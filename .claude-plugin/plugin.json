@@ -1,0 +1,11 @@
+{
+  "name": "ai-maestro-maintainer-agent",
+  "version": "1.0.0",
+  "description": "MAINTAINER role-plugin for AI Maestro. Polls a GitHub repository for new issues, triages bugs, and fixes valid issues autonomously via clone-branch-test-publish workflow.",
+  "author": {
+    "name": "AI Maestro",
+    "email": "713559+Emasoft@users.noreply.github.com"
+  },
+  "repository": "https://github.com/Emasoft/ai-maestro-maintainer-agent",
+  "license": "MIT"
+}

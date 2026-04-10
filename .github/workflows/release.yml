@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+# The GitHub release itself is created by scripts/publish.py using the
+# git-cliff release notes, BEFORE the tag is pushed. This workflow runs
+# AFTER the tag push as a post-hoc safety gate — it re-runs the strict
+# CPV plugin validator and fails the workflow if the tagged state does
+# not pass. A failed gate does NOT delete the already-created release;
+# you must roll back manually.
+#
+# Rationale: publish.py already runs every validator locally before it
+# pushes anything, so this gate is redundant on the happy path. Its
+# purpose is to catch regressions where someone bypasses publish.py and
+# pushes a tag directly — CI will flag the broken release.
+
+jobs:
+  validate-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: CPV strict validation gate (post-hoc safety net)
+        run: |
+          set +e
+          uvx --from git+https://github.com/Emasoft/claude-plugins-validation \
+            --with pyyaml \
+            cpv-remote-validate plugin . --strict
+          EXIT_CODE=$?
+          set -e
+          # Strict mode: ANY non-zero exit fails the gate. If the tag was
+          # pushed by publish.py, this should always pass because publish.py
+          # ran the same validator locally first. A failure here means
+          # someone bypassed publish.py — investigate immediately.
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::error::CPV strict validation failed for pushed tag $GITHUB_REF_NAME (exit $EXIT_CODE)"
+            echo "::error::This tag was likely pushed without going through scripts/publish.py"
+            echo "::error::The GitHub release (if any) should be rolled back by the release owner"
+            exit $EXIT_CODE
+          fi

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+uv.lock
+dist/
+*.egg-info/
+
+# SERENA MCP state
+.serena/
+
+# Claude Code local settings
+.claude/
+
+# git-cliff scratch
+.git-cliff-release-notes.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Reports
+reports_dev/
+llm_externalizer_output/
