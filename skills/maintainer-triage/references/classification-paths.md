@@ -1,5 +1,12 @@
 # Triage Classification Paths — Detailed Commands
 
+## Table of Contents
+
+- [Bug Path (any author)](#bug-path-any-author)
+- [Feature Path (authorized user only)](#feature-path-authorized-user-only)
+- [Duplicate Path](#duplicate-path)
+- [Invalid Path](#invalid-path)
+
 ## Bug Path (any author)
 
 1. Read the issue body and any linked error logs
