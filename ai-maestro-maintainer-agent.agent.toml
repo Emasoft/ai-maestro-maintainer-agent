@@ -6,7 +6,7 @@ name = "ai-maestro-maintainer-agent"
 source = "plugin:ai-maestro-maintainer-agent"
 path = "agents/ai-maestro-maintainer-agent-main-agent.md"
 compatible-titles = ["MAINTAINER"]
-compatible-clients = ["claude-code"]
+compatible-clients = ["claude"]
 
 [requirements]
 project_type = "plugin"
