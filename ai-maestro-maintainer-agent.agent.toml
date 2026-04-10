@@ -1,12 +1,39 @@
+# AI Maestro Maintainer Agent - Agent Profile
+# Quad-match: plugin.json name == TOML [agent].name == agents/<name>-main-agent.md
+
 [agent]
 name = "ai-maestro-maintainer-agent"
-description = "Maintains a GitHub repository by polling for new issues, triaging bugs, and fixing valid issues via the clone-branch-test-publish workflow."
-
-[agent.metadata]
+source = "plugin:ai-maestro-maintainer-agent"
+path = "agents/ai-maestro-maintainer-agent-main-agent.md"
 compatible-titles = ["MAINTAINER"]
 compatible-clients = ["claude-code"]
 
+[requirements]
+project_type = "plugin"
+tech_stack = ["python", "typescript", "rust", "go"]
+
 [skills]
-maintainer-patrol = { description = "Poll GitHub issues every 5 minutes, detect new unprocessed issues" }
-maintainer-triage = { description = "Classify issues: bugs auto-triage, features only from authorized gh user" }
-maintainer-fix = { description = "Clone repo, create branch, fix issue, run tests, publish via publish.py" }
+primary = ["maintainer-patrol", "maintainer-triage", "maintainer-fix"]
+secondary = []
+specialized = []
+
+[agents]
+recommended = []
+
+[commands]
+recommended = []
+
+[rules]
+recommended = []
+
+[mcp]
+recommended = ["serena-mcp", "llm-externalizer"]
+
+[hooks]
+recommended = []
+
+[lsp]
+recommended = []
+
+[output_styles]
+recommended = []

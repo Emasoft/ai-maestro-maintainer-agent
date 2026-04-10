@@ -1,17 +1,10 @@
 ---
 description: >
-  Poll a GitHub repository for new issues every 5 minutes. Detects
-  unprocessed issues by comparing `gh issue list` output against a local
-  ledger. Triggers the maintainer-triage skill for each new issue. Use
-  when the MAINTAINER agent starts a session, resumes from hibernation,
-  or when the user says "start patrol", "check for issues", "resume
-  monitoring", or "begin maintenance loop".
-allowed-tools:
-  - Bash
-  - Read
-  - Write
-  - Glob
-  - Grep
+  Use when MAINTAINER agent starts or resumes, or user says "start patrol".
+  Polls a GitHub repository every 5 minutes, detects new issues via a
+  persistent ledger, triggers maintainer-triage for each.
+  Trigger with "start patrol".
+allowed-tools: "Bash(gh:*), Bash(git:*), Read, Write, Glob, Grep"
 ---
 
 # Maintainer Patrol — GitHub Issues Polling
@@ -19,6 +12,13 @@ allowed-tools:
 Poll the assigned `githubRepo` for new open issues every 5 minutes. Track
 which issues have already been processed in a persistent ledger so the
 same issue is never triaged twice.
+
+## Overview
+
+This skill runs a continuous polling loop against a GitHub repository. It
+fetches open issues, compares them against a local ledger of processed issues,
+triggers triage for each new unprocessed issue, waits 5 minutes, and repeats.
+The ledger persists across hibernation so the patrol resumes cleanly on wake.
 
 ## Prerequisites
 
@@ -37,69 +37,64 @@ mkdir -p "$LEDGER_DIR"
 [ -f "$LEDGER" ] || echo '{"processed":{}}' > "$LEDGER"
 ```
 
-## Polling Protocol
+Copy this checklist and track your progress:
+- [ ] gh auth status passes
+- [ ] githubRepo attribute set on agent
+- [ ] Ledger directory created
+- [ ] Patrol loop started
 
-### Step 1: Fetch open issues
+## Instructions
 
-```bash
-gh issue list --repo "$REPO" --state open --limit 50 \
-  --json number,title,author,labels,createdAt,body
+1. Verify prerequisites: `gh auth status` succeeds and `githubRepo` attribute is set on agent.
+2. Initialize ledger if missing: `mkdir -p ~/.aimaestro/maintainer/<agentId> && echo '{"processed":{}}' > <ledger>`.
+3. Fetch open issues: `gh issue list --repo "$REPO" --state open --limit 50 --json number,title,author,labels,createdAt,body`.
+4. Load the ledger JSON and identify issues whose `number` is NOT already in `processed`.
+5. For each new issue, invoke the **maintainer-triage** skill passing number, title, author, labels, and body.
+6. Record each triaged issue in the ledger with its disposition (`triaged`, `fixed`, `rejected`, `duplicate`, `needs-info`, `manual`).
+7. After processing all new issues (or if none), sleep 300 seconds then repeat from step 3.
+
+## Output
+
+A continuously running patrol that:
+- Detects new issues in real-time (up to 5-minute delay)
+- Triggers triage automatically for each new issue
+- Maintains a persistent ledger so no issue is processed twice
+- Reports patrol cycle results to the agent's session
+
+## Error Handling
+
+| Error | Action |
+|-------|--------|
+| `gh issue list` fails (network, auth) | Log error, wait 5 minutes, retry |
+| Triage fails for one issue | Record as `error` in ledger with message, continue to next issue |
+| Ledger file corrupted | Recreate as `{"processed":{}}`, re-process all current open issues |
+| `githubRepo` not set | Stop patrol, report to user |
+
+## Examples
+
+**Normal patrol cycle:**
+```
+→ gh issue list returns issues 40, 41, 42
+→ Ledger shows 40 already processed
+→ Triage issues 41 and 42
+→ Record 41: triaged/fix, 42: rejected/unauthorized-feature
+→ sleep 300
+→ Repeat
 ```
 
-### Step 2: Load the ledger
-
-Read `$LEDGER`. It contains:
-
-```json
-{
-  "processed": {
-    "42": { "status": "fixed", "at": "2026-04-10T21:00:00Z" },
-    "43": { "status": "rejected", "at": "2026-04-10T21:05:00Z" }
-  }
-}
+**Resume after hibernation:**
+```
+→ Wake from hibernation
+→ Load ledger (last entry: issue 42)
+→ gh issue list returns 43, 44 (new while hibernated)
+→ Triage 43 and 44
+→ Continue patrol loop
 ```
 
-### Step 3: Detect new issues
+## Resources
 
-An issue is "new" if its `number` is NOT a key in `processed`. Filter the
-fetched list to only new issues.
-
-### Step 4: Triage each new issue
-
-For each new issue, invoke the **maintainer-triage** skill with:
-- Issue number, title, author login, labels, body
-- The `githubRepo` value
-
-After triage completes (regardless of outcome), record the issue in the
-ledger with its disposition (`triaged`, `fixed`, `rejected`, `duplicate`,
-`needs-info`, `manual`).
-
-### Step 5: Sleep and repeat
-
-After processing all new issues (or if there are none), wait 5 minutes
-(300 seconds), then repeat from Step 1. Use:
-
-```bash
-sleep 300
-```
-
-## Ledger Location
-
-```
-~/.aimaestro/maintainer/<agentId>/processed-issues.json
-```
-
-The ledger persists across hibernation. On wake, the patrol resumes and
-picks up any issues that arrived while the agent was asleep.
-
-## Error Recovery
-
-- If `gh issue list` fails (network, auth): log the error, wait 5 minutes,
-  retry. Do NOT crash the patrol loop.
-- If triage fails for one issue: record it as `error` in the ledger with
-  the error message, continue to the next issue.
-- If the ledger file is corrupted: recreate it as `{"processed":{}}` and
-  re-process all currently open issues (safe because triage is idempotent).
+- GitHub CLI: https://cli.github.com/manual/gh_issue_list
+- Ledger location: `~/.aimaestro/maintainer/<agentId>/processed-issues.json`
 
 ## Stopping the Patrol
 
