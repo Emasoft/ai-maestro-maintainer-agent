@@ -35,45 +35,21 @@ Copy this checklist and track your progress:
 
 ## Instructions
 
-### Authorization Check (CRITICAL — R19.6)
+1. Determine the authorized user: `AUTHORIZED_USER=$(gh api user --jq .login)`. This is the MAESTRO-privileged GitHub login (R19.6).
+2. Fetch the issue metadata: `gh issue view <number> --repo <repo> --json title,body,author,labels`.
+3. Classify the issue by scanning the title, labels, and body against the flowchart below.
+4. If **bug** (label "bug" or title matches "bug"/"error"/"crash"/"fix"): follow the Bug Path — verify, label, return `action: fix` or `needs-info`.
+5. If **feature/change** (label "feature"/"enhancement" or title matches "feature"/"add"/"request"): check author against `$AUTHORIZED_USER`. Reject if mismatch (R19.6). Accept if match.
+6. If **duplicate**: link the original issue, label `duplicate`, close.
+7. If **invalid/spam**: label `invalid`, close.
+8. If **ambiguous**: read the body carefully, classify as bug or feature based on content.
+9. Return the structured disposition to the patrol skill.
 
-Before processing any issue, determine the authorized user:
-
-```bash
-AUTHORIZED_USER=$(gh api user --jq .login)
-```
-
-This is the GitHub login of the host's authenticated `gh` user (typically
-the repository owner / MAESTRO-privileged user).
-
-### Classification Flowchart
-
-```text
-New Issue
-  │
-  ├─ Has label "bug" or title contains "bug"/"error"/"crash"/"fix"?
-  │   YES → BUG PATH (any author)
-  │
-  ├─ Has label "feature"/"enhancement" or title contains "feature"/"add"/"request"?
-  │   YES → FEATURE PATH (authorized user only)
-  │
-  ├─ Clearly a duplicate of an existing open issue?
-  │   YES → DUPLICATE PATH
-  │
-  ├─ Spam, off-topic, or unintelligible?
-  │   YES → INVALID PATH
-  │
-  └─ Ambiguous
-      → Read the body carefully, classify as bug or feature based on content
-```
-
-For detailed commands for each path, see [Classification Paths Reference](references/classification-paths.md):
+For detailed `gh` commands for each path, see [Classification Paths Reference](references/classification-paths.md):
   - Bug Path (any author)
   - Feature Path (authorized user only)
   - Duplicate Path
   - Invalid Path
-
-**Summary:** Bug → verify + label `bug,verified` → action=fix. Feature → check author against `$AUTHORIZED_USER` → reject if mismatch, accept if match. Duplicate → link original + close. Invalid → label + close.
 
 ## Output
 
