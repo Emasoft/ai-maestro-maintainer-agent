@@ -3,6 +3,7 @@ description: >
   Use when maintainer-triage returns action=fix or user says "fix issue #N".
   Clones repo, branches, applies fix, runs tests, publishes via strict
   pipeline, closes issue with commit link. Trigger with "fix issue #N".
+# Reviewed 2026-04-15: all 12 tools required for clone→edit→test→publish workflow
 allowed-tools: "Bash(git:*), Bash(gh:*), Bash(uv:*), Bash(npm:*), Bash(cargo:*), Bash(go:*), Read, Write, Edit, Grep, Glob, Agent"
 ---
 

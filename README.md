@@ -1,5 +1,9 @@
 # ai-maestro-maintainer-agent
 
+<!--BADGES-START-->
+[![CI](https://github.com/Emasoft/ai-maestro-maintainer-agent/actions/workflows/validate.yml/badge.svg)](https://github.com/Emasoft/ai-maestro-maintainer-agent/actions/workflows/validate.yml)
+<!--BADGES-END-->
+
 An AI Maestro role-plugin for the **MAINTAINER** governance title. Polls a
 GitHub repository for new issues, triages bugs autonomously, accepts feature
 requests only from the authorized GitHub user, and fixes valid issues via a

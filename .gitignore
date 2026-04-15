@@ -1,28 +1,62 @@
+# Development directories
+*_dev/
+docs_dev/
+scripts_dev/
+
 # Python
 __pycache__/
-*.pyc
-.venv/
-uv.lock
-dist/
+*.py[cod]
+*$py.class
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
 *.egg-info/
+dist/
+build/
+.venv/
+venv/
 
-# SERENA MCP state
-.serena/
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
 
-# Claude Code local settings
-.claude/
-
-# git-cliff scratch
-.git-cliff-release-notes.md
-
-# Secrets
+# Environment
 .env
-*.env
+.env.*
+
+# Node
+node_modules/
 
 # OS
 .DS_Store
 Thumbs.db
 
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Claude Code
+.claude/
+
+# LLM Externalizer
+llm_externalizer_output/
+
+# TLDR
+.tldr/
+
+# SERENA MCP state (local project metadata, not published)
+.serena/
+
+# git-cliff scratch — ephemeral release notes between bump and push
+.git-cliff-release-notes.md
+
 # Reports
 reports_dev/
-llm_externalizer_output/
