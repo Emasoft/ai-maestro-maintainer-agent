@@ -1,6 +1,6 @@
 [project]
 name = "ai-maestro-maintainer-agent"
-version = "1.0.2"
+version = "1.0.3"
 description = "MAINTAINER role-plugin for AI Maestro"
 requires-python = ">=3.10"
 license = "MIT"

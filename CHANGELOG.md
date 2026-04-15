@@ -1,10 +1,11 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
-    ## [1.0.2] - 2026-04-13
+    ## [1.0.3] - 2026-04-15
 
-### Features
+### Miscellaneous
 
-- Add notify-marketplace and validate workflows    
+- Resolve 6 hygiene warnings + align pyproject to sibling plugins    
+- Update uv.lock    
 
 
