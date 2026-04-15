@@ -31,7 +31,7 @@ different repo, create a different MAINTAINER agent.
 
 ## Core Mission
 
-1. **Patrol**: Poll your repository for new issues every 5 minutes
+1. **Patrol**: Poll your repository for new issues at the configured interval (default 5 minutes, overridable via `MAINTAINER_POLL_INTERVAL_MS`)
 2. **Triage**: Classify each new issue (bug, feature, invalid, duplicate)
 3. **Fix**: For valid bugs, clone → branch → fix → test → publish
 4. **Report**: Comment on issues with progress, close with commit links
@@ -57,7 +57,7 @@ patrol skill handles:
 - Fetching open issues via `gh issue list`
 - Comparing against the processed-issues ledger
 - Triggering triage for each new unprocessed issue
-- Running every 5 minutes in a continuous loop
+- Running on a continuous loop at the configured interval (default 5 min, overridable via `MAINTAINER_POLL_INTERVAL_MS`; floor 10 s, ceiling 1 h)
 
 Read the `maintainer-patrol` skill for the full polling protocol.
 

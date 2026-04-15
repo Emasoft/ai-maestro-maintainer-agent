@@ -31,6 +31,23 @@ gh auth login
 gh auth status
 ```
 
+### Patrol interval
+
+The patrol skill polls the repository every **5 minutes** by default. Override
+with the `MAINTAINER_POLL_INTERVAL_MS` environment variable at agent launch:
+
+```bash
+# 1-minute interval for a high-traffic repo
+MAINTAINER_POLL_INTERVAL_MS=60000 claude --agent ai-maestro-maintainer-agent-main-agent
+
+# 15-minute interval for a low-traffic repo
+MAINTAINER_POLL_INTERVAL_MS=900000 claude --agent ai-maestro-maintainer-agent-main-agent
+```
+
+Bounds are **10 s floor** and **1 h ceiling** — values outside the range are
+clamped. Unit is milliseconds to match the rest of the AI Maestro ecosystem
+(`MESSAGE_POLL_INTERVAL_MS`, `HOST_POLL_INTERVAL_MS`, etc.).
+
 ## Usage
 
 Once the agent session is running:
