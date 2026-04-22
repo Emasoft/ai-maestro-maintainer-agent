@@ -1415,6 +1415,7 @@ Examples:
         "pyproject.toml",
         "package.json",
         "Cargo.toml",
+        "uv.lock",
         "CHANGELOG.md",
         "cliff.toml",
         ".gitignore",
