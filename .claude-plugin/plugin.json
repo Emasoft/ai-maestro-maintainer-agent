@@ -1,6 +1,6 @@
 {
   "name": "ai-maestro-maintainer-agent",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "MAINTAINER role-plugin for AI Maestro. Polls a GitHub repository for new issues, triages bugs, and fixes valid issues autonomously via clone-branch-test-publish workflow.",
   "author": {
     "name": "AI Maestro",
