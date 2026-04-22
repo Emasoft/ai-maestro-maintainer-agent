@@ -58,5 +58,12 @@ llm_externalizer_output/
 # git-cliff scratch — ephemeral release notes between bump and push
 .git-cliff-release-notes.md
 
-# Reports
+# Reports (both must stay gitignored — contain private paths, tokens, internal notes)
+reports/
 reports_dev/
+
+# Janitor state (per-project session state from ai-maestro-janitor plugin)
+.janitor/
+
+# TLDR read-enforcer config
+.tldrignore
