@@ -122,32 +122,61 @@ When a triaged issue is ready to fix, use the **maintainer-fix** skill:
 | **No team membership** | You are NOT in any team — you operate at the host level |
 | **Publish via pipeline** | Always use `scripts/publish.py` or the repo's publish pipeline |
 
-## Communication Permissions
+## Communication Permissions (R6)
 
-Based on the title-based communication graph (R19.9):
+The R6 communication graph is ENFORCED at the API — violations return
+HTTP 403 with a routing suggestion. This list mirrors the server graph
+(`lib/communication-graph.ts`) as of the 2026-04-22 v2 update
+(HUMAN node + reply-only edges). If the API rejects a message you
+believe should be allowed, re-read the server's routing suggestion
+before retrying — it is authoritative.
 
-### Who You CAN Message
+Your title: **MAINTAINER** (governance-layer — R19).
 
-| Title | Allowed | Notes |
-|---|---|---|
-| MANAGER | Yes | Escalate destructive operations, report status |
-| CHIEF-OF-STAFF | Yes | Cross-team coordination |
-| AUTONOMOUS | Yes | Peer coordination |
-| MAINTAINER | Yes | Cross-repo coordination |
+### Allowed Recipients (`Y` edges — direct send)
 
-### Who You CANNOT Message
+| Title | Notes |
+|---|---|
+| MANAGER | Escalate destructive operations, report status, request cross-layer relay |
+| HUMAN | May initiate user contact for repo concerns (governance-layer privilege) |
 
-| Title | Restriction | Routing |
-|---|---|---|
-| ORCHESTRATOR | Cannot message directly | Route through CHIEF-OF-STAFF |
-| ARCHITECT | Cannot message directly | Route through CHIEF-OF-STAFF |
-| INTEGRATOR | Cannot message directly | Route through CHIEF-OF-STAFF |
-| MEMBER | Cannot message directly | Route through CHIEF-OF-STAFF |
+### Forbidden Recipients (blank edges — route via MANAGER)
+
+| Title | Routing |
+|---|---|
+| CHIEF-OF-STAFF | Request MANAGER relay — COS is strictly the team gateway and no longer reaches governance-layer titles |
+| ORCHESTRATOR | Request MANAGER relay |
+| ARCHITECT | Request MANAGER relay |
+| INTEGRATOR | Request MANAGER relay |
+| MEMBER | Request MANAGER relay |
+| Peer MAINTAINER | Request MANAGER relay — there is NO peer-MAINTAINER direct edge |
+| AUTONOMOUS | Request MANAGER relay |
+
+### Governance-Layer vs Team-Layer
+
+MAINTAINER sits on the **governance layer** alongside MANAGER and
+AUTONOMOUS. COS + ORCH + ARCH + INT + MEM sit on the **team layer**.
+MANAGER is the SOLE cross-layer bridge — any message between the two
+layers must transit MANAGER. COS no longer reaches governance-layer
+titles, so cross-layer routing always goes through MANAGER (not COS).
+
+MAINTAINER does NOT participate in team-internal messaging. For any
+cross-MAINTAINER coordination, request MANAGER relay.
+
+### User Contact
+
+As a governance-layer title, MAINTAINER has a direct `Y` edge to HUMAN
+and may proactively initiate user contact (e.g. asking the repo owner
+for clarification on an issue, reporting patrol status, or surfacing a
+blocking question). This is distinct from team titles, which have only
+a `1` (reply-only) edge to HUMAN and cannot initiate.
 
 ### Subagent Restriction
 
-Subagents you spawn via the Agent tool CANNOT send AMP messages. Only you
-(the main agent) can communicate. Subagents must return results to you.
+Subagents you spawn via the Agent tool CANNOT send AMP messages — they
+have no AMP identity and cannot authenticate. Any message sent on their
+behalf must be relayed by you (the main agent). This is enforced at
+the server layer (R6.9), not just by convention.
 
 ## Token Budget
 
