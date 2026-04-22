@@ -67,3 +67,6 @@ reports_dev/
 
 # TLDR read-enforcer config
 .tldrignore
+
+# Rechecker plugin local state (operational telemetry, not reports)
+.rechecker/
