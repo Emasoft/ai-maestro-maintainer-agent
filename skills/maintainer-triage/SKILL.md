@@ -36,14 +36,30 @@ Copy this checklist and track your progress:
 ## Instructions
 
 1. Determine the authorized user: `AUTHORIZED_USER=$(gh api user --jq .login)`. This is the MAESTRO-privileged GitHub login (R19.6).
-2. Fetch the issue metadata: `gh issue view <number> --repo <repo> --json title,body,author,labels`.
-3. Classify the issue by scanning the title, labels, and body against the flowchart below.
-4. If **bug** (label "bug" or title matches "bug"/"error"/"crash"/"fix"): follow the Bug Path — verify, label, return `action: fix` or `needs-info`.
-5. If **feature/change** (label "feature"/"enhancement" or title matches "feature"/"add"/"request"): check author against `$AUTHORIZED_USER`. Reject if mismatch (R19.6). Accept if match.
-6. If **duplicate**: link the original issue, label `duplicate`, close.
-7. If **invalid/spam**: label `invalid`, close.
-8. If **ambiguous**: read the body carefully, classify as bug or feature based on content.
-9. Return the structured disposition to the patrol skill.
+2. Read the effort level from the environment to scale verification depth (Claude Code ≥ 2.1.133 exports `$CLAUDE_EFFORT`). MEDIUM is the floor — LOW is intentionally promoted to MEDIUM because triage that skips code verification is unsafe:
+
+   ```bash
+   # Floor is MEDIUM. LOW is too shallow for triage — promote to MEDIUM.
+   # MAX is reserved for difficult/ambiguous issues that need cross-file analysis.
+   case "${CLAUDE_EFFORT:-medium}" in
+     max|MAX|maximum|MAXIMUM)  TRIAGE_DEPTH=max ;;     # deep grep + cross-file
+     high|HIGH)                TRIAGE_DEPTH=high ;;    # proactive grep before classifying
+     *)                        TRIAGE_DEPTH=medium ;;  # default: grep only when title+body ambiguous
+   esac
+   ```
+
+   Pre-2.1.133 sessions (env var unset) get the `medium` branch — same conservative default the skill used before.
+3. Fetch the issue metadata: `gh issue view <number> --repo <repo> --json title,body,author,labels`.
+4. Classify the issue by scanning the title, labels, and body against the flowchart below. Verification depth scales with `$TRIAGE_DEPTH`:
+   - `medium` — title + labels + body match; grep the repo only when classification is ambiguous after that.
+   - `high` — also grep the repo for referenced symbols/files before deciding, even when title/body looks unambiguous.
+   - `max` — escalate to deep cross-file analysis (referenced symbols + their callers/imports) before deciding. Use for issues that span multiple modules or contradict their own labels.
+5. If **bug** (label "bug" or title matches "bug"/"error"/"crash"/"fix"): follow the Bug Path — verify, label, return `action: fix` or `needs-info`.
+6. If **feature/change** (label "feature"/"enhancement" or title matches "feature"/"add"/"request"): check author against `$AUTHORIZED_USER`. Reject if mismatch (R19.6). Accept if match.
+7. If **duplicate**: link the original issue, label `duplicate`, close.
+8. If **invalid/spam**: label `invalid`, close.
+9. If **ambiguous**: read the body carefully, classify as bug or feature based on content. When `$TRIAGE_DEPTH` is `high` or `max`, grep the codebase (and for `max`, trace cross-file references) before deciding.
+10. Return the structured disposition to the patrol skill.
 
 For detailed `gh` commands for each path, see [Classification Paths Reference](references/classification-paths.md):
   - Bug Path (any author)

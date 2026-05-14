@@ -21,7 +21,16 @@ If the repo is not already cloned locally:
 ```bash
 REPO="<githubRepo>"
 AGENT_NAME="<agent name>"
-WORKSPACE="$HOME/agents/$AGENT_NAME/workspace"
+
+# Per-session workspace isolation. CLAUDE_CODE_SESSION_ID is exported by
+# Claude Code >= 2.1.132 to every Bash subprocess. When two MAINTAINER
+# sessions race on the same repo without this suffix, both write to the
+# same checkout and corrupt each other's index. When the env var is
+# absent (older CC), fall back to the historical single-workspace path.
+SESSION_SUFFIX=""
+[ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && SESSION_SUFFIX="-${CLAUDE_CODE_SESSION_ID:0:8}"
+WORKSPACE="$HOME/agents/$AGENT_NAME/workspace$SESSION_SUFFIX"
+
 mkdir -p "$WORKSPACE"
 cd "$WORKSPACE"
 if [ ! -d ".git" ]; then
@@ -31,6 +40,11 @@ git fetch origin
 git checkout main
 git pull origin main
 ```
+
+Branch names stay collision-checked at push time (step 7) — `git push`
+fails fast on a non-fast-forward, which is the right signal that another
+MAINTAINER already opened the same `fix/<issue>-<slug>` branch. Do NOT
+force-push (R19.7); investigate first.
 
 ---
 

@@ -76,6 +76,15 @@ Once the agent session is running:
 
 ## Requirements
 
+- Claude Code **≥ 2.1.133** — the triage skill reads `$CLAUDE_EFFORT` (added
+  2.1.133) to scale verification depth, and the fix skill reads
+  `$CLAUDE_CODE_SESSION_ID` (added 2.1.132) for per-session workspace
+  isolation. MEDIUM is the effort floor: `$CLAUDE_EFFORT=LOW` is intentionally
+  promoted to MEDIUM because triage that skips code verification is unsafe;
+  set `$CLAUDE_EFFORT=MAX` for difficult issues that need cross-file analysis.
+  Earlier Claude Code versions still work — both env vars degrade gracefully
+  to the historical single-workspace, ambiguity-only-grep defaults — but you
+  lose concurrency safety and effort-aware triage.
 - `gh` CLI authenticated (`gh auth login`)
 - `git` configured with user identity
 - `uv` (for Python repos with `scripts/publish.py`)

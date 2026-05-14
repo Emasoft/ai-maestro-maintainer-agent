@@ -38,8 +38,8 @@ Copy this checklist and track your progress:
 
 ## Instructions
 
-1. Prepare the workspace: clone or update the repo to `$HOME/agents/<name>/workspace`.
-2. Create a feature branch: `fix/<issue-number>-<short-slug>`.
+1. Prepare the workspace: clone or update the repo to `$HOME/agents/<name>/workspace[-<sid8>]`. The optional `-<sid8>` suffix (first 8 chars of `$CLAUDE_CODE_SESSION_ID`, exported by Claude Code ≥ 2.1.132) isolates concurrent MAINTAINER sessions on the same repo. See [Step 1](references/fix-steps.md#step-1-prepare-the-workspace).
+2. Create a feature branch: `fix/<issue-number>-<short-slug>`. Branch collisions are detected at push time (R19.7 — never force-push).
 3. Read the issue body (`gh issue view`), search related code, plan the fix.
 4. Apply the minimum code changes needed; follow existing style conventions.
 5. Run the test suite (pytest / npm test / cargo test / go test) — all must pass.
