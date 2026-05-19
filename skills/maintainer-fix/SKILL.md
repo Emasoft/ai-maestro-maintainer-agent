@@ -1,8 +1,25 @@
 ---
 description: >
-  Use when maintainer-triage returns action=fix or user says "fix issue #N".
-  Clones repo, branches, applies fix, runs tests, publishes via strict
-  pipeline, closes issue with commit link. Trigger with "fix issue #N".
+  Use when maintainer-triage returns `action: fix` or the user says
+  "fix issue #N" / "work on issue #N" / "implement issue #N". Runs
+  the full clone → branch → understand → edit → test → commit →
+  publish → close workflow against the agent's assigned
+  `githubRepo`. Reads `$CLAUDE_CODE_SESSION_ID` (Claude Code ≥
+  2.1.132) to isolate the per-session workspace under
+  `~/.aimaestro/maintainer/<agentId>/<session>/`, so concurrent fix
+  sessions never trample each other's clones. Enforces governance
+  rules R19.7 (no force-push, no history rewrite, no tag or branch
+  deletion without MANAGER approval) and R19.8 (all tests must pass
+  before any push). For Python repos, delegates the publish step
+  to the repo's own strict `scripts/publish.py` pipeline (uv-based
+  release flow with conventional-commit tagging); for other
+  ecosystems, mirrors the equivalent build-and-test pipeline with
+  `npm`/`cargo`/`go` before push. Closes the GitHub issue with a
+  link to the merged commit on success; on test failure, opens a
+  comment on the issue with the failure log and does NOT push.
+  Do NOT trigger on triage dispositions other than `action: fix`,
+  on rejected/duplicate/needs-info dispositions, or on read-only
+  inspection queries — those bypass the fix workflow entirely.
 # Reviewed 2026-04-15: all 12 tools required for clone→edit→test→publish workflow
 allowed-tools: "Bash(git:*), Bash(gh:*), Bash(uv:*), Bash(npm:*), Bash(cargo:*), Bash(go:*), Read, Write, Edit, Grep, Glob, Agent"
 ---

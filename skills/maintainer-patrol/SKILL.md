@@ -1,9 +1,24 @@
 ---
 description: >
-  Use when MAINTAINER starts, resumes, or patrol is requested. Polls a
-  GitHub repo at a configurable interval (default 5 min), detects new
-  issues via ledger, triggers maintainer-triage per issue. Trigger with
-  "start patrol".
+  Use when MAINTAINER starts, resumes, or the user requests issue
+  monitoring. Polls the agent's assigned `githubRepo` for new open
+  GitHub issues at a configurable interval (default 5 minutes,
+  bounded 10 s floor and 1 h ceiling via `MAINTAINER_POLL_INTERVAL_MS`),
+  tracks already-processed issues in a persistent JSON ledger at
+  `~/.aimaestro/maintainer/<agentId>/processed-issues.json`,
+  dispatches the **maintainer-triage** skill for each new issue, and
+  records the returned disposition (triaged/fixed/rejected/duplicate/
+  needs-info/manual). Resumes cleanly after hibernation by replaying
+  the ledger against the current open-issue list. Honours the GitHub
+  rate-limit hint added in Claude Code 2.1.116: when the Bash tool
+  prepends "GitHub API rate limit" to a `gh issue list`, the loop
+  sleeps for `$POLL_SECONDS` rather than retrying inside the same
+  cycle, letting the next cycle resume on a fresh API budget.
+  Trigger phrases include "start patrol", "begin maintenance loop",
+  "resume monitoring", "watch for new issues", or "patrol
+  Emasoft/my-project". Do NOT trigger on read-only inspection
+  queries like "show me the open issues" — those go straight to
+  `gh issue list` without entering the polling loop.
 allowed-tools: "Bash(gh:*), Bash(git:*), Read, Write, Glob, Grep"
 ---
 
@@ -85,11 +100,25 @@ A continuously running patrol that:
 - Maintains a persistent ledger so no issue is processed twice
 - Reports patrol cycle results to the agent's session
 
+## Rate-limit awareness
+
+If the Bash tool prepends a **"GitHub API rate limit"** hint to a `gh` call
+(added in Claude Code 2.1.116), stop iterating on that repo for at least 60
+seconds and `sleep "$POLL_SECONDS"` instead of retrying immediately. Do not
+retry the same `gh` call until the rate-limit window resets — the hint
+means GitHub is already throttling and a tight retry loop will only deepen
+the back-off.
+
+When you resume after the sleep, the next `gh issue list` call gives you a
+fresh rate-limit budget. Retrying inside the same patrol cycle wastes the
+budget you just paid for.
+
 ## Error Handling
 
 | Error | Action |
 |-------|--------|
 | `gh issue list` fails (network, auth) | Log error, `sleep "$POLL_SECONDS"`, retry |
+| Bash tool emits a "GitHub API rate limit" hint | Stop iterating, `sleep "$POLL_SECONDS"`, do NOT retry inside the same cycle |
 | Triage fails for one issue | Record as `error` in ledger with message, continue to next issue |
 | Ledger file corrupted | Recreate as `{"processed":{}}`, re-process all current open issues |
 | `githubRepo` not set | Stop patrol, report to user |

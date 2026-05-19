@@ -1,9 +1,29 @@
 ---
 description: >
-  Use when maintainer-patrol detects a new issue or user says "triage
-  issue #N". Classifies GitHub issues as bug, feature, duplicate, or
-  invalid. Enforces authorized-user rule (R19.6) for feature requests.
-  Trigger with "triage issue #N".
+  Use when maintainer-patrol surfaces a new open issue or the user
+  asks to "triage issue #N", "classify issue #N", or "decide what to
+  do with issue #N". Classifies a GitHub issue against a flowchart —
+  bug, feature/enhancement, duplicate, invalid/spam, or
+  needs-info — and returns a structured disposition the patrol
+  skill records in the ledger. Enforces governance rule R19.6:
+  feature requests and change proposals are accepted ONLY from the
+  GitHub user authenticated with `gh` on the host (the authorized
+  MAESTRO user); bug reports are welcomed from any author. Reads
+  `$CLAUDE_EFFORT` (Claude Code ≥ 2.1.133) to scale verification
+  depth — MEDIUM is the floor (LOW is intentionally promoted to
+  MEDIUM because triage that skips code verification is unsafe),
+  HIGH adds proactive grep before deciding, and MAX/XHIGH escalate
+  to cross-file analysis for cross-module or self-contradicting
+  issues. Honours the 2.1.116 GitHub rate-limit hint: if any `gh
+  api user` / `gh issue view` / `gh issue comment` / `gh issue
+  edit --add-label` / `gh issue close` / `gh search issues` call
+  trips the rate-limit warning, the skill returns
+  `{disposition: "needs-info", action: "none", reason:
+  "rate-limit deferred"}` so the patrol skill does NOT mark the
+  issue processed and re-picks it up on the next cycle with a
+  fresh API budget. Do NOT trigger on read-only "show me issue
+  #N" queries — those go straight to `gh issue view` without
+  entering the classification flow.
 allowed-tools: "Bash(gh:*), Bash(git:*), Read, Write, Grep, Glob, Agent"
 ---
 
@@ -41,14 +61,16 @@ Copy this checklist and track your progress:
    ```bash
    # Floor is MEDIUM. LOW is too shallow for triage — promote to MEDIUM.
    # MAX is reserved for difficult/ambiguous issues that need cross-file analysis.
+   # XHIGH (added in Claude Code 2.1.111) is treated as MAX — same deep cross-file budget.
    case "${CLAUDE_EFFORT:-medium}" in
      max|MAX|maximum|MAXIMUM)  TRIAGE_DEPTH=max ;;     # deep grep + cross-file
+     xhigh|XHIGH)              TRIAGE_DEPTH=max ;;     # 2.1.111 tier, route to MAX budget
      high|HIGH)                TRIAGE_DEPTH=high ;;    # proactive grep before classifying
      *)                        TRIAGE_DEPTH=medium ;;  # default: grep only when title+body ambiguous
    esac
    ```
 
-   Pre-2.1.133 sessions (env var unset) get the `medium` branch — same conservative default the skill used before.
+   Pre-2.1.133 sessions (env var unset) get the `medium` branch — same conservative default the skill used before. The `xhigh` tier (2.1.111+) maps to `max` because both represent "the user explicitly asked for the deepest available analysis"; triage has no reason to distinguish them.
 3. Fetch the issue metadata: `gh issue view <number> --repo <repo> --json title,body,author,labels`.
 4. Classify the issue by scanning the title, labels, and body against the flowchart below. Verification depth scales with `$TRIAGE_DEPTH`:
    - `medium` — title + labels + body match; grep the repo only when classification is ambiguous after that.
@@ -66,6 +88,26 @@ For detailed `gh` commands for each path, see [Classification Paths Reference](r
   - Feature Path (authorized user only)
   - Duplicate Path
   - Invalid Path
+
+## Rate-limit awareness
+
+Every `gh` call in this skill (`gh api user`, `gh issue view`, `gh issue
+comment`, `gh issue edit --add-label`, `gh issue close`, `gh search issues`)
+can trip GitHub's REST or search-API rate limit. From Claude Code 2.1.116
+onward the Bash tool prepends a **"GitHub API rate limit"** hint to the
+tool output when the limit is close. If you see that hint:
+
+1. Stop iterating on the current issue.
+2. Return the partial disposition `{disposition: "needs-info", action:
+   "none", reason: "rate-limit deferred"}` to the patrol skill so the
+   issue is **not** marked processed in the ledger.
+3. Do NOT retry the same `gh` call inside this triage invocation — the
+   next patrol cycle will pick the issue up with a fresh rate-limit
+   budget (see `maintainer-patrol`'s own back-off rule).
+
+Tight retry loops only deepen the back-off. A deferred triage costs one
+cycle (≤ `$POLL_SECONDS`); a hammered API costs minutes of throttling
+across the whole patrol.
 
 ## Output
 
