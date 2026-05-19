@@ -1440,6 +1440,16 @@ Examples:
     print(f"{GREEN}ok Committed v{new_version} (bump + CHANGELOG){NC}")
 
     # ── Step 12: Create annotated tag with the release notes as body ──
+    # We use raw `git tag -a` instead of `claude plugin tag` (Claude Code
+    # v2.1.118) on purpose. `claude plugin tag` writes the tag as
+    # `{plugin-name}--v{version}` (e.g. ai-maestro-maintainer-agent--v1.0.10)
+    # to disambiguate multi-plugin marketplace repos. This repo uses the
+    # legacy `v{version}` scheme, which is what `.github/workflows/release.yml`
+    # matches via `on.push.tags: 'v*.*.*'` and what GitHub Releases keys on.
+    # Switching schemes would orphan all existing tags and require a
+    # coordinated workflow + release migration — out of scope for routine
+    # publishes. Per the v2.1.110 docs, raw `git tag` with a matching
+    # plugin.json is officially equivalent to `claude plugin tag`.
     print(f"\n{BLUE}=== Step 12: Create annotated tag v{new_version} ==={NC}")
     notes_path = plugin_root / ".git-cliff-release-notes.md"
     if notes_path.exists():
