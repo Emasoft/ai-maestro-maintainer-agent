@@ -81,14 +81,38 @@ Once the agent session is running:
   `$CLAUDE_CODE_SESSION_ID` (added 2.1.132) for per-session workspace
   isolation. MEDIUM is the effort floor: `$CLAUDE_EFFORT=LOW` is intentionally
   promoted to MEDIUM because triage that skips code verification is unsafe;
-  set `$CLAUDE_EFFORT=MAX` for difficult issues that need cross-file analysis.
-  Earlier Claude Code versions still work — both env vars degrade gracefully
-  to the historical single-workspace, ambiguity-only-grep defaults — but you
-  lose concurrency safety and effort-aware triage.
+  set `$CLAUDE_EFFORT=MAX` (or `XHIGH`, added 2.1.111) for difficult issues
+  that need cross-file analysis. Earlier Claude Code versions still work —
+  both env vars degrade gracefully to the historical single-workspace,
+  ambiguity-only-grep defaults — but you lose concurrency safety and
+  effort-aware triage.
 - `gh` CLI authenticated (`gh auth login`)
 - `git` configured with user identity
 - `uv` (for Python repos with `scripts/publish.py`)
 - SERENA MCP (optional, improves code search)
+
+## Behaviour notes
+
+- **GitHub rate-limit awareness** (Claude Code ≥ 2.1.116). The Bash tool
+  prepends a `GitHub API rate limit` hint to `gh` output when the REST or
+  search-API limit is close. Both the patrol and triage skills honour this
+  hint: patrol sleeps for `$POLL_SECONDS` instead of retrying inside the
+  same cycle, and triage returns a `needs-info / rate-limit deferred`
+  disposition so the issue is **not** marked processed in the ledger and is
+  re-picked-up on the next cycle with a fresh budget. Tight retry loops
+  only deepen GitHub's back-off — the skills will never retry the same
+  `gh` call inside one invocation.
+- **Permission prompts.** If you are running the agent unattended and want
+  to reduce permission prompts (e.g. for the `Bash(git:*)`, `Bash(gh:*)`,
+  `Bash(uv:*)` patterns this plugin uses), invoke the
+  `/less-permission-prompts` skill (Claude Code ≥ 2.1.111) once at the
+  start of the session. It walks you through trusting the allow-list
+  declared in each skill's frontmatter — the lists in this plugin are
+  already scoped to the exact subcommands the workflow needs.
+- **Observability** (Claude Code ≥ 2.1.145). `claude agents --json` emits a
+  machine-readable view of every running agent (including this one), and
+  OTEL spans for agent activity expose `agent_id` / `parent_agent_id` so
+  you can correlate patrol cycles in your observability backend.
 
 ## License
 
