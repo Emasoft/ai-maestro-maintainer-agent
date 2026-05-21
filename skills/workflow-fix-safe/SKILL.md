@@ -55,8 +55,10 @@ branch. Pushing is the caller's responsibility.
 3. Layer idempotent hardening on each `.github/workflows/*.yml`:
    top-level `permissions: contents: read`, `concurrency:`,
    per-job `timeout-minutes:`, per-checkout
-   `persist-credentials: false`. Use the Read+Edit tools — never
-   sed/awk for YAML edits.
+   `persist-credentials: false`, plus a jq `--arg` trap audit
+   (rewrite any `${VAR}` inside a double-quoted jq filter to use
+   `--arg name "$VAR"`). Use the Read+Edit tools — never sed/awk
+   for YAML edits.
 4. Post-scan via workflow-scan; abort if new findings appeared.
 5. Stage by name (NEVER `git add -A`) and commit:
    `chore(ci): apply safe workflow hardening`.

@@ -48,6 +48,8 @@ Files in this directory:
 | `templates/go.yml` | Go CI (`go vet && go test`) |
 | `templates/generic.yml` | Language-agnostic baseline + manual customization stub |
 | `templates/zizmor-job.yml` | The `workflow-security` job (appended to every CI workflow) |
+| `templates/dependabot.yml` | Weekly `github-actions` Dependabot config (always seeded) |
+| `templates/npmrc-hardened` | `.npmrc` with 24h quarantine + exotic-subdep block (Node only) |
 | `templates/ruleset.json` | The default-branch ruleset spec consumed by `workflow-protect-branch` post-merge |
 
 ## Step-by-step commands
@@ -73,7 +75,19 @@ mkdir -p .github/workflows
 cp "$SKILL_REFS/$LANG.yml"        .github/workflows/ci.yml
 cp "$SKILL_REFS/zizmor-job.yml"   .github/workflows/security.yml
 
-# Step 5 — stash the ruleset spec (NOT committed)
+# Step 5 — seed supply-chain config + stash the ruleset spec.
+#
+# dependabot.yml is ALWAYS seeded — it tracks the github-actions
+# ecosystem so SHA-pinned actions don't go silently stale.
+# .npmrc is seeded only on Node repos and adds the 24h package
+# quarantine + exotic-subdep block from the Atai-Barkai playbook.
+cp "$SKILL_REFS/dependabot.yml" .github/dependabot.yml
+if [ "$LANG" = "node" ]; then
+  cp "$SKILL_REFS/npmrc-hardened" .npmrc
+fi
+
+# Ruleset spec is stashed to a tmpfile (NOT committed) —
+# workflow-protect-branch picks it up post-merge.
 RULESET_TMP=$(mktemp -t ruleset.XXXXXX.json)
 cp "$SKILL_REFS/ruleset.json" "$RULESET_TMP"
 echo "ruleset stashed at: $RULESET_TMP"
@@ -87,8 +101,12 @@ git checkout -b chore/bootstrap-ci
 # Step 8 — verify zizmor + actionlint clean
 # Chain the workflow-scan skill here.
 
-# Step 9 — commit by name
-git add .github/workflows/ci.yml .github/workflows/security.yml
+# Step 9 — commit by name (include the supply-chain seeds)
+git add .github/workflows/ci.yml .github/workflows/security.yml \
+        .github/dependabot.yml
+if [ -f .npmrc ]; then
+  git add .npmrc
+fi
 git commit -m "chore: bootstrap secure CI baseline (zizmor-clean)"
 
 # Step 10 — print follow-up

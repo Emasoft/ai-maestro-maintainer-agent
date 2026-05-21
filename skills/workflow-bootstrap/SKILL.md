@@ -10,10 +10,11 @@ description: |
   under .github/workflows/, applies all zizmor hardening rules
   from the start (top-level permissions: contents: read,
   concurrency:, per-job timeout-minutes, persist-credentials:
-  false on every checkout, no template-injection patterns), drops
-  a baseline branch-ruleset spec, then chains workflow-pin-actions
-  (SHA-pin every uses:) and workflow-scan (verify clean) so the
-  resulting pipeline is fully hardened on the very first push.
+  false on every checkout, no template-injection patterns), seeds
+  .github/dependabot.yml (and .npmrc for Node repos) so SHA pins
+  stay current, drops a baseline branch-ruleset spec, then chains
+  workflow-pin-actions and workflow-scan so the resulting pipeline
+  is hardened on the very first push.
   REFUSES to overwrite if .github/workflows/ already contains user
   files — use workflow-fix-safe + workflow-pin-actions instead.
   Assumes the gh CLI is authenticated by AI Maestro and the
@@ -46,14 +47,12 @@ first push. Refuses to overwrite existing workflows.
 
 Copy this checklist and track your progress:
 
-- [ ] Repo entrusted to maintainer (`githubRepo` set)
-- [ ] Working tree clean, no existing workflows
+- [ ] Repo entrusted; tree clean; no existing workflows
 - [ ] Primary language detected
-- [ ] CI workflow + zizmor-security job written
-- [ ] Ruleset spec written to tmpfile
-- [ ] workflow-pin-actions chained (SHA pinning)
-- [ ] workflow-scan post-sweep clean
-- [ ] Commit landed on `chore/bootstrap-ci`
+- [ ] CI + zizmor-security workflow written
+- [ ] dependabot.yml (+ .npmrc if Node) seeded
+- [ ] Ruleset spec stashed; pin-actions + scan chained
+- [ ] Commit on `chore/bootstrap-ci`
 
 ## Instructions
 
@@ -64,8 +63,9 @@ Copy this checklist and track your progress:
 3. Copy `references/templates/<lang>.yml` to
    `.github/workflows/ci.yml`; substitute placeholders.
 4. Append the zizmor-security job from `templates/zizmor-job.yml`.
-5. Stash `templates/ruleset.json` to a tmpfile (NOT committed —
-   `workflow-protect-branch` consumes it post-merge).
+5. Seed `.github/dependabot.yml` (always); seed `.npmrc` if
+   `package.json` is present. Stash `templates/ruleset.json` to a
+   tmpfile — `workflow-protect-branch` applies it post-merge.
 6. Create branch `chore/bootstrap-ci` off the default.
 7. Chain **workflow-pin-actions** to SHA-pin every `uses:` ref.
 8. Chain **workflow-scan** — must report 0 findings; STOP if not.
@@ -110,8 +110,7 @@ Per-language walk-throughs (Node, Rust, Go, refusal) live in
 - Never overwrites existing workflow files.
 - Never commits on `main`/`master` — always `chore/bootstrap-ci`.
 - Never pushes — caller pushes via PR.
-- Never sets secrets here; for `MARKETPLACE_PAT` etc. use the
-  `-b` form via `scripts/setup_marketplace_pat.py`.
+- Never sets secrets here; use `-b` form in helper scripts.
 
 ## Resources
 

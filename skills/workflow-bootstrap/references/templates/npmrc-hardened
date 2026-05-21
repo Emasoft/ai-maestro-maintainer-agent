@@ -1,0 +1,20 @@
+# pnpm / npm supply-chain hardening.
+#
+# Seeded by workflow-bootstrap into Node repos. Applies the two
+# defences the Atai-Barkai supply-chain article calls out for npm /
+# pnpm projects: a 24h quarantine on freshly published packages
+# (defeats the npm-publish-then-delete short attack window) and a
+# block on transitive deps that escape the registry via git/tarball
+# URLs.
+
+# 24-hour quarantine on newly published packages (pnpm)
+minimum-release-age=1440
+
+# Block transitive deps that use Git/tarball URLs (pnpm)
+block-exotic-subdeps=true
+
+# Treat lockfile-out-of-sync as an error in CI (pnpm)
+frozen-lockfile=true
+
+# Refuse to install unless integrity hash matches (npm + pnpm)
+audit-level=high

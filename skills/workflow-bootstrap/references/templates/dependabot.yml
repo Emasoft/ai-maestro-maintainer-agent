@@ -1,0 +1,31 @@
+# Dependabot config seeded by workflow-bootstrap.
+#
+# Pinning actions to SHAs (workflow-pin-actions does this) protects
+# against tag rewrites by a compromised maintainer. Dependabot is the
+# OTHER half of the discipline: it surfaces upstream security patches
+# as PRs so the pinned SHAs don't go silently stale.
+#
+# The `package-ecosystem` block(s) below are language-aware — the
+# bootstrap skill keeps `github-actions` always and appends one of
+# `pip` / `npm` / `cargo` / `gomod` based on the detected language.
+
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: "chore(deps)"
+      include: scope
+    labels:
+      - dependencies
+      - github-actions
+    open-pull-requests-limit: 5

