@@ -2,21 +2,21 @@
 description: |
   Use when maintainer-triage returns action=fix or the user wants
   to fix, work on, or implement a GitHub issue on the maintained
-  repo. Runs the full clone, branch, edit, test, optional workflow
-  audit, commit, publish, and close workflow against the agent's
-  assigned githubRepo. Reads CLAUDE_CODE_SESSION_ID (Claude Code
-  2.1.132+) to isolate the per-session workspace under
-  ~/.aimaestro/maintainer/AGENT_ID/SESSION/. Enforces governance
-  R19.7 (no force-push, no history rewrite, no tag or branch
-  deletion without MANAGER approval) and R19.8 (all tests must
-  pass before any push). For Python repos delegates the publish
-  step to the repo's strict scripts/publish.py uv pipeline; for
-  other ecosystems mirrors the equivalent build-and-test flow with
-  npm, cargo, or go. Closes the issue with a link to the merged
-  commit on success; on test failure comments the log and does NOT
-  push. Do NOT trigger on triage dispositions other than fix, on
-  rejected, duplicate, or needs-info dispositions, or on read-only
-  inspection queries — those bypass the fix workflow entirely.
+  repo. Runs the full clone, branch, edit, test, workflow audit,
+  approval gate, commit, publish, and close lifecycle against the
+  agent's assigned githubRepo. Reads CLAUDE_CODE_SESSION_ID
+  (Claude Code 2.1.132+) to isolate the per-session workspace
+  under ~/.aimaestro/maintainer/AGENT_ID/SESSION/. Enforces
+  governance R19.7 (no force-push, no history rewrite, no
+  tag/branch deletion without MANAGER) and R19.8 (all tests pass
+  before push). Calls maintainer-approval-gate before every
+  commit — if the planned diff touches a protected path, the fix
+  halts pending approve-protected-edit from the authorized user.
+  For Python repos publishes via scripts/publish.py; mirrors the
+  build-and-test flow for npm / cargo / go. Closes the issue with
+  a commit link on success; on failure comments the log and does
+  NOT push. Do NOT trigger on triage dispositions other than fix,
+  on rejected/duplicate/needs-info, or on read-only queries.
   Trigger with phrases like "fix issue #N", "work on issue #N",
   or "implement issue #N".
 ---
@@ -25,12 +25,10 @@ description: |
 
 ## Overview
 
-Handles the complete fix lifecycle for a triaged GitHub issue.
-Clones (or updates) the maintained repo into a per-session
-workspace, creates an isolated feature branch, applies the code
-fix, runs the test suite, optionally audits any touched
-workflows, commits with a conventional message, publishes via
-the repo's pipeline, and closes the issue with a commit link.
+Handles the complete fix lifecycle: clone → branch → edit → test
+→ workflow audit (if touched) → approval gate → commit → publish
+→ close. The approval-gate step refuses to commit any diff that
+touches a protected path without explicit maintainer approval.
 
 ## Prerequisites
 
@@ -43,11 +41,10 @@ Copy this checklist and track your progress (per-fix):
 
 - [ ] Issue triaged with action=fix
 - [ ] Feature branch created
-- [ ] Code changes applied
-- [ ] Tests passing
-- [ ] Workflow audit run (only if `.github/workflows/` touched)
-- [ ] Published via pipeline
-- [ ] Issue closed
+- [ ] Code changes applied; tests passing
+- [ ] Workflow audit (if `.github/workflows/` touched)
+- [ ] Approval gate cleared (no protected-path hits OR approved)
+- [ ] Published via pipeline; issue closed
 
 ## Instructions
 
@@ -58,26 +55,29 @@ Copy this checklist and track your progress (per-fix):
 3. Read the issue body, search related code, plan the fix.
 4. Apply the minimum changes; match existing style.
 5. Run the test suite — ALL tests must pass (R19.8).
-6. If `.github/workflows/` was touched, chain the
-   **workflow-scan** skill; it auto-creates the
-   `workflow-security-review-needed` label via
-   `gh label create --force` if it needs to flag a regression.
-   Non-blocking.
-7. Commit: `fix: <description> (closes #N)`.
-8. Publish: `uv run python scripts/publish.py --patch` (or the
+6. If `.github/workflows/` was touched, chain **workflow-scan**;
+   it auto-creates `workflow-security-review-needed` via
+   `gh label create --force` on regression. Non-blocking.
+7. **Approval gate** — invoke **maintainer-approval-gate** CHECK.
+   If the planned diff hits any protected path, the gate posts
+   an approval-request comment and returns `needs-approval`.
+   HALT — do NOT commit. Next cycle, the gate's VERIFY mode
+   resumes the fix only if `$AUTHORIZED_USER` replied with
+   `approve-protected-edit`.
+8. Commit: `fix: <description> (closes #N)`.
+9. Publish: `uv run python scripts/publish.py --patch` (or the
    repo's pipeline equivalent).
-9. Comment on the issue with the commit SHA + new version, then
-   close it.
-10. Return to patrol: `git checkout main && git pull origin main`.
+10. Comment on the issue with the commit SHA + new version, then
+    close it.
+11. Return to patrol: `git checkout main && git pull origin main`.
 
 Full step-by-step commands are in
 [references/fix-steps.md](references/fix-steps.md).
 
 ## Output
 
-A closed GitHub issue with a comment linking to the fix commit
-and the new version, plus a merged (or PR-created) branch with
-the code change.
+A closed issue with a commit-link comment and the new version,
+plus a merged (or PR-created) branch with the code change.
 
 ## Error Handling
 
@@ -88,40 +88,32 @@ the code change.
 | `gh` not authenticated | Stop, report to main agent |
 | Push rejected | Investigate (e.g. needs rebase) — NEVER force-push |
 | `.github/workflows/` audit surfaces NEW high finding | Comment on issue, tag `workflow-security-review-needed`, continue |
+| Approval-gate returns `needs-approval` | HALT fix; do NOT commit; resume next cycle if authorized user replies `approve-protected-edit` |
 
 ## Examples
 
-Fix a verified bug:
+```
+"fix #42" → clone, branch, edit, tests pass, approval-gate
+noop, commit, publish, close
+```
 
 ```
-User: "fix issue #42"
-→ Clone/update repo, create branch fix/42-null-pointer
-→ Edit the offending code
-→ All tests pass
-→ git commit -m "fix: handle null pointer (closes #42)"
-→ uv run python scripts/publish.py --patch
-→ gh issue close 42 with commit link
+"fix #58" (touches .github/workflows/) → tests pass →
+approval-gate CHECK requests approve-protected-edit → HALT;
+next cycle VERIFY finds approval → RESUME → commit, publish
 ```
 
 ## Constraints
 
-- NEVER force-push (R19.7).
-- NEVER rewrite history or delete tags/branches without MANAGER.
-- ALL tests must pass before push (R19.8).
-- Pre-push hooks must pass — NEVER `--no-verify`.
-- One fix per issue — never bundle multiple fixes in one commit.
+- NEVER force-push (R19.7); never rewrite history.
+- ALL tests pass before push (R19.8); NEVER `--no-verify`.
+- One fix per issue — never bundle multiple fixes.
 
 ## Resources
 
-- [Step-by-step reference](references/fix-steps.md):
-  - Step 1: Prepare the Workspace
-  - Step 2: Create a Feature Branch
-  - Step 3: Understand the Issue
-  - Step 4: Make the Code Changes
-  - Step 5: Run Tests
-  - Step 6: Commit
-  - Step 7: Publish
-  - Step 8: Close the Issue
-  - Step 9: Return to Patrol
+- [Step-by-step reference](references/fix-steps.md): workspace,
+  branch, code changes, tests, workflow-scan, approval-gate,
+  commit, publish, close, return to patrol
+- Companion: `maintainer-approval-gate`, `maintainer-guardian`,
+  `workflow-scan`, `workflow-fix-safe`.
 - Conventional Commits: <https://www.conventionalcommits.org/>
-- GitHub CLI: <https://cli.github.com/manual/>

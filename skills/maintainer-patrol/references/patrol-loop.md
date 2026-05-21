@@ -4,6 +4,7 @@
 
 - [Poll interval and bounds](#poll-interval-and-bounds)
 - [Ledger setup](#ledger-setup)
+- [Guardian pre/post hooks](#guardian-prepost-hooks)
 - [Per-cycle loop body](#per-cycle-loop-body)
 - [Rate-limit handling](#rate-limit-handling)
 - [Stopping the patrol](#stopping-the-patrol)
@@ -50,6 +51,45 @@ The ledger persists across hibernation. On resume, replay it
 against the current open-issue list to skip already-processed
 entries.
 
+## Guardian pre/post hooks
+
+Each patrol cycle is bracketed by Guardian-Mode work that turns
+the maintainer from a reactive issue-fixer into a proactive
+guardian of the repo.
+
+**Pre-cycle (before `gh issue list`):**
+
+```bash
+# 1. Backstop the SessionStart hook — make sure the baseline exists.
+BASELINE="$HOME/.aimaestro/maintainer/$AGENT_ID/guardian-baseline.json"
+if [ ! -f "$BASELINE" ]; then
+  # Invoke maintainer-guardian in baseline mode.
+  # ...
+fi
+
+# 2. Run the per-cycle scan and read its disposition.
+# Invoke maintainer-guardian in scan mode → ./guardian-state.json
+# Disposition shape: {delta: {...}, routes: [...]}
+```
+
+If the scan returns a **T5 hit** (secret-leak marker in recent
+commits) the loop STOPS and the authorized user is alerted — no
+issue-loop work happens this cycle.
+
+If the scan returns critical **T1/T2/T3/T4** deltas, the routed
+work (auto-fix PR, tracking issue, alert) is launched and the
+patrol SKIPS the issue loop this cycle to let the routed work
+land first. The skip is recorded so the issue list is picked up
+again next cycle without back-pressure on GitHub.
+
+**Post-cycle (after the issue loop):**
+
+```bash
+# Refresh the branch-rules cache so the next Guardian scan diffs
+# against the live state of the repo's ruleset.
+# Invoke workflow-protect-branch in SHOW mode.
+```
+
 ## Per-cycle loop body
 
 ```bash
@@ -63,7 +103,9 @@ sleep "$POLL_SECONDS"
 ```
 
 Dispositions recorded in the ledger: `triaged`, `fixed`,
-`rejected`, `duplicate`, `needs-info`, `manual`, `error`.
+`rejected`, `duplicate`, `needs-info`, `manual`, `error`,
+`guardian-skip` (cycle was pre-empted by a Guardian critical
+finding).
 
 ## Rate-limit handling
 

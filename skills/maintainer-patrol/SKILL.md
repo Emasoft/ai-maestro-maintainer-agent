@@ -54,16 +54,27 @@ Copy this checklist and track your progress (pre-flight):
 1. Verify prerequisites (`gh auth status`, `githubRepo` set).
 2. Initialize ledger at
    `~/.aimaestro/maintainer/<agentId>/processed-issues.json`
-   if missing.
+   if missing. If
+   `~/.aimaestro/maintainer/<agentId>/guardian-baseline.json`
+   is also missing, invoke **maintainer-guardian** in baseline
+   mode first (the SessionStart hook normally does this, but
+   patrol is the backstop).
 3. Compute `$POLL_SECONDS` from `MAINTAINER_POLL_INTERVAL_MS`
-   (default 300, floor 10, ceiling 3600). See
-   [patrol-loop.md](references/patrol-loop.md#poll-interval-and-bounds).
-4. Fetch open issues: `gh issue list --repo "$REPO" --state open
+   (default 300, floor 10, ceiling 3600).
+4. **Pre-cycle Guardian scan** — invoke **maintainer-guardian**
+   in scan mode. If it returns a T5 (secret leak) hit, STOP the
+   patrol and alert the authorized user. For other critical
+   deltas, file/auto-fix per the routing table and SKIP the issue
+   loop this cycle (let the routed work land first).
+5. Fetch open issues: `gh issue list --repo "$REPO" --state open
    --limit 50 --json number,title,author,labels,createdAt,body`.
-5. Identify issues whose `number` is NOT in `ledger.processed`.
-6. For each new issue, invoke **maintainer-triage** with number,
+6. Identify issues whose `number` is NOT in `ledger.processed`.
+7. For each new issue, invoke **maintainer-triage** with number,
    title, author, labels, body. Record returned disposition.
-7. `sleep "$POLL_SECONDS"`; repeat from step 4.
+8. **Post-cycle refresh** — chain **workflow-protect-branch** SHOW
+   to refresh the branch-rules cache; the next Guardian scan diffs
+   against the refreshed state.
+9. `sleep "$POLL_SECONDS"`; repeat from step 4.
 
 Detailed reference: [patrol-loop.md](references/patrol-loop.md).
 

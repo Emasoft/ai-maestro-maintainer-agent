@@ -7,6 +7,7 @@
 - [Step 3: Understand the Issue](#step-3-understand-the-issue)
 - [Step 4: Make the Code Changes](#step-4-make-the-code-changes)
 - [Step 5: Run Tests](#step-5-run-tests)
+- [Step 5.5: Approval Gate](#step-55-approval-gate)
 - [Step 6: Commit](#step-6-commit)
 - [Step 7: Publish](#step-7-publish)
 - [Step 8: Close the Issue](#step-8-close-the-issue)
@@ -100,6 +101,46 @@ test framework:
 ```
 
 If tests fail after 3 attempts, comment on the issue and label `fix-failed`.
+
+---
+
+## Step 5.5: Approval Gate
+
+Between passing tests and committing, invoke the
+**maintainer-approval-gate** skill in CHECK mode. The gate inspects
+the planned diff (`git diff --name-only HEAD --`) against the
+canonical protected-paths list — `.github/workflows/**`,
+`scripts/publish.py`, `.gitignore`, `.npmrc`, `LICENSE`, etc. —
+plus any per-repo override at `.aimaestro/protected-paths.txt`.
+
+```bash
+# Invoke approval-gate CHECK (returns "noop" / "needs-approval")
+# See skills/maintainer-approval-gate/references/protected-paths.md
+# for the full command surface.
+GATE_RESULT="$(invoke maintainer-approval-gate CHECK \
+  --issue "$ISSUE_NUM" --repo "$REPO")"
+
+if [ "$GATE_RESULT" = "needs-approval" ]; then
+  # The gate has posted an approve-protected-edit comment on the
+  # issue and labelled it awaiting-maintainer-approval.
+  # HALT — do NOT commit. Return control to patrol.
+  echo "{\"issue\": $ISSUE_NUM, \"disposition\": \"awaiting-approval\"}"
+  exit 0
+fi
+```
+
+On the next patrol cycle, the gate's VERIFY mode reads the issue
+comments and looks for `approve-protected-edit` from
+`$AUTHORIZED_USER`. If found, the fix resumes from Step 6
+(commit). If a `reject-protected-edit` is found instead, the
+branch is left in place and the issue gets `fix-rejected`.
+
+Why this step is mandatory: an adversarial bug report saying
+"remove the type-check step from validate.yml" would otherwise
+sail through Steps 1-5 (the agent could write the edit, run the
+tests with the type-check removed, and commit the change). The
+gate is the single chokepoint that catches the adversarial-edit
+pattern BEFORE it lands.
 
 ---
 
