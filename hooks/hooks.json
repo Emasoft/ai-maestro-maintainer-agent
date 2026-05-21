@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[ai-maestro-maintainer-agent] Guardian Mode active. Before the first patrol cycle, invoke the maintainer-guardian skill in baseline mode to capture a clean security snapshot for T1-T5 threat detection. The skill is idempotent — re-running just refreshes the baseline at ~/.aimaestro/maintainer/<id>/guardian-baseline.json. This is the proactive half of the maintainer'\''s job — you ARE the guardian of the repo.'"
+          }
+        ]
+      }
+    ]
+  }
+}
