@@ -64,6 +64,7 @@ Once the agent session is running:
 | `maintainer-patrol` | "start patrol", "begin maintenance loop" |
 | `maintainer-triage` | "triage issue #N", "classify issue #N" |
 | `maintainer-fix` | "fix issue #N", "work on issue #N" |
+| `maintainer-workflow-audit` | "scan workflows", "audit github actions", "zizmor scan", "fix workflow security" |
 
 ## Governance Rules
 
@@ -88,7 +89,9 @@ Once the agent session is running:
   effort-aware triage.
 - `gh` CLI authenticated (`gh auth login`)
 - `git` configured with user identity
-- `uv` (for Python repos with `scripts/publish.py`)
+- `uv` (for Python repos with `scripts/publish.py`, and for the
+  workflow-audit skill — `uvx zizmor` is fetched on demand,
+  no host install required)
 - SERENA MCP (optional, improves code search)
 
 ## Behaviour notes
@@ -113,6 +116,20 @@ Once the agent session is running:
   machine-readable view of every running agent (including this one), and
   OTEL spans for agent activity expose `agent_id` / `parent_agent_id` so
   you can correlate patrol cycles in your observability backend.
+- **GitHub Actions security.** The `maintainer-workflow-audit` skill
+  wraps [zizmor](https://github.com/zizmorcore/zizmor) (`uvx zizmor` —
+  no host install needed) for static analysis of `.github/workflows/`.
+  It catches template injection, credential persistence, excessive
+  permissions, unpinned action refs, known-vulnerable actions, and
+  ~30 other CI/CD smells. Three modes: `scan-only`, `scan-and-fix`
+  (commits `--fix=safe` directly to the current branch — never
+  force-push), and `audit-and-comment` (chained from `maintainer-fix`
+  when a bug-fix touches `.github/workflows/`). A companion job in
+  `.github/workflows/validate.yml` runs zizmor on every push / PR and
+  uploads SARIF to GitHub code-scanning, providing a post-push safety
+  net. All third-party actions in this plugin's own workflows are
+  SHA-pinned with version comments per zizmor's `unpinned-uses`
+  policy.
 
 ## License
 
