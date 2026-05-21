@@ -1,0 +1,124 @@
+---
+description: |
+  Use when the maintainer agent is entrusted with a NEW GitHub
+  repo that has no .github/workflows/ yet (or only a broken /
+  insecure skeleton), and the user wants the agent to set up a
+  secure CI baseline from scratch. Detects the primary language
+  (Python via pyproject.toml, Node via package.json, Rust via
+  Cargo.toml, Go via go.mod, else generic), writes a
+  language-appropriate CI workflow plus a zizmor-security job
+  under .github/workflows/, applies all zizmor hardening rules
+  from the start (top-level permissions: contents: read,
+  concurrency:, per-job timeout-minutes, persist-credentials:
+  false on every checkout, no template-injection patterns), drops
+  a baseline branch-ruleset spec, then chains workflow-pin-actions
+  (SHA-pin every uses:) and workflow-scan (verify clean) so the
+  resulting pipeline is fully hardened on the very first push.
+  REFUSES to overwrite if .github/workflows/ already contains user
+  files — use workflow-fix-safe + workflow-pin-actions instead.
+  Assumes the gh CLI is authenticated by AI Maestro and the
+  authenticated user has admin rights. Commits on
+  chore/bootstrap-ci and stops there — caller opens the PR.
+  Trigger with phrases like "set up workflows", "bootstrap CI",
+  "initialize github actions", or "configure github for this
+  new repo".
+---
+
+# workflow-bootstrap — first-time secure CI setup
+
+## Overview
+
+Scaffolds a secure GitHub Actions baseline on a freshly-entrusted
+repo. Detects the primary language, writes a CI workflow plus a
+zizmor-security job, applies hardening from the start, drops a
+baseline branch-ruleset spec, then chains `workflow-pin-actions`
+and `workflow-scan` so the pipeline is zizmor-clean on the very
+first push. Refuses to overwrite existing workflows.
+
+## Prerequisites
+
+- `gh auth token` returns a value; authenticated user has admin
+  permission on the target repo.
+- Working tree clean.
+- `.github/workflows/` absent or empty (refuses if user files are
+  present — suggest `workflow-fix-safe` + `workflow-pin-actions`).
+- `uvx` on PATH (for the zizmor self-check).
+
+Copy this checklist and track your progress:
+
+- [ ] Repo entrusted to maintainer (`githubRepo` set)
+- [ ] Working tree clean, no existing workflows
+- [ ] Primary language detected
+- [ ] CI workflow + zizmor-security job written
+- [ ] Ruleset spec written to tmpfile
+- [ ] workflow-pin-actions chained (SHA pinning)
+- [ ] workflow-scan post-sweep clean
+- [ ] Commit landed on `chore/bootstrap-ci`
+
+## Instructions
+
+1. Refuse if `.github/workflows/` has any `*.yml`/`*.yaml`.
+2. Detect language via file fingerprint (Python → `pyproject.toml`,
+   Node → `package.json`, Rust → `Cargo.toml`, Go → `go.mod`,
+   else generic).
+3. Copy `references/templates/<lang>.yml` to
+   `.github/workflows/ci.yml`; substitute placeholders.
+4. Append the zizmor-security job from `templates/zizmor-job.yml`.
+5. Stash `templates/ruleset.json` to a tmpfile (NOT committed —
+   `workflow-protect-branch` consumes it post-merge).
+6. Create branch `chore/bootstrap-ci` off the default.
+7. Chain **workflow-pin-actions** to SHA-pin every `uses:` ref.
+8. Chain **workflow-scan** — must report 0 findings; STOP if not.
+9. Stage by name; commit
+   `chore: bootstrap secure CI baseline (zizmor-clean)`.
+10. Print post-merge follow-up: open PR; after merge invoke
+    **workflow-protect-branch**.
+
+## Output
+
+- `.github/workflows/ci.yml` (+ optional `security.yml`) on
+  branch `chore/bootstrap-ci`.
+- A commit + the suggested follow-up commands printed to stdout.
+- JSON disposition with `language`, `files_written`,
+  `pinned_actions`, `commit_sha`, `next_step`.
+
+## Error Handling
+
+| Error | Action |
+|-------|--------|
+| Existing workflow files | Stop, suggest workflow-fix-safe + workflow-pin-actions |
+| Working tree dirty | Stop, ask caller to commit/stash first |
+| Language unrecognised | Use `generic.yml` template, warn caller |
+| Admin check fails | Stop, surface "needs admin" |
+| Post-scan finds anything | Stop, no commit |
+
+## Examples
+
+```
+User: "set up workflows for this new Python repo"
+→ Detect Python (pyproject.toml) → templates/python.yml
+→ Append zizmor-security; pin-actions; scan: 0 findings
+→ commit on chore/bootstrap-ci
+→ Print follow-up: PR, then workflow-protect-branch post-merge
+```
+
+Per-language walk-throughs (Node, Rust, Go, refusal) live in
+[references/instructions.md](references/instructions.md).
+
+## Constraints
+
+- Never overwrites existing workflow files.
+- Never commits on `main`/`master` — always `chore/bootstrap-ci`.
+- Never pushes — caller pushes via PR.
+- Never sets secrets here; for `MARKETPLACE_PAT` etc. use the
+  `-b` form via `scripts/setup_marketplace_pat.py`.
+
+## Resources
+
+- [Step-by-step + templates](references/instructions.md):
+  - Language detection table
+  - Template inventory
+  - Per-step commands
+  - Post-merge ruleset apply
+- Companion: `workflow-scan`, `workflow-fix-safe`,
+  `workflow-pin-actions`, `workflow-protect-branch`.

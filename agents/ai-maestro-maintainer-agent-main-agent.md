@@ -9,6 +9,7 @@ skills:
   - maintainer-patrol
   - maintainer-triage
   - maintainer-fix
+  - workflow-bootstrap
   - workflow-scan
   - workflow-fix-safe
   - workflow-pin-actions
@@ -116,14 +117,15 @@ When a triaged issue is ready to fix, use the **maintainer-fix** skill:
 10. Comment on the issue with the fix commit hash and new version
 11. Close the issue
 
-## GitHub Actions Security (4 focused skills)
+## GitHub Actions Security (5 focused skills)
 
 | Skill | Triggers | Effect |
 |---|---|---|
+| **workflow-bootstrap** | "set up workflows", "bootstrap CI", "initialize github actions", "configure github for this new repo" | First-time scaffold for a freshly-entrusted repo with no `.github/workflows/` yet — detects language (Python / Node / Rust / Go / generic), writes a hardened CI workflow + `workflow-security` job from templates, drops a baseline ruleset spec, chains workflow-pin-actions + workflow-scan to verify, commits on `chore/bootstrap-ci`. Refuses to overwrite existing workflows. |
 | **workflow-scan** | "scan workflows", "audit github actions", "zizmor scan" | Read-only — runs zizmor + actionlint, writes JSON/markdown report under `$MAIN_ROOT/reports/workflow-scan/`, optionally comments on a linked issue. No file modifications. |
 | **workflow-fix-safe** | "fix workflow security", "harden workflows" | Runs `zizmor --fix=safe`, adds missing top-level `permissions: contents: read` / `concurrency:` / `timeout-minutes:`, commits on the current branch. Never force-push (R19.7). |
-| **workflow-pin-actions** | "pin workflow actions", "SHA-pin actions" | Discovers every `uses: name@vN`, resolves `vN` → 40-char commit SHA via `gh api`, replaces inline with `uses: name@<sha>  # vX.Y.Z`, commits. |
-| **workflow-protect-branch** | "protect main branch", "apply branch rules" | Idempotent `gh api POST repos/.../rulesets` — requires status checks (`validate`, `workflow-security`), blocks force-push, blocks deletion. No human prompts. |
+| **workflow-pin-actions** | "pin workflow actions", "SHA-pin actions" | Discovers every `uses: name@vN`, resolves `vN` → 40-char commit SHA via `gh api`, replaces inline with the SHA plus a trailing semver comment, commits. |
+| **workflow-protect-branch** | "protect main branch", "apply branch rules" | Idempotent `gh api POST repos/.../rulesets` — requires status checks (auto-detected from local workflows), blocks force-push, blocks deletion. No human prompts. |
 
 All four skills assume `gh` is authenticated and secrets/PATs are pre-exported in the environment (AI Maestro guarantees this). Labels they need are auto-created via `gh label create --force` on first use. The CI safety-net job in `.github/workflows/validate.yml` runs zizmor on every push and PR, uploading SARIF to GitHub code-scanning.
 

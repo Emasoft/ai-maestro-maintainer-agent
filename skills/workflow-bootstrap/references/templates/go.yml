@@ -1,0 +1,40 @@
+# Go CI baseline.
+# workflow-pin-actions converts every `@vN` to a 40-char commit SHA
+# (with a trailing `# vX.Y.Z` comment) on the first run.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -v -race ./...

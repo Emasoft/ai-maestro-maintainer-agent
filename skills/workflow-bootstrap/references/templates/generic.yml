@@ -1,0 +1,40 @@
+# Language-agnostic CI baseline.
+# workflow-pin-actions converts every `@vN` to a 40-char commit SHA
+# (with a trailing `# vX.Y.Z` comment) on the first run.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build / lint / test
+        env:
+          REPO_NAME: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          echo "TODO: implement build/test steps for $REPO_NAME."
+          echo "This is the generic template — replace this step"
+          echo "with the language-appropriate commands for your repo."
+          # Example placeholders:
+          #   make lint && make test
+          #   ./scripts/ci.sh

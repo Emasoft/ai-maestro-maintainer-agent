@@ -64,6 +64,7 @@ Once the agent session is running:
 | `maintainer-patrol` | "start patrol", "begin maintenance loop" |
 | `maintainer-triage` | "triage issue #N", "classify issue #N" |
 | `maintainer-fix` | "fix issue #N", "work on issue #N" |
+| `workflow-bootstrap` | "set up workflows", "bootstrap CI", "configure github for this new repo" |
 | `workflow-scan` | "scan workflows", "audit github actions", "zizmor scan" |
 | `workflow-fix-safe` | "fix workflow security", "harden workflows" |
 | `workflow-pin-actions` | "pin workflow actions", "SHA-pin actions" |
@@ -93,9 +94,15 @@ Once the agent session is running:
 - `gh` CLI authenticated (`gh auth login`)
 - `git` configured with user identity
 - `uv` (for Python repos with `scripts/publish.py`, and for the
-  workflow-audit skill — `uvx zizmor` is fetched on demand,
-  no host install required)
+  workflow-* skills — `uvx zizmor` is fetched on demand, no host
+  install required)
 - SERENA MCP (optional, improves code search)
+- `$MARKETPLACE_PAT` exported in your shell (or a .env outside the
+  repo) for the one-time setup of the `notify-marketplace` workflow.
+  Run `uv run scripts/setup_marketplace_pat.py` to push the secret
+  to both the plugin repo and the marketplace hub — the script
+  always uses `gh secret set NAME -b "$VALUE"` (the only reliable
+  form; stdin pipes silently produce broken secrets).
 
 ## Behaviour notes
 
@@ -123,24 +130,30 @@ Once the agent session is running:
   machine-readable view of every running agent (including this one), and
   OTEL spans for agent activity expose `agent_id` / `parent_agent_id` so
   you can correlate patrol cycles in your observability backend.
-- **GitHub Actions security.** Four focused skills wrap
-  [zizmor](https://github.com/zizmorcore/zizmor) and `actionlint` (both
-  via `uvx`/Homebrew — no manual install needed for zizmor; actionlint
-  is a Homebrew formula):
-    - `workflow-scan` — read-only audit; JSON + markdown reports under
-      `$MAIN_ROOT/reports/workflow-scan/`. Posts a summary on the
-      linked issue when chained from `maintainer-fix`.
-    - `workflow-fix-safe` — runs `zizmor --fix=safe` and adds missing
-      hardening (`permissions: contents: read`, `concurrency:`,
-      `timeout-minutes:`). Commits on the current branch — never
-      force-push (R19.7).
-    - `workflow-pin-actions` — resolves every unpinned `uses: name@vN`
-      to a 40-char commit SHA via `gh api`, replaces inline with
-      `uses: name@<sha>  # vX.Y.Z`.
+- **GitHub Actions security.** Five focused skills wrap
+  [zizmor](https://github.com/zizmorcore/zizmor) and `actionlint`
+  (both via `uvx` / Homebrew — no manual install needed for
+  zizmor; actionlint is a Homebrew formula):
+    - `workflow-bootstrap` — first-time scaffold for a repo with no
+      `.github/workflows/` yet. Detects language (Python / Node /
+      Rust / Go / generic), writes a hardened CI workflow +
+      `workflow-security` job from templates, drops a ruleset spec,
+      chains pin-actions + scan to verify, commits on
+      `chore/bootstrap-ci`. Refuses to overwrite existing workflows.
+    - `workflow-scan` — read-only audit; JSON + markdown reports
+      under `$MAIN_ROOT/reports/workflow-scan/`. Posts a summary on
+      the linked issue when chained from `maintainer-fix`.
+    - `workflow-fix-safe` — runs `zizmor --fix=safe` and adds
+      missing hardening (`permissions: contents: read`,
+      `concurrency:`, `timeout-minutes:`). Commits on the current
+      branch — never force-push (R19.7).
+    - `workflow-pin-actions` — resolves every unpinned
+      `uses: name@vN` to a 40-char commit SHA via `gh api` and
+      rewrites inline with the SHA plus a trailing semver comment.
     - `workflow-protect-branch` — idempotent
-      `gh api POST /repos/.../rulesets` that requires
-      `validate` + `workflow-security` status checks, blocks
-      non-fast-forward pushes, and blocks branch deletion.
+      `gh api POST /repos/.../rulesets` that requires the
+      auto-detected status checks, blocks non-fast-forward pushes,
+      and blocks branch deletion.
   A companion `workflow-security` job in
   `.github/workflows/validate.yml` runs zizmor on every push / PR and
   uploads SARIF to GitHub code-scanning, providing a post-push safety

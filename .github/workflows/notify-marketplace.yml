@@ -2,12 +2,22 @@
 # Plugin-side notifier: tells the marketplace repo to refresh this plugin
 # whenever plugin files change on the default branch.
 #
-# SETUP:
+# SETUP (one-time):
 #   1. Create a PAT with 'repo' scope owned by a marketplace admin.
-#   2. Add it as repo secret MARKETPLACE_PAT on THIS plugin repo:
-#      gh secret set MARKETPLACE_PAT --repo Emasoft/ai-maestro-maintainer-agent --body "$MARKETPLACE_PAT"
-#   3. The marketplace repo (Emasoft/ai-maestro-plugins) also needs the same secret:
-#      gh secret set MARKETPLACE_PAT --repo Emasoft/ai-maestro-plugins --body "$MARKETPLACE_PAT"
+#   2. Export it as $MARKETPLACE_PAT in your shell (or load from a
+#      .env file outside the repo — never commit it).
+#   3. Run the helper to set the secret on BOTH the plugin repo AND
+#      the marketplace repo:
+#        uv run scripts/setup_marketplace_pat.py
+#   4. Manual equivalent (always use `-b` for the value — the stdin
+#      fallback path of `gh secret set` has failure modes that
+#      produce subtly broken secrets):
+#        gh secret set MARKETPLACE_PAT \
+#          --repo Emasoft/ai-maestro-maintainer-agent \
+#          -b "$MARKETPLACE_PAT"
+#        gh secret set MARKETPLACE_PAT \
+#          --repo Emasoft/ai-maestro-plugins \
+#          -b "$MARKETPLACE_PAT"
 
 name: Notify Marketplace
 

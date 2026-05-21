@@ -1,0 +1,66 @@
+# Static analysis of every workflow under .github/workflows/.
+# Runs zizmor (zizmorcore/zizmor) plus actionlint and uploads
+# SARIF to GitHub code-scanning so findings show up in the
+# Security tab. The job's `security-events: write` permission is
+# the only place this template grants write scope — every other
+# job stays at the contents:read default set at the workflow level.
+#
+# This file is APPENDED (or copied as a sibling security.yml) by
+# the workflow-bootstrap skill. workflow-pin-actions converts
+# every `@vN` to a 40-char commit SHA on the first run.
+
+name: workflow-security
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - '.github/workflows/**'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workflow-security-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  workflow-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: false
+
+      - name: Run zizmor (SARIF)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          uvx zizmor --gh-token "$GH_TOKEN" --format=sarif \
+            .github/workflows/ > zizmor.sarif
+
+      - name: Upload SARIF to GitHub code-scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: zizmor.sarif
+          category: zizmor
+
+      - name: Re-run zizmor (text, fail on findings)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uvx zizmor --gh-token "$GH_TOKEN" .github/workflows/
