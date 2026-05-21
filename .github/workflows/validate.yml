@@ -73,3 +73,43 @@ jobs:
           if [ -f validation-report.md ]; then
             cat validation-report.md >> $GITHUB_STEP_SUMMARY
           fi
+
+  # Static analysis of every workflow under .github/workflows/.
+  # Runs zizmor (zizmorcore/zizmor) and uploads SARIF to GitHub
+  # code-scanning so findings show up in the Security tab. The job's
+  # `security-events: write` permission is the only place we grant
+  # write scope — every other job stays at the contents:read default
+  # set at the workflow level.
+  workflow-security:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5.4.2
+        with:
+          enable-cache: false
+
+      - name: Run zizmor (SARIF)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          uvx zizmor --gh-token "$GH_TOKEN" --format=sarif .github/workflows/ \
+            > zizmor.sarif
+
+      - name: Upload SARIF to GitHub code-scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@458d36d7d4f47d0dd16ca424c1d3cda0060f1360  # v3.35.5
+        with:
+          sarif_file: zizmor.sarif
+          category: zizmor
+
+      - name: Re-run zizmor (text, fail on findings)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uvx zizmor --gh-token "$GH_TOKEN" .github/workflows/
