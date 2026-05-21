@@ -1,24 +1,26 @@
 ---
-description: >
+description: |
   Use when MAINTAINER starts, resumes, or the user requests issue
-  monitoring. Polls the agent's assigned `githubRepo` for new open
+  monitoring. Polls the agent's assigned githubRepo for new open
   GitHub issues at a configurable interval (default 5 minutes,
-  bounded 10 s floor and 1 h ceiling via `MAINTAINER_POLL_INTERVAL_MS`),
-  tracks already-processed issues in a persistent JSON ledger at
-  `~/.aimaestro/maintainer/<agentId>/processed-issues.json`,
-  dispatches the **maintainer-triage** skill for each new issue, and
-  records the returned disposition (triaged/fixed/rejected/duplicate/
-  needs-info/manual). Resumes cleanly after hibernation by replaying
-  the ledger against the current open-issue list. Honours the GitHub
-  rate-limit hint added in Claude Code 2.1.116: when the Bash tool
-  prepends "GitHub API rate limit" to a `gh issue list`, the loop
-  sleeps for `$POLL_SECONDS` rather than retrying inside the same
-  cycle, letting the next cycle resume on a fresh API budget.
-  Trigger phrases include "start patrol", "begin maintenance loop",
-  "resume monitoring", "watch for new issues", or "patrol
-  Emasoft/my-project". Do NOT trigger on read-only inspection
-  queries like "show me the open issues" — those go straight to
-  `gh issue list` without entering the polling loop.
+  bounded by a 10 second floor and a 1 hour ceiling via
+  MAINTAINER_POLL_INTERVAL_MS), tracks already-processed issues in
+  a persistent JSON ledger at
+  ~/.aimaestro/maintainer/AGENT_ID/processed-issues.json,
+  dispatches the maintainer-triage skill for each new issue, and
+  records the returned disposition (triaged, fixed, rejected,
+  duplicate, needs-info, or manual). Resumes cleanly after
+  hibernation by replaying the ledger against the current
+  open-issue list. Honours the GitHub rate-limit hint added in
+  Claude Code 2.1.116: when the Bash tool prepends a GitHub API
+  rate limit warning to a gh issue list call, the loop sleeps for
+  the configured poll interval rather than retrying inside the
+  same cycle, letting the next cycle resume on a fresh API budget.
+  Do NOT trigger on read-only inspection queries like "show me the
+  open issues" — those go straight to gh issue list without
+  entering the polling loop. Trigger with phrases like "start
+  patrol", "begin maintenance loop", "resume monitoring", "watch
+  for new issues", or "patrol owner/repo".
 allowed-tools: "Bash(gh:*), Bash(git:*), Read, Write, Glob, Grep"
 ---
 

@@ -1,25 +1,24 @@
 ---
-description: >
-  Use when maintainer-triage returns `action: fix` or the user says
-  "fix issue #N" / "work on issue #N" / "implement issue #N". Runs
-  the full clone → branch → understand → edit → test → commit →
-  publish → close workflow against the agent's assigned
-  `githubRepo`. Reads `$CLAUDE_CODE_SESSION_ID` (Claude Code ≥
-  2.1.132) to isolate the per-session workspace under
-  `~/.aimaestro/maintainer/<agentId>/<session>/`, so concurrent fix
-  sessions never trample each other's clones. Enforces governance
-  rules R19.7 (no force-push, no history rewrite, no tag or branch
-  deletion without MANAGER approval) and R19.8 (all tests must pass
-  before any push). For Python repos, delegates the publish step
-  to the repo's own strict `scripts/publish.py` pipeline (uv-based
-  release flow with conventional-commit tagging); for other
-  ecosystems, mirrors the equivalent build-and-test pipeline with
-  `npm`/`cargo`/`go` before push. Closes the GitHub issue with a
-  link to the merged commit on success; on test failure, opens a
-  comment on the issue with the failure log and does NOT push.
-  Do NOT trigger on triage dispositions other than `action: fix`,
-  on rejected/duplicate/needs-info dispositions, or on read-only
+description: |
+  Use when maintainer-triage returns action=fix or the user wants
+  to fix, work on, or implement a GitHub issue on the maintained
+  repo. Runs the full clone, branch, edit, test, optional workflow
+  audit, commit, publish, and close workflow against the agent's
+  assigned githubRepo. Reads CLAUDE_CODE_SESSION_ID (Claude Code
+  2.1.132+) to isolate the per-session workspace under
+  ~/.aimaestro/maintainer/AGENT_ID/SESSION/. Enforces governance
+  R19.7 (no force-push, no history rewrite, no tag or branch
+  deletion without MANAGER approval) and R19.8 (all tests must
+  pass before any push). For Python repos delegates the publish
+  step to the repo's strict scripts/publish.py uv pipeline; for
+  other ecosystems mirrors the equivalent build-and-test flow with
+  npm, cargo, or go. Closes the issue with a link to the merged
+  commit on success; on test failure comments the log and does NOT
+  push. Do NOT trigger on triage dispositions other than fix, on
+  rejected, duplicate, or needs-info dispositions, or on read-only
   inspection queries — those bypass the fix workflow entirely.
+  Trigger with phrases like "fix issue #N", "work on issue #N",
+  or "implement issue #N".
 # Reviewed 2026-04-15: all 12 tools required for clone→edit→test→publish workflow
 allowed-tools: "Bash(git:*), Bash(gh:*), Bash(uv:*), Bash(npm:*), Bash(cargo:*), Bash(go:*), Read, Write, Edit, Grep, Glob, Agent"
 ---
@@ -61,7 +60,7 @@ Copy this checklist and track your progress:
 3. Read the issue body (`gh issue view`), search related code, plan the fix.
 4. Apply the minimum code changes needed; follow existing style conventions.
 5. Run the test suite (pytest / npm test / cargo test / go test) — all must pass.
-6. If the fix touched anything under `.github/workflows/`, chain the **maintainer-workflow-audit** skill in `audit-and-comment` mode. It runs zizmor against the changed workflows and, if NEW high-severity findings appear on the touched files, comments on the issue with the diff and tags `workflow-security-review-needed`. This step is **non-blocking** — patrol continues even if findings are surfaced. Skip if no workflow files were modified.
+6. If the fix touched anything under `.github/workflows/`, chain the **workflow-scan** skill. It runs zizmor and actionlint against the workflows; if NEW high-severity findings appear on the touched files vs the base branch, it comments the diff on the issue and tags `workflow-security-review-needed` (label auto-created via `gh label create --force` if missing). Non-blocking — patrol continues even if findings are surfaced. Skip if no workflow files were modified.
 7. Commit with a conventional message: `fix: <description> (closes #N)`.
 8. Publish via `uv run python scripts/publish.py --patch` or push and create a PR.
 9. Comment on the issue with commit hash and new version, then close it.
@@ -73,7 +72,7 @@ For detailed commands, see [Step-by-Step Reference](references/fix-steps.md):
   - Step 3: Understand the Issue
   - Step 4: Make the Code Changes
   - Step 5: Run Tests
-  - Step 6: Workflow audit (conditional — chains **maintainer-workflow-audit**)
+  - Step 6: Workflow audit (conditional — chains **workflow-scan**)
   - Step 7: Commit
   - Step 8: Publish
   - Step 9: Close the Issue

@@ -1,29 +1,27 @@
 ---
-description: >
+description: |
   Use when maintainer-patrol surfaces a new open issue or the user
-  asks to "triage issue #N", "classify issue #N", or "decide what to
-  do with issue #N". Classifies a GitHub issue against a flowchart —
-  bug, feature/enhancement, duplicate, invalid/spam, or
-  needs-info — and returns a structured disposition the patrol
-  skill records in the ledger. Enforces governance rule R19.6:
-  feature requests and change proposals are accepted ONLY from the
-  GitHub user authenticated with `gh` on the host (the authorized
-  MAESTRO user); bug reports are welcomed from any author. Reads
-  `$CLAUDE_EFFORT` (Claude Code ≥ 2.1.133) to scale verification
-  depth — MEDIUM is the floor (LOW is intentionally promoted to
-  MEDIUM because triage that skips code verification is unsafe),
-  HIGH adds proactive grep before deciding, and MAX/XHIGH escalate
-  to cross-file analysis for cross-module or self-contradicting
-  issues. Honours the 2.1.116 GitHub rate-limit hint: if any `gh
-  api user` / `gh issue view` / `gh issue comment` / `gh issue
-  edit --add-label` / `gh issue close` / `gh search issues` call
-  trips the rate-limit warning, the skill returns
-  `{disposition: "needs-info", action: "none", reason:
-  "rate-limit deferred"}` so the patrol skill does NOT mark the
-  issue processed and re-picks it up on the next cycle with a
-  fresh API budget. Do NOT trigger on read-only "show me issue
-  #N" queries — those go straight to `gh issue view` without
-  entering the classification flow.
+  wants to triage, classify, or decide what to do with a specific
+  issue on the maintained repo. Classifies a GitHub issue against
+  a flowchart (bug, feature or enhancement, duplicate, invalid or
+  spam, needs-info) and returns a structured disposition the
+  patrol skill records in the ledger. Enforces governance rule
+  R19.6: feature requests and change proposals are accepted ONLY
+  from the GitHub user authenticated with gh on the host (the
+  authorized MAESTRO user); bug reports are welcomed from any
+  author. Reads CLAUDE_EFFORT (Claude Code 2.1.133+) to scale
+  verification depth — MEDIUM is the floor (LOW is intentionally
+  promoted to MEDIUM because triage that skips code verification
+  is unsafe), HIGH adds proactive grep before deciding, and MAX
+  or XHIGH escalate to cross-file analysis for cross-module or
+  self-contradicting issues. Honours the 2.1.116 rate-limit hint:
+  if any gh call trips the rate-limit warning, returns a
+  needs-info disposition with reason "rate-limit deferred" so the
+  patrol skill does NOT mark the issue processed and re-picks it
+  up next cycle with a fresh budget. Do NOT trigger on read-only
+  "show me issue N" queries — those go straight to gh issue view.
+  Trigger with phrases like "triage issue #N", "classify issue
+  #N", or "decide what to do with issue #N".
 allowed-tools: "Bash(gh:*), Bash(git:*), Read, Write, Grep, Glob, Agent"
 ---
 

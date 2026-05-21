@@ -70,3 +70,6 @@ reports_dev/
 
 # Rechecker plugin local state (operational telemetry, not reports)
 .rechecker/
+/.trashcan/*
+!/.trashcan/.gitkeep
+!/.trashcan/README.txt

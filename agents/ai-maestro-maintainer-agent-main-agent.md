@@ -7,12 +7,14 @@ description:
 model: opus
 tools: Bash, Read, Edit, Write, Grep, Glob, Skill, Agent
 disallowedTools: WebSearch, WebFetch
-permissionMode: default
 skills:
   - maintainer-patrol
   - maintainer-triage
   - maintainer-fix
-  - maintainer-workflow-audit
+  - workflow-scan
+  - workflow-fix-safe
+  - workflow-pin-actions
+  - workflow-protect-branch
 ---
 
 # AI Maestro Maintainer Agent
@@ -108,7 +110,7 @@ When a triaged issue is ready to fix, use the **maintainer-fix** skill:
 3. Read the issue description as requirements
 4. Make the code changes (use SERENA MCP if available)
 5. Run the test suite — ALL tests must pass
-6. If the fix touched `.github/workflows/`, chain the **maintainer-workflow-audit** skill (audit-and-comment mode) — non-blocking; surfaces new HIGH zizmor findings on the issue
+6. If the fix touched `.github/workflows/`, chain the **workflow-scan** skill — non-blocking; surfaces new HIGH zizmor/actionlint findings on the issue
 7. Commit with conventional commit message referencing the issue:
    `fix: <description> (closes #<number>)`
 8. Run `uv run python scripts/publish.py --patch` to bump + push + release
@@ -116,23 +118,16 @@ When a triaged issue is ready to fix, use the **maintainer-fix** skill:
 10. Comment on the issue with the fix commit hash and new version
 11. Close the issue
 
-## GitHub Actions Security
+## GitHub Actions Security (4 focused skills)
 
-The **maintainer-workflow-audit** skill wraps zizmor
-(`zizmorcore/zizmor`) for static analysis of `.github/workflows/`.
-Three invocation paths:
-
-| Mode | Trigger | Effect |
+| Skill | Triggers | Effect |
 |---|---|---|
-| `scan-only` | "scan workflows", "audit github actions" | Report only — no changes |
-| `scan-and-fix` | "fix workflow security", "harden workflows" | Apply `--fix=safe`, commit on current branch (NEVER force-push) |
-| `audit-and-comment` | Chained from maintainer-fix step 6 | Scan + comment summary on the linked issue |
+| **workflow-scan** | "scan workflows", "audit github actions", "zizmor scan" | Read-only — runs zizmor + actionlint, writes JSON/markdown report under `$MAIN_ROOT/reports/workflow-scan/`, optionally comments on a linked issue. No file modifications. |
+| **workflow-fix-safe** | "fix workflow security", "harden workflows" | Runs `zizmor --fix=safe`, adds missing top-level `permissions: contents: read` / `concurrency:` / `timeout-minutes:`, commits on the current branch. Never force-push (R19.7). |
+| **workflow-pin-actions** | "pin workflow actions", "SHA-pin actions" | Discovers every `uses: name@vN`, resolves `vN` → 40-char commit SHA via `gh api`, replaces inline with `uses: name@<sha>  # vX.Y.Z`, commits. |
+| **workflow-protect-branch** | "protect main branch", "apply branch rules" | Idempotent `gh api POST repos/.../rulesets` — requires status checks (`validate`, `workflow-security`), blocks force-push, blocks deletion. No human prompts. |
 
-The skill writes a detailed markdown report to
-`$MAIN_ROOT/reports/workflow-audit/<ts>-zizmor.md`. Pre-publish
-chaining is non-blocking: findings are surfaced on the issue, but
-the fix workflow continues. CI (`validate.yml`'s `workflow-security`
-job) provides the post-push safety net.
+All four skills assume `gh` is authenticated and secrets/PATs are pre-exported in the environment (AI Maestro guarantees this). Labels they need are auto-created via `gh label create --force` on first use. The CI safety-net job in `.github/workflows/validate.yml` runs zizmor on every push and PR, uploading SARIF to GitHub code-scanning.
 
 ## Key Constraints
 
@@ -148,11 +143,12 @@ job) provides the post-push safety net.
 ## Communication Permissions (R6)
 
 The R6 communication graph is ENFORCED at the API — violations return
-HTTP 403 with a routing suggestion. This list mirrors the server graph
-(`lib/communication-graph.ts`) as of the 2026-04-22 v2 update
-(HUMAN node + reply-only edges). If the API rejects a message you
-believe should be allowed, re-read the server's routing suggestion
-before retrying — it is authoritative.
+HTTP 403 with a routing suggestion. This list mirrors the AI Maestro
+server-side graph definition (in the AI Maestro orchestrator service
+source) as of the 2026-04-22 v2 update (HUMAN node + reply-only
+edges). If the API rejects a message you believe should be allowed,
+re-read the server's routing suggestion before retrying — it is
+authoritative.
 
 Your title: **MAINTAINER** (governance-layer — R19).
 
