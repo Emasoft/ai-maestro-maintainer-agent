@@ -24,91 +24,64 @@ description: |
   #N", or "decide what to do with issue #N".
 ---
 
-# Maintainer Triage — Issue Classification
-
-Classify a GitHub issue and determine the appropriate action. This is
-the gatekeeper: only verified bugs and authorized feature requests pass
-through to the fix workflow.
+# maintainer-triage — gatekeeper classification
 
 ## Overview
 
-This skill evaluates each new GitHub issue against a classification flowchart,
-enforces the authorized-user rule for feature requests (R19.6), and returns a
-structured disposition with the recommended action. Bugs from any author are
-welcomed; feature requests are accepted only from the repository owner.
+Evaluates each new GitHub issue against a classification
+flowchart, enforces the authorized-user rule for feature
+requests (R19.6), and returns a structured disposition with the
+recommended action. Bugs from any author are welcomed; feature
+requests are accepted only from the repository owner.
 
 ## Prerequisites
 
-- `gh` CLI authenticated (`gh auth status`)
-- `githubRepo` set on the calling agent
-- Issue number and basic metadata available (from maintainer-patrol ledger)
+- `gh auth status` succeeds.
+- `githubRepo` set on the calling agent.
+- Issue number + basic metadata available (typically passed by
+  `maintainer-patrol`).
 
-Copy this checklist and track your progress:
-- [ ] Authorized user identified via gh api user
+Per-issue checklist:
+
+- [ ] Authorized user identified via `gh api user`
 - [ ] Issue body read and classified
-- [ ] Action determined (fix / none)
+- [ ] Action determined (`fix` / `none`)
 - [ ] GitHub labels updated
 - [ ] Disposition returned to patrol
 
 ## Instructions
 
-1. Determine the authorized user: `AUTHORIZED_USER=$(gh api user --jq .login)`. This is the MAESTRO-privileged GitHub login (R19.6).
-2. Read the effort level from the environment to scale verification depth (Claude Code ≥ 2.1.133 exports `$CLAUDE_EFFORT`). MEDIUM is the floor — LOW is intentionally promoted to MEDIUM because triage that skips code verification is unsafe:
-
-   ```bash
-   # Floor is MEDIUM. LOW is too shallow for triage — promote to MEDIUM.
-   # MAX is reserved for difficult/ambiguous issues that need cross-file analysis.
-   # XHIGH (added in Claude Code 2.1.111) is treated as MAX — same deep cross-file budget.
-   case "${CLAUDE_EFFORT:-medium}" in
-     max|MAX|maximum|MAXIMUM)  TRIAGE_DEPTH=max ;;     # deep grep + cross-file
-     xhigh|XHIGH)              TRIAGE_DEPTH=max ;;     # 2.1.111 tier, route to MAX budget
-     high|HIGH)                TRIAGE_DEPTH=high ;;    # proactive grep before classifying
-     *)                        TRIAGE_DEPTH=medium ;;  # default: grep only when title+body ambiguous
-   esac
-   ```
-
-   Pre-2.1.133 sessions (env var unset) get the `medium` branch — same conservative default the skill used before. The `xhigh` tier (2.1.111+) maps to `max` because both represent "the user explicitly asked for the deepest available analysis"; triage has no reason to distinguish them.
-3. Fetch the issue metadata: `gh issue view <number> --repo <repo> --json title,body,author,labels`.
-4. Classify the issue by scanning the title, labels, and body against the flowchart below. Verification depth scales with `$TRIAGE_DEPTH`:
-   - `medium` — title + labels + body match; grep the repo only when classification is ambiguous after that.
-   - `high` — also grep the repo for referenced symbols/files before deciding, even when title/body looks unambiguous.
-   - `max` — escalate to deep cross-file analysis (referenced symbols + their callers/imports) before deciding. Use for issues that span multiple modules or contradict their own labels.
-5. If **bug** (label "bug" or title matches "bug"/"error"/"crash"/"fix"): follow the Bug Path — verify, label, return `action: fix` or `needs-info`.
-6. If **feature/change** (label "feature"/"enhancement" or title matches "feature"/"add"/"request"): check author against `$AUTHORIZED_USER`. Reject if mismatch (R19.6). Accept if match.
-7. If **duplicate**: link the original issue, label `duplicate`, close.
-8. If **invalid/spam**: label `invalid`, close.
-9. If **ambiguous**: read the body carefully, classify as bug or feature based on content. When `$TRIAGE_DEPTH` is `high` or `max`, grep the codebase (and for `max`, trace cross-file references) before deciding.
+1. `AUTHORIZED_USER=$(gh api user --jq .login)` — the
+   MAESTRO-privileged GitHub login (R19.6).
+2. Set `$TRIAGE_DEPTH` from `$CLAUDE_EFFORT` (floor = `medium`,
+   `MAX`/`XHIGH` → `max`). See
+   [effort-scaling.md](references/effort-scaling.md).
+3. Fetch metadata: `gh issue view <N> --repo <repo> --json
+   title,body,author,labels`.
+4. Classify against the flowchart. Verification depth scales:
+   - `medium` — title + labels + body match; grep only if
+     ambiguous.
+   - `high` — also grep referenced symbols / files before
+     deciding.
+   - `max` — deep cross-file analysis (referenced symbols + their
+     callers / imports) before deciding.
+5. **Bug** (label `bug`, or title matches
+   `bug`/`error`/`crash`/`fix`): verify, label, return
+   `action: fix` or `needs-info`.
+6. **Feature / change** (label `feature`/`enhancement`, or title
+   matches `feature`/`add`/`request`): check author against
+   `$AUTHORIZED_USER`. Reject if mismatch (R19.6); accept if
+   match.
+7. **Duplicate**: link the original, label `duplicate`, close.
+8. **Invalid / spam**: label `invalid`, close.
+9. **Ambiguous**: read body carefully; at `high` or `max` depth,
+   grep the codebase before deciding.
 10. Return the structured disposition to the patrol skill.
 
-For detailed `gh` commands for each path, see [Classification Paths Reference](references/classification-paths.md):
-  - Bug Path (any author)
-  - Feature Path (authorized user only)
-  - Duplicate Path
-  - Invalid Path
-
-## Rate-limit awareness
-
-Every `gh` call in this skill (`gh api user`, `gh issue view`, `gh issue
-comment`, `gh issue edit --add-label`, `gh issue close`, `gh search issues`)
-can trip GitHub's REST or search-API rate limit. From Claude Code 2.1.116
-onward the Bash tool prepends a **"GitHub API rate limit"** hint to the
-tool output when the limit is close. If you see that hint:
-
-1. Stop iterating on the current issue.
-2. Return the partial disposition `{disposition: "needs-info", action:
-   "none", reason: "rate-limit deferred"}` to the patrol skill so the
-   issue is **not** marked processed in the ledger.
-3. Do NOT retry the same `gh` call inside this triage invocation — the
-   next patrol cycle will pick the issue up with a fresh rate-limit
-   budget (see `maintainer-patrol`'s own back-off rule).
-
-Tight retry loops only deepen the back-off. A deferred triage costs one
-cycle (≤ `$POLL_SECONDS`); a hammered API costs minutes of throttling
-across the whole patrol.
+Path-specific `gh` commands:
+[classification-paths.md](references/classification-paths.md).
 
 ## Output
-
-A structured result returned to the patrol skill:
 
 ```json
 {
@@ -119,49 +92,42 @@ A structured result returned to the patrol skill:
 }
 ```
 
-The patrol skill records this in the ledger. If `action: fix`, the patrol
-skill invokes the **maintainer-fix** skill next.
+The patrol skill records this in the ledger. If `action: fix`,
+patrol invokes **maintainer-fix** next.
 
 ## Error Handling
 
 | Error | Action |
 |-------|--------|
-| `gh api user` fails | Stop, report auth failure to main agent |
+| `gh api user` fails | Stop, report auth failure |
 | Issue not found | Return disposition `invalid`, log error |
-| Cannot read repo tree | Skip code verification, triage based on text only |
-| Duplicate search fails | Skip duplicate check, proceed to classification |
+| Cannot read repo tree | Skip code verification, triage on text only |
+| Duplicate search fails | Skip duplicate check, continue |
+| GitHub rate-limit hint | Return `needs-info / rate-limit deferred`, do NOT retry |
 
 ## Examples
 
-**Bug from any user:**
+Bug from any user:
+
 ```
 Issue #42: "NullPointerException in auth module"
-→ Identified as bug (title contains "exception")
-→ Search code for auth module
-→ Found root cause in auth.py:87
-→ Label: bug,verified
-→ Return: {disposition: "triaged", action: "fix"}
+→ Bug; verify in code → label bug,verified
+→ {disposition: "triaged", action: "fix"}
 ```
 
-**Feature from unauthorized user:**
+Feature from unauthorized user:
+
 ```
-Issue #43: "Add dark mode support"
-→ Identified as feature request
-→ Author: randomuser ≠ AUTHORIZED_USER
-→ Comment politely, label wontfix, close
-→ Return: {disposition: "rejected", action: "none"}
+Issue #43: "Add dark mode support" by randomuser
+→ Author != AUTHORIZED_USER → wontfix, close
+→ {disposition: "rejected", action: "none"}
 ```
 
-**Feature from authorized user:**
-```
-Issue #44: "Increase poll interval to 10 minutes"
-→ Identified as feature request
-→ Author: Emasoft == AUTHORIZED_USER
-→ Label: enhancement,accepted
-→ Return: {disposition: "triaged", action: "fix"}
-```
+More examples and per-path commands:
+[classification-paths.md](references/classification-paths.md).
 
 ## Resources
 
-- GitHub CLI issue commands: https://cli.github.com/manual/gh_issue
-- Conventional labels: bug, feature, duplicate, invalid, needs-info, wontfix, enhancement
+- [Classification paths](references/classification-paths.md)
+- [Effort scaling](references/effort-scaling.md)
+- GitHub CLI: <https://cli.github.com/manual/gh_issue>
