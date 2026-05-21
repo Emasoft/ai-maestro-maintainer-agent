@@ -28,9 +28,10 @@ description: |
 
 # workflow-protect-branch — idempotent default-branch ruleset
 
-Uses the GitHub Rulesets REST API (stable since 2022-11-28) to
-apply a deterministic ruleset to the maintained repo's default
-branch. Fully idempotent — re-running converges to the same state.
+Uses the GitHub Rulesets REST API (stable, see
+`docs.github.com/en/rest/repos/rules`) to apply a deterministic
+ruleset to the maintained repo's default branch. Fully idempotent
+— re-running converges to the same state.
 
 ## Overview
 
@@ -108,4 +109,11 @@ User: "apply branch protection to main"
   <https://docs.github.com/en/rest/repos/rules>
 - Companion skills: `workflow-scan`, `workflow-fix-safe`,
   `workflow-pin-actions`.
-- [Full step-by-step instructions](references/instructions.md)
+- [Full step-by-step instructions](references/instructions.md):
+  - Step 1: Verify admin permission
+  - Step 2: Auto-detect required checks
+  - Step 3: Build the ruleset JSON
+  - Step 4: Discover existing ruleset
+  - Step 5: POST or PUT
+  - Step 6: Verify post-apply
+  - Step 7: Write report

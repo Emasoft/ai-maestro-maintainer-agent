@@ -39,7 +39,7 @@ the repo's pipeline, and closes the issue with a commit link.
 - The repo's `scripts/publish.py` exists (or an equivalent
   ecosystem pipeline: npm / cargo / go).
 
-Per-fix checklist:
+Copy this checklist and track your progress (per-fix):
 
 - [ ] Issue triaged with action=fix
 - [ ] Feature branch created
@@ -113,6 +113,15 @@ User: "fix issue #42"
 
 ## Resources
 
-- [Step-by-step reference](references/fix-steps.md)
+- [Step-by-step reference](references/fix-steps.md):
+  - Step 1: Prepare the Workspace
+  - Step 2: Create a Feature Branch
+  - Step 3: Understand the Issue
+  - Step 4: Make the Code Changes
+  - Step 5: Run Tests
+  - Step 6: Commit
+  - Step 7: Publish
+  - Step 8: Close the Issue
+  - Step 9: Return to Patrol
 - Conventional Commits: <https://www.conventionalcommits.org/>
 - GitHub CLI: <https://cli.github.com/manual/>

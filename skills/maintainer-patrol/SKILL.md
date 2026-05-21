@@ -42,7 +42,7 @@ repeats. The ledger persists across hibernation.
   `~/.aimaestro/maintainer/<agentId>/` (auto-created on first
   run).
 
-Pre-flight checklist:
+Copy this checklist and track your progress (pre-flight):
 
 - [ ] gh auth status passes
 - [ ] githubRepo attribute set on agent
@@ -109,6 +109,11 @@ Resume after hibernation:
 
 ## Resources
 
-- [Patrol loop reference](references/patrol-loop.md)
+- [Patrol loop reference](references/patrol-loop.md):
+  - Poll interval and bounds
+  - Ledger setup
+  - Per-cycle loop body
+  - Rate-limit handling
+  - Stopping the patrol
 - GitHub CLI: <https://cli.github.com/manual/gh_issue_list>
 - Ledger location: `~/.aimaestro/maintainer/<agentId>/processed-issues.json`

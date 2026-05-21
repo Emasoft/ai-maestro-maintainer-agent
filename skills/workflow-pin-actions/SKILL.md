@@ -104,4 +104,11 @@ User: "SHA-pin every action in the workflows"
   <https://docs.github.com/rest/git/refs>
 - Companion skills: `workflow-scan`, `workflow-fix-safe`,
   `workflow-protect-branch`.
-- [Full step-by-step instructions](references/instructions.md)
+- [Full step-by-step instructions](references/instructions.md):
+  - Step 1: Protected-branch guard
+  - Step 2: Discover unpinned refs
+  - Step 3: Resolve SHA + semver tag
+  - Step 4: Rewrite inline
+  - Step 5: Per-file safety net
+  - Step 6: Final sweep
+  - Step 7: Stage by name and commit

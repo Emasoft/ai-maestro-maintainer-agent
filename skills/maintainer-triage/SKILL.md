@@ -41,7 +41,7 @@ requests are accepted only from the repository owner.
 - Issue number + basic metadata available (typically passed by
   `maintainer-patrol`).
 
-Per-issue checklist:
+Copy this checklist and track your progress (per-issue):
 
 - [ ] Authorized user identified via `gh api user`
 - [ ] Issue body read and classified
@@ -115,19 +115,19 @@ Issue #42: "NullPointerException in auth module"
 → {disposition: "triaged", action: "fix"}
 ```
 
-Feature from unauthorized user:
-
-```
-Issue #43: "Add dark mode support" by randomuser
-→ Author != AUTHORIZED_USER → wontfix, close
-→ {disposition: "rejected", action: "none"}
-```
-
-More examples and per-path commands:
+More examples (rejected feature, duplicate, invalid) and the
+per-path `gh` commands:
 [classification-paths.md](references/classification-paths.md).
 
 ## Resources
 
-- [Classification paths](references/classification-paths.md)
-- [Effort scaling](references/effort-scaling.md)
-- GitHub CLI: <https://cli.github.com/manual/gh_issue>
+- [Classification paths](references/classification-paths.md):
+  - Bug Path (any author)
+  - Feature Path (AUTHORIZED USER ONLY)
+  - Duplicate Path
+  - Invalid Path
+- [Effort scaling](references/effort-scaling.md):
+  - Triage depth tiers
+  - Reading $CLAUDE_EFFORT
+  - Rate-limit handling
+- GitHub CLI: <https://cli.github.com/manual/>

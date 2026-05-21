@@ -97,4 +97,10 @@ User: "fix the safe zizmor findings"
 - zizmor fix modes: <https://docs.zizmor.sh/usage/#auto-fixing>
 - Companion skills: `workflow-scan`, `workflow-pin-actions`,
   `workflow-protect-branch`.
-- [Full step-by-step instructions](references/instructions.md)
+- [Full step-by-step instructions](references/instructions.md):
+  - Step 1: Protected-branch guard
+  - Step 2: Pre-scan baseline
+  - Step 3: Run zizmor --fix=safe
+  - Step 4: Hardening edits
+  - Step 5: Post-scan regression guard
+  - Step 6: Stage by name and commit

@@ -105,5 +105,19 @@ maintainer-fix step 6 (workflow touched):
 
 - zizmor docs: <https://docs.zizmor.sh/>
 - actionlint docs: <https://github.com/rhysd/actionlint>
-- [Report layout](references/report-layout.md)
-- [Full step-by-step instructions](references/instructions.md)
+- [Report layout](references/report-layout.md):
+  - File header
+  - Severity summary
+  - Findings sections
+  - Footer
+  - Reproduce locally
+  - Suppress a finding
+  - Markdown invariants
+- [Full step-by-step instructions](references/instructions.md):
+  - Step 1: Resolve report path
+  - Step 2: Run zizmor (JSON)
+  - Step 3: Run actionlint
+  - Step 4: Render markdown report
+  - Step 5: Rate-limit handling
+  - Step 6: Optional issue comment
+  - Step 7: Return disposition
