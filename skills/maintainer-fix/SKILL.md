@@ -50,6 +50,7 @@ Copy this checklist and track your progress:
 - [ ] Feature branch created
 - [ ] Code changes applied
 - [ ] Tests passing
+- [ ] Workflow audit run (skip if no .github/workflows/ changes)
 - [ ] Published via pipeline
 - [ ] Issue closed
 
@@ -60,10 +61,11 @@ Copy this checklist and track your progress:
 3. Read the issue body (`gh issue view`), search related code, plan the fix.
 4. Apply the minimum code changes needed; follow existing style conventions.
 5. Run the test suite (pytest / npm test / cargo test / go test) — all must pass.
-6. Commit with a conventional message: `fix: <description> (closes #N)`.
-7. Publish via `uv run python scripts/publish.py --patch` or push and create a PR.
-8. Comment on the issue with commit hash and new version, then close it.
-9. Return to patrol: `git checkout main && git pull origin main`.
+6. If the fix touched anything under `.github/workflows/`, chain the **maintainer-workflow-audit** skill in `audit-and-comment` mode. It runs zizmor against the changed workflows and, if NEW high-severity findings appear on the touched files, comments on the issue with the diff and tags `workflow-security-review-needed`. This step is **non-blocking** — patrol continues even if findings are surfaced. Skip if no workflow files were modified.
+7. Commit with a conventional message: `fix: <description> (closes #N)`.
+8. Publish via `uv run python scripts/publish.py --patch` or push and create a PR.
+9. Comment on the issue with commit hash and new version, then close it.
+10. Return to patrol: `git checkout main && git pull origin main`.
 
 For detailed commands, see [Step-by-Step Reference](references/fix-steps.md):
   - Step 1: Prepare the Workspace
@@ -71,10 +73,11 @@ For detailed commands, see [Step-by-Step Reference](references/fix-steps.md):
   - Step 3: Understand the Issue
   - Step 4: Make the Code Changes
   - Step 5: Run Tests
-  - Step 6: Commit
-  - Step 7: Publish
-  - Step 8: Close the Issue
-  - Step 9: Return to Patrol
+  - Step 6: Workflow audit (conditional — chains **maintainer-workflow-audit**)
+  - Step 7: Commit
+  - Step 8: Publish
+  - Step 9: Close the Issue
+  - Step 10: Return to Patrol
 
 ## Output
 

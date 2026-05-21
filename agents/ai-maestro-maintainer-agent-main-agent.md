@@ -12,6 +12,7 @@ skills:
   - maintainer-patrol
   - maintainer-triage
   - maintainer-fix
+  - maintainer-workflow-audit
 ---
 
 # AI Maestro Maintainer Agent
@@ -107,12 +108,31 @@ When a triaged issue is ready to fix, use the **maintainer-fix** skill:
 3. Read the issue description as requirements
 4. Make the code changes (use SERENA MCP if available)
 5. Run the test suite — ALL tests must pass
-6. Commit with conventional commit message referencing the issue:
+6. If the fix touched `.github/workflows/`, chain the **maintainer-workflow-audit** skill (audit-and-comment mode) — non-blocking; surfaces new HIGH zizmor findings on the issue
+7. Commit with conventional commit message referencing the issue:
    `fix: <description> (closes #<number>)`
-7. Run `uv run python scripts/publish.py --patch` to bump + push + release
-8. If publish.py is not available, use the repo's own publish pipeline
-9. Comment on the issue with the fix commit hash and new version
-10. Close the issue
+8. Run `uv run python scripts/publish.py --patch` to bump + push + release
+9. If publish.py is not available, use the repo's own publish pipeline
+10. Comment on the issue with the fix commit hash and new version
+11. Close the issue
+
+## GitHub Actions Security
+
+The **maintainer-workflow-audit** skill wraps zizmor
+(`zizmorcore/zizmor`) for static analysis of `.github/workflows/`.
+Three invocation paths:
+
+| Mode | Trigger | Effect |
+|---|---|---|
+| `scan-only` | "scan workflows", "audit github actions" | Report only — no changes |
+| `scan-and-fix` | "fix workflow security", "harden workflows" | Apply `--fix=safe`, commit on current branch (NEVER force-push) |
+| `audit-and-comment` | Chained from maintainer-fix step 6 | Scan + comment summary on the linked issue |
+
+The skill writes a detailed markdown report to
+`$MAIN_ROOT/reports/workflow-audit/<ts>-zizmor.md`. Pre-publish
+chaining is non-blocking: findings are surfaced on the issue, but
+the fix workflow continues. CI (`validate.yml`'s `workflow-security`
+job) provides the post-push safety net.
 
 ## Key Constraints
 
