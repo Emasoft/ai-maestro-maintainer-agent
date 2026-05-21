@@ -19,9 +19,10 @@ description: |
   .github/workflows/ is missing or when the working tree is dirty
   with non-workflow changes (caller should commit those first).
   Do NOT trigger on read-only audit requests (use workflow-scan)
-  or on SHA-pinning requests (use workflow-pin-actions). Trigger
-  with phrases like "fix workflow security", "harden workflows",
-  "apply safe workflow fixes", or "auto-fix workflow findings".
+  or on SHA-pinning requests (use workflow-pin-actions).
+  Trigger with phrases like "fix workflow security", "harden
+  workflows", "apply safe workflow fixes", or "auto-fix workflow
+  findings".
 ---
 
 # workflow-fix-safe — apply only conservative auto-fixes

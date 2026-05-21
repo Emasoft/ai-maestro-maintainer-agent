@@ -41,6 +41,33 @@ different repo, create a different MAINTAINER agent.
 3. **Fix**: For valid bugs, clone → branch → fix → test → publish
 4. **Report**: Comment on issues with progress, close with commit links
 
+## Branch-rules awareness (MUST stay current)
+
+The agent MUST know the live branch-protection state of its
+assigned repo at all times. Concretely:
+
+1. **At session startup** — before the first patrol cycle, invoke
+   the **workflow-protect-branch** skill in SHOW mode. It caches
+   the current ruleset to
+   `~/.aimaestro/maintainer/<agentId>/branch-rules.json`.
+2. **Before any push or PR creation** — re-invoke
+   workflow-protect-branch in SHOW mode to refresh the cache.
+   Rules may have changed externally (the repo owner edited a
+   ruleset from the GitHub web UI, another collaborator merged
+   a `default-branch-ruleset` edit, etc.). Stale rules cause
+   surprising push rejections.
+3. **After every successful push** — re-invoke SHOW again so the
+   cache reflects the post-push state (status-check requirements
+   may now refer to job names from the just-pushed workflows).
+4. **If SHOW reports zero rulesets and the repo is freshly
+   entrusted** — flag the gap to the user and suggest invoking
+   workflow-protect-branch in APPLY mode (or workflow-bootstrap
+   if the repo also lacks `.github/workflows/`).
+
+Downstream skills consult the cache file directly when they need
+to know what status checks must pass before a push will succeed —
+they do NOT re-hit the GitHub API for every check.
+
 ## GitHub Authentication
 
 You use the host's `gh` CLI authentication. Verify it's working:
@@ -125,7 +152,7 @@ When a triaged issue is ready to fix, use the **maintainer-fix** skill:
 | **workflow-scan** | "scan workflows", "audit github actions", "zizmor scan" | Read-only — runs zizmor + actionlint, writes JSON/markdown report under `$MAIN_ROOT/reports/workflow-scan/`, optionally comments on a linked issue. No file modifications. |
 | **workflow-fix-safe** | "fix workflow security", "harden workflows" | Runs `zizmor --fix=safe`, adds missing top-level `permissions: contents: read` / `concurrency:` / `timeout-minutes:`, commits on the current branch. Never force-push (R19.7). |
 | **workflow-pin-actions** | "pin workflow actions", "SHA-pin actions" | Discovers every `uses: name@vN`, resolves `vN` → 40-char commit SHA via `gh api`, replaces inline with the SHA plus a trailing semver comment, commits. |
-| **workflow-protect-branch** | "protect main branch", "apply branch rules" | Idempotent `gh api POST repos/.../rulesets` — requires status checks (auto-detected from local workflows), blocks force-push, blocks deletion. No human prompts. |
+| **workflow-protect-branch** | SHOW: "show branch rules", "what branch rules are active", "refresh branch-rule cache" · APPLY: "protect main branch", "apply branch rules" | Two modes. SHOW = read-only fetch of the deployed ruleset + cache to `~/.aimaestro/maintainer/<agentId>/branch-rules.json` (used by the Branch-rules awareness loop above). APPLY = idempotent `gh api POST repos/.../rulesets` requiring auto-detected status checks, blocking force-push and deletion. No human prompts. |
 
 All four skills assume `gh` is authenticated and secrets/PATs are pre-exported in the environment (AI Maestro guarantees this). Labels they need are auto-created via `gh label create --force` on first use. The CI safety-net job in `.github/workflows/validate.yml` runs zizmor on every push and PR, uploading SARIF to GitHub code-scanning.
 

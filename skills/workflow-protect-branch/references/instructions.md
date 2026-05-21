@@ -2,15 +2,33 @@
 
 ## Table of Contents
 
-- [Step 1: Verify admin permission](#step-1-verify-admin-permission)
-- [Step 2: Auto-detect required checks](#step-2-auto-detect-required-checks)
-- [Step 3: Build the ruleset JSON](#step-3-build-the-ruleset-json)
+- [Step 0: Decide mode (SHOW vs APPLY)](#step-0-decide-mode-show-vs-apply)
+- [Step 1: Verify admin permission (APPLY only)](#step-1-verify-admin-permission-apply-only)
+- [Step 2: Auto-detect required checks (APPLY only)](#step-2-auto-detect-required-checks-apply-only)
+- [Step 3: Build the ruleset JSON (APPLY only)](#step-3-build-the-ruleset-json-apply-only)
 - [Step 4: Discover existing ruleset](#step-4-discover-existing-ruleset)
-- [Step 5: POST or PUT](#step-5-post-or-put)
+- [Step 5: POST or PUT (APPLY only)](#step-5-post-or-put-apply-only)
 - [Step 6: Verify post-apply](#step-6-verify-post-apply)
-- [Step 7: Write report](#step-7-write-report)
+- [Step 7: Write report + refresh agent cache](#step-7-write-report--refresh-agent-cache)
 
-## Step 1: Verify admin permission
+## Step 0: Decide mode (SHOW vs APPLY)
+
+Match the user's trigger phrase:
+
+| Phrases | Mode |
+|---|---|
+| "show branch rules", "what branch rules are active", "fetch the ruleset", "refresh branch-rule cache" | **SHOW** |
+| "protect main branch", "apply branch rules", "set up branch protection", "harden default branch" | **APPLY** |
+
+SHOW skips steps 1–3 and 5 (no admin check needed, no JSON build,
+no write). Both modes converge on steps 4, 6, 7.
+
+The main agent invokes SHOW automatically at session startup
+(per `agents/ai-maestro-maintainer-agent-main-agent.md`) so the
+cache at `~/.aimaestro/maintainer/<agentId>/branch-rules.json`
+is fresh before any other skill runs.
+
+## Step 1: Verify admin permission (APPLY only)
 
 ```bash
 REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
@@ -22,7 +40,7 @@ if [ "$IS_ADMIN" != "true" ]; then
 fi
 ```
 
-## Step 2: Auto-detect required checks
+## Step 2: Auto-detect required checks (APPLY only)
 
 ```bash
 CHECKS_JSON="$(grep -REn '^[[:space:]]{2}[a-z0-9_-]+:' \
@@ -42,7 +60,7 @@ For this plugin that yields:
 ]
 ```
 
-## Step 3: Build the ruleset JSON
+## Step 3: Build the ruleset JSON (APPLY only)
 
 Write to a tmpfile — never inline with `${{ }}` interpolation
 in the shell:
@@ -94,7 +112,7 @@ RULESET_ID="$(gh api "repos/$REPO/rulesets" \
 `// empty` keeps the result empty when no ruleset matches (yields
 empty string rather than `null`).
 
-## Step 5: POST or PUT
+## Step 5: POST or PUT (APPLY only)
 
 ```bash
 if [ -z "$RULESET_ID" ]; then
@@ -123,7 +141,7 @@ NEW_ID="$(gh api "repos/$REPO/rulesets" \
   --jq '[.[] | select(.name=="default-branch-ruleset")] | .[0].id')"
 ```
 
-## Step 7: Write report
+## Step 7: Write report + refresh agent cache
 
 ```bash
 MAIN_ROOT="$(git worktree list | head -n1 | awk '{print $1}')"
@@ -132,21 +150,68 @@ mkdir -p "$DIR"
 TS="$(date +%Y%m%d_%H%M%S%z)"
 REPORT="$DIR/$TS-ruleset.json"
 
-gh api "repos/$REPO/rulesets/$NEW_ID" > "$REPORT"
+# APPLY mode: fetch the post-apply state. SHOW mode: same call, just no
+# preceding POST/PUT.
+gh api "repos/$REPO/rulesets" > "$REPORT"
+
+# Refresh the per-agent cache so the main agent + downstream skills
+# stay aware of the live rule state across the session.
+AGENT_ID="${MAINTAINER_AGENT_ID:-$(basename "$REPO")}"
+CACHE_DIR="$HOME/.aimaestro/maintainer/$AGENT_ID"
+mkdir -p "$CACHE_DIR"
+CACHE_TMP="$CACHE_DIR/branch-rules.json.tmp.$$"
+gh api "repos/$REPO/rulesets" --jq '.' > "$CACHE_TMP"
+mv -f "$CACHE_TMP" "$CACHE_DIR/branch-rules.json"
+```
+
+Cache schema (each entry of the top-level array):
+
+```json
+{
+  "id": 12345,
+  "name": "default-branch-ruleset",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {...},
+  "rules": [
+    {"type": "required_status_checks", "parameters": {...}},
+    {"type": "non_fast_forward"},
+    {"type": "deletion"}
+  ]
+}
 ```
 
 Return the disposition:
 
 ```json
 {
+  "mode": "apply",
   "action": "created",
   "ruleset_id": 12345,
   "required_checks": ["validate", "workflow-security"],
-  "report": "/path/to/<ts>-ruleset.json"
+  "report": "/path/to/<ts>-ruleset.json",
+  "cache_path": "/Users/.../branch-rules.json"
 }
 ```
 
-Cleanup:
+For SHOW mode the disposition is:
+
+```json
+{
+  "mode": "show",
+  "ruleset_count": 1,
+  "default_branch_ruleset": {
+    "id": 12345,
+    "required_checks": ["validate", "workflow-security"],
+    "enforcement": "active",
+    "non_fast_forward": true,
+    "deletion": true
+  },
+  "cache_path": "/Users/.../branch-rules.json"
+}
+```
+
+Cleanup (APPLY only):
 
 ```bash
 rm -f "$TMPJSON"

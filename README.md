@@ -68,7 +68,7 @@ Once the agent session is running:
 | `workflow-scan` | "scan workflows", "audit github actions", "zizmor scan" |
 | `workflow-fix-safe` | "fix workflow security", "harden workflows" |
 | `workflow-pin-actions` | "pin workflow actions", "SHA-pin actions" |
-| `workflow-protect-branch` | "protect main branch", "apply branch rules" |
+| `workflow-protect-branch` | SHOW: "show branch rules", "what branch rules are active", "refresh branch-rule cache" · APPLY: "protect main branch", "apply branch rules" |
 
 ## Governance Rules
 
