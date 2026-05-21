@@ -25,7 +25,7 @@ no write). Both modes converge on steps 4, 6, 7.
 
 The main agent invokes SHOW automatically at session startup
 (per `agents/ai-maestro-maintainer-agent-main-agent.md`) so the
-cache at `~/.aimaestro/maintainer/<agentId>/branch-rules.json`
+cache at `$AGENT_DIR/.aimaestro/state/branch-rules.json`
 is fresh before any other skill runs.
 
 ## Step 1: Verify admin permission (APPLY only)
@@ -156,8 +156,16 @@ gh api "repos/$REPO/rulesets" > "$REPORT"
 
 # Refresh the per-agent cache so the main agent + downstream skills
 # stay aware of the live rule state across the session.
-AGENT_ID="${MAINTAINER_AGENT_ID:-$(basename "$REPO")}"
-CACHE_DIR="$HOME/.aimaestro/maintainer/$AGENT_ID"
+#
+# State MUST live inside the AGENT WORKING DIRECTORY (never $HOME)
+# so AI Maestro backups and host-to-host migration capture it.
+# Resolution order:
+#   1. $AIMAESTRO_AGENT_DIR — proposed AI Maestro env var
+#      (https://github.com/Emasoft/ai-maestro/issues/32)
+#   2. $CLAUDE_PROJECT_DIR  — Claude Code project dir
+#   3. $PWD                 — last-resort fallback
+AGENT_DIR="${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+CACHE_DIR="$AGENT_DIR/.aimaestro/state"
 mkdir -p "$CACHE_DIR"
 CACHE_TMP="$CACHE_DIR/branch-rules.json.tmp.$$"
 gh api "repos/$REPO/rulesets" --jq '.' > "$CACHE_TMP"

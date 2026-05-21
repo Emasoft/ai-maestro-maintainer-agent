@@ -6,7 +6,7 @@ description: |
   bounded by a 10 second floor and a 1 hour ceiling via
   MAINTAINER_POLL_INTERVAL_MS), tracks already-processed issues in
   a persistent JSON ledger at
-  ~/.aimaestro/maintainer/AGENT_ID/processed-issues.json,
+  $AGENT_DIR/.aimaestro/state/processed-issues.json,
   dispatches the maintainer-triage skill for each new issue, and
   records the returned disposition (triaged, fixed, rejected,
   duplicate, needs-info, or manual). Resumes cleanly after
@@ -39,7 +39,7 @@ repeats. The ledger persists across hibernation.
 - Agent's `githubRepo` attribute is set
   (e.g. `Emasoft/my-project`).
 - Ledger directory exists at
-  `~/.aimaestro/maintainer/<agentId>/` (auto-created on first
+  `$AGENT_DIR/.aimaestro/state/` (auto-created on first
   run).
 
 Copy this checklist and track your progress (pre-flight):
@@ -53,9 +53,9 @@ Copy this checklist and track your progress (pre-flight):
 
 1. Verify prerequisites (`gh auth status`, `githubRepo` set).
 2. Initialize ledger at
-   `~/.aimaestro/maintainer/<agentId>/processed-issues.json`
+   `$AGENT_DIR/.aimaestro/state/processed-issues.json`
    if missing. If
-   `~/.aimaestro/maintainer/<agentId>/guardian-baseline.json`
+   `$AGENT_DIR/.aimaestro/state/guardian-baseline.json`
    is also missing, invoke **maintainer-guardian** in baseline
    mode first (the SessionStart hook normally does this, but
    patrol is the backstop).
@@ -127,4 +127,4 @@ Resume after hibernation:
   - Rate-limit handling
   - Stopping the patrol
 - GitHub CLI: <https://cli.github.com/manual/gh_issue_list>
-- Ledger location: `~/.aimaestro/maintainer/<agentId>/processed-issues.json`
+- Ledger location: `$AGENT_DIR/.aimaestro/state/processed-issues.json`

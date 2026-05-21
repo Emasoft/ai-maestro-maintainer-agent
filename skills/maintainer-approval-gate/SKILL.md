@@ -1,31 +1,25 @@
 ---
 description: |
-  Use when the maintainer-fix skill (or any other skill that
-  commits code on behalf of an issue) is about to write a commit
-  whose planned diff touches a SECURITY-SENSITIVE path. This is the
-  agent-layer analogue of the article's "build/publish separation"
-  pattern — the trusted decision (the authorized maintainer says
-  OK) is separated from the untrusted spec (an arbitrary issue
-  body). Two modes share one skill. (1) CHECK — inspects the
-  planned diff against the canonical protected-paths list (plus any
-  per-repo .aimaestro/protected-paths.txt override). If any
-  protected path is touched, posts an approval-request comment on
-  the originating issue, labels it awaiting-maintainer-approval,
-  halts the caller, returns disposition "needs-approval". (2)
-  VERIFY — looks for an approve-protected-edit comment by
-  $AUTHORIZED_USER (the gh-authenticated MAESTRO user, NOT the
-  issue author) on the issue. Returns ok/pending/rejected based on
-  whether the exact phrase is present and the author matches.
-  Caller releases the fix only on ok. Protected paths include
-  .github/workflows/, .github/dependabot.yml, .github/CODEOWNERS,
-  scripts/publish.py, .gitignore, .npmrc, LICENSE, SECURITY.md, and
-  .claude-plugin/ for plugin repos. Reports under
+  Use when maintainer-fix (or any skill that commits on behalf of
+  an issue) is about to write a commit whose planned diff touches a
+  SECURITY-SENSITIVE path. Mirrors the article's "build/publish
+  separation" — trusted decision (maintainer says OK) split from
+  untrusted spec (issue body). Two modes. (1) CHECK inspects the
+  diff against the canonical protected-paths list plus any per-repo
+  .aimaestro/protected-paths.txt override; on hit, posts an
+  approval-request comment, labels awaiting-maintainer-approval,
+  halts the caller, returns disposition needs-approval. (2) VERIFY
+  looks for an approve-protected-edit comment by $AUTHORIZED_USER
+  (the gh-authenticated user, NOT the issue author); returns
+  ok/pending/rejected. Caller releases the fix only on ok.
+  Protected paths cover .github/workflows/, .github/dependabot.yml,
+  .github/CODEOWNERS, scripts/publish.py, .gitignore, .npmrc,
+  LICENSE, SECURITY.md, .claude-plugin/. Reports under
   $MAIN_ROOT/reports/maintainer-approval-gate/. Do NOT trigger on
-  non-fix workflows (workflow-fix-safe, workflow-pin-actions, etc.
-  run on their own branches and don't read issue bodies).
+  non-fix workflows (workflow-fix-safe, workflow-pin-actions run on
+  their own branches and don't read issue bodies).
   Trigger with phrases like "approval gate check", "verify
-  protected-edit approval", "is this fix allowed", or "guard
-  protected paths".
+  protected-edit approval", or "guard protected paths".
 ---
 
 # maintainer-approval-gate — protected-paths guardrail

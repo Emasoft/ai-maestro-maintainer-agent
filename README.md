@@ -64,6 +64,8 @@ Once the agent session is running:
 | `maintainer-patrol` | "start patrol", "begin maintenance loop" |
 | `maintainer-triage` | "triage issue #N", "classify issue #N" |
 | `maintainer-fix` | "fix issue #N", "work on issue #N" |
+| `maintainer-guardian` | BASELINE: "guardian baseline", "capture security baseline" · SCAN: "guardian scan", "scan for threats", "check for supply-chain drift" |
+| `maintainer-approval-gate` | CHECK: "approval gate check", "guard protected paths" · VERIFY: "verify protected-edit approval" |
 | `workflow-bootstrap` | "set up workflows", "bootstrap CI", "configure github for this new repo" |
 | `workflow-scan` | "scan workflows", "audit github actions", "zizmor scan" |
 | `workflow-fix-safe` | "fix workflow security", "harden workflows" |
@@ -130,6 +132,25 @@ Once the agent session is running:
   machine-readable view of every running agent (including this one), and
   OTEL spans for agent activity expose `agent_id` / `parent_agent_id` so
   you can correlate patrol cycles in your observability backend.
+- **Guardian Mode.** The maintainer is the **guardian of the repo**,
+  not merely a reactive issue-fixer. At session start, the SessionStart
+  hook fires the `maintainer-guardian` skill in BASELINE mode to
+  snapshot five threat classes — T1 zizmor/actionlint findings, T2
+  stale SHA pins, T3 branch-rule state, T4 protected-path activity,
+  T5 secret-leak markers in recent commits — to
+  `~/.aimaestro/maintainer/<agentId>/guardian-baseline.json`. At
+  every patrol cycle, SCAN mode diffs against baseline and routes
+  critical deltas: safe-fixable zizmor findings auto-PR via
+  `workflow-fix-safe`, stale pins auto-file a tracking issue,
+  protected-path changes alert the authorized user, and any T5 hit
+  STOPS the cycle. The `maintainer-approval-gate` skill refuses
+  to commit any fix whose planned diff touches a security-sensitive
+  path (`.github/**`, `scripts/publish.py`, `.gitignore`, `.npmrc`,
+  `LICENSE`, `.claude-plugin/**`, etc.) without an
+  `approve-protected-edit` reply from the authorized maintainer on
+  the originating issue — defeating the "malicious bug report
+  requesting CI edit" supply-chain pattern documented in Atai
+  Barkai's 2026-05-20 article.
 - **GitHub Actions security.** Five focused skills wrap
   [zizmor](https://github.com/zizmorcore/zizmor) and `actionlint`
   (both via `uvx` / Homebrew — no manual install needed for

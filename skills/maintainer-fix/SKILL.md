@@ -6,7 +6,7 @@ description: |
   approval gate, commit, publish, and close lifecycle against the
   agent's assigned githubRepo. Reads CLAUDE_CODE_SESSION_ID
   (Claude Code 2.1.132+) to isolate the per-session workspace
-  under ~/.aimaestro/maintainer/AGENT_ID/SESSION/. Enforces
+  under $AGENT_DIR/.aimaestro/workspace/SESSION/. Enforces
   governance R19.7 (no force-push, no history rewrite, no
   tag/branch deletion without MANAGER) and R19.8 (all tests pass
   before push). Calls maintainer-approval-gate before every
@@ -48,9 +48,8 @@ Copy this checklist and track your progress (per-fix):
 
 ## Instructions
 
-1. Prepare the workspace at
-   `$HOME/agents/<name>/workspace[-<sid8>]` (per-session via
-   `$CLAUDE_CODE_SESSION_ID`).
+1. Per-session workspace in the agent workdir (never `$HOME`):
+   `WORKSPACE="$AGENT_DIR/.aimaestro/workspace[-<sid8>]"`.
 2. Create a feature branch `fix/<issue-number>-<slug>`.
 3. Read the issue body, search related code, plan the fix.
 4. Apply the minimum changes; match existing style.

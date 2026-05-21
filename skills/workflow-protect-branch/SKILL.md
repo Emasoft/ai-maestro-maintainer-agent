@@ -3,7 +3,7 @@ description: |
   Use when the user wants to QUERY or APPLY the maintained repo's
   default-branch ruleset via the GitHub Rulesets API. Two modes:
   (1) SHOW — read-only fetch of the currently-deployed ruleset,
-  cached to $HOME/.aimaestro/maintainer/AGENT_ID/branch-rules.json
+  cached to $AGENT_DIR/.aimaestro/state/branch-rules.json
   so other skills and the main agent stay aware of the live rule
   state across the session. (2) APPLY — auto-detects every CI job
   name from .github/workflows/*.yml, then POSTs (or PUTs if it
@@ -57,7 +57,7 @@ refresh / what rules"):
 1. `GET /repos/$REPO/rulesets` and for each, `GET
    /repos/$REPO/rulesets/<id>` for the full body.
 2. Atomically write the array to
-   `~/.aimaestro/maintainer/$AGENT_ID/branch-rules.json`.
+   `$AGENT_DIR/.aimaestro/state/branch-rules.json`.
 3. Emit the summary disposition (see Output).
 
 **APPLY** (when the trigger is "protect / apply / harden /
@@ -78,11 +78,10 @@ Full commands + the canonical JSON body:
 ## Output
 
 - **SHOW**: `{mode, ruleset_count, default_branch_ruleset,
-  cache_path}` plus the refreshed cache at
-  `~/.aimaestro/maintainer/<agentId>/branch-rules.json`.
+  cache_path}` + refreshed cache at
+  `$AGENT_DIR/.aimaestro/state/branch-rules.json`.
 - **APPLY**: `{mode, action, ruleset_id, required_checks, report,
-  cache_path}` plus the post-apply ruleset on the default branch
-  AND the refreshed cache.
+  cache_path}` + post-apply ruleset + refreshed cache.
 
 ## Error Handling
 

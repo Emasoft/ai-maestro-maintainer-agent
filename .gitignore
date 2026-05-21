@@ -65,6 +65,15 @@ reports_dev/
 # Janitor state (per-project session state from ai-maestro-janitor plugin)
 .janitor/
 
+# AI Maestro per-agent state — backed up + migrated by AI Maestro itself,
+# never committed to the git repo. Includes:
+#   .aimaestro/state/processed-issues.json
+#   .aimaestro/state/branch-rules.json
+#   .aimaestro/state/guardian-baseline.json
+#   .aimaestro/state/guardian-state.json
+#   .aimaestro/workspace-<sid>/   (per-session repo clone, regenerable)
+.aimaestro/
+
 # TLDR read-enforcer config
 .tldrignore
 

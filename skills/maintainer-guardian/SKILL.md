@@ -8,7 +8,7 @@ description: |
   classes (T1 zizmor/actionlint findings, T2 stale SHA pins,
   T3 branch-rule state, T4 protected-path activity, T5 secret-leak
   markers in recent commits) into a JSON snapshot cached to
-  $HOME/.aimaestro/maintainer/AGENT_ID/guardian-baseline.json.
+  $AGENT_DIR/.aimaestro/state/guardian-baseline.json.
   (2) SCAN — invoked at every patrol pre-cycle; re-runs the same
   five detectors, diffs against the baseline, writes the running
   tally to guardian-state.json, returns a disposition. Critical
@@ -53,7 +53,7 @@ maintainer no longer waits for someone to file an issue saying
    each path, capture its last-modified commit SHA.
 4. Run the secret-leak regex scan on the last 50 commits.
 5. Aggregate into `guardian-baseline.json` and write atomically to
-   `~/.aimaestro/maintainer/$AGENT_ID/guardian-baseline.json`.
+   `$AGENT_DIR/.aimaestro/state/guardian-baseline.json`.
 
 **SCAN** (mode=scan, invoked at every patrol pre-cycle):
 

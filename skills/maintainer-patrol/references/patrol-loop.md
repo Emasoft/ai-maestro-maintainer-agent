@@ -38,18 +38,42 @@ Use `$POLL_SECONDS` as the argument to every `sleep` in the loop.
 
 ## Ledger setup
 
+All per-agent state lives **inside the agent's working directory**
+— never under `$HOME` — so AI Maestro's backup snapshots capture
+it and host-to-host migration (export from laptop, re-import on
+desktop) carries the ledger with the agent.
+
+The agent working directory is resolved via this fallback chain:
+
+```bash
+# 1. $AIMAESTRO_AGENT_DIR is the canonical AI Maestro env var
+#    (preferred when AI Maestro is the runtime, see
+#    https://github.com/Emasoft/ai-maestro/issues/32).
+# 2. $CLAUDE_PROJECT_DIR is Claude Code's standard project dir
+#    (current actual env var until AI Maestro ships its own).
+# 3. $PWD is the last-resort fallback for unmanaged runs.
+AGENT_DIR="${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+STATE_DIR="$AGENT_DIR/.aimaestro/state"
+mkdir -p "$STATE_DIR"
+```
+
+Then:
+
 ```bash
 REPO="<githubRepo from agent registry>"
-AGENT_ID="<agentId>"
-LEDGER_DIR="$HOME/.aimaestro/maintainer/$AGENT_ID"
-LEDGER="$LEDGER_DIR/processed-issues.json"
-mkdir -p "$LEDGER_DIR"
+LEDGER="$STATE_DIR/processed-issues.json"
 [ -f "$LEDGER" ] || echo '{"processed":{}}' > "$LEDGER"
 ```
 
 The ledger persists across hibernation. On resume, replay it
 against the current open-issue list to skip already-processed
 entries.
+
+> **Never** write the ledger under `$HOME` (`~/.aimaestro/...`,
+> `$HOME/agents/...`). Host-global paths are invisible to AI
+> Maestro backups, which means after a restore the agent boots
+> into a fresh ledger and re-processes already-handled issues.
+> The same trap breaks agent migration between hosts.
 
 ## Guardian pre/post hooks
 
@@ -61,7 +85,7 @@ guardian of the repo.
 
 ```bash
 # 1. Backstop the SessionStart hook — make sure the baseline exists.
-BASELINE="$HOME/.aimaestro/maintainer/$AGENT_ID/guardian-baseline.json"
+BASELINE="$STATE_DIR/guardian-baseline.json"
 if [ ! -f "$BASELINE" ]; then
   # Invoke maintainer-guardian in baseline mode.
   # ...

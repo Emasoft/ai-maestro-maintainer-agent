@@ -21,7 +21,16 @@ If the repo is not already cloned locally:
 
 ```bash
 REPO="<githubRepo>"
-AGENT_NAME="<agent name>"
+
+# Resolve the agent working directory — NEVER write under $HOME.
+# AI Maestro backups only snapshot the agent workdir, and agent
+# migration between hosts only ships the workdir. State outside
+# the workdir is silently lost on both. Resolution order:
+#   1. $AIMAESTRO_AGENT_DIR — proposed AI Maestro env var
+#      (https://github.com/Emasoft/ai-maestro/issues/32)
+#   2. $CLAUDE_PROJECT_DIR  — Claude Code project dir
+#   3. $PWD                 — last-resort fallback
+AGENT_DIR="${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
 
 # Per-session workspace isolation. CLAUDE_CODE_SESSION_ID is exported by
 # Claude Code >= 2.1.132 to every Bash subprocess. When two MAINTAINER
@@ -30,7 +39,7 @@ AGENT_NAME="<agent name>"
 # absent (older CC), fall back to the historical single-workspace path.
 SESSION_SUFFIX=""
 [ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && SESSION_SUFFIX="-${CLAUDE_CODE_SESSION_ID:0:8}"
-WORKSPACE="$HOME/agents/$AGENT_NAME/workspace$SESSION_SUFFIX"
+WORKSPACE="$AGENT_DIR/.aimaestro/workspace$SESSION_SUFFIX"
 
 mkdir -p "$WORKSPACE"
 cd "$WORKSPACE"
@@ -41,6 +50,13 @@ git fetch origin
 git checkout main
 git pull origin main
 ```
+
+The workspace is a regenerable cache: if it's absent after a
+migration, `gh repo clone` re-creates it on first fix. The agent
+working dir does NOT need to ship the clone bytes; it only needs
+to ship the state files (ledger, branch-rules cache, Guardian
+baseline / state) so the maintainer resumes with full memory of
+what's already been done.
 
 Branch names stay collision-checked at push time (step 7) — `git push`
 fails fast on a non-fast-forward, which is the right signal that another

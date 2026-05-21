@@ -189,15 +189,30 @@ other patrol task until the user acknowledges.
 ## Atomic write pattern
 
 Both `guardian-baseline.json` and `guardian-state.json` are written
-atomically — same pattern as `branch-rules.json`:
+atomically — same pattern as `branch-rules.json`. State files MUST
+live inside the AGENT WORKING DIRECTORY (never under `$HOME`) so
+AI Maestro backups and host migration capture them:
 
 ```bash
-CACHE_DIR="$HOME/.aimaestro/maintainer/$AGENT_ID"
-mkdir -p "$CACHE_DIR"
-TMP="$CACHE_DIR/guardian-baseline.json.tmp.$$"
+# Resolve the agent working dir:
+#   1. $AIMAESTRO_AGENT_DIR (preferred — AI Maestro env var, see
+#      https://github.com/Emasoft/ai-maestro/issues/32)
+#   2. $CLAUDE_PROJECT_DIR  (Claude Code project dir)
+#   3. $PWD                 (last-resort fallback)
+AGENT_DIR="${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+STATE_DIR="$AGENT_DIR/.aimaestro/state"
+mkdir -p "$STATE_DIR"
+
+TMP="$STATE_DIR/guardian-baseline.json.tmp.$$"
 # ...build JSON into $TMP...
-mv -f "$TMP" "$CACHE_DIR/guardian-baseline.json"
+mv -f "$TMP" "$STATE_DIR/guardian-baseline.json"
 ```
 
 `mv -f` is atomic on POSIX filesystems, so a crash mid-scan leaves
 the previous baseline intact rather than truncating it.
+
+> **Never** write to `$HOME/.aimaestro/...` or `$HOME/agents/...`.
+> Host-global paths are invisible to AI Maestro backups, which
+> means after a restore the Guardian starts from a clean baseline
+> and re-flags every drift the user already vetted. The same trap
+> breaks agent migration between hosts.
