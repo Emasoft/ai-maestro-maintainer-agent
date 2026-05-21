@@ -19,8 +19,6 @@ description: |
   inspection queries — those bypass the fix workflow entirely.
   Trigger with phrases like "fix issue #N", "work on issue #N",
   or "implement issue #N".
-# Reviewed 2026-04-15: all 12 tools required for clone→edit→test→publish workflow
-allowed-tools: "Bash(git:*), Bash(gh:*), Bash(uv:*), Bash(npm:*), Bash(cargo:*), Bash(go:*), Read, Write, Edit, Grep, Glob, Agent"
 ---
 
 # Maintainer Fix — Clone, Branch, Fix, Test, Publish

@@ -24,7 +24,6 @@ description: |
   branch. Trigger with phrases like "protect main branch", "apply
   branch rules", "set up branch protection", "harden default
   branch", or "apply default-branch ruleset".
-allowed-tools: "Bash(gh:*), Bash(git:*), Bash(grep:*), Read, Write, Grep, Glob"
 ---
 
 # workflow-protect-branch — idempotent default-branch ruleset
@@ -33,92 +32,80 @@ Uses the GitHub Rulesets REST API (stable since 2022-11-28) to
 apply a deterministic ruleset to the maintained repo's default
 branch. Fully idempotent — re-running converges to the same state.
 
-## Prerequisites (auto-checked)
+## Overview
+
+Auto-detects required CI status check names from the local
+workflows, then POSTs (create) or PUTs (update) a ruleset called
+`default-branch-ruleset` that requires those checks, blocks
+non-fast-forward pushes, and blocks branch deletion. Targets the
+default branch via the `~DEFAULT_BRANCH` magic ref. No PR review
+requirement (single-maintainer pattern). Idempotent.
+
+## Prerequisites
 
 - `gh auth token` returns a value.
-- Authenticated user has `admin` permission on the repo:
-  ```bash
-  gh api "repos/$REPO" --jq '.permissions.admin'  # → true
-  ```
-  Otherwise the skill stops with a clear "needs admin" message.
+- Authenticated user has `admin` permission on the repo
+  (`gh api repos/$REPO --jq .permissions.admin` returns `true`).
+  Otherwise stops with a clear "needs admin" message.
 
-## Workflow
+## Instructions
 
-1. Auto-detect required status checks from local workflows:
-   ```bash
-   CHECKS=$(grep -REn '^[[:space:]]{2}[a-z0-9_-]+:' \
-     .github/workflows/*.yml \
-     | awk -F: '/^[^:]+:[0-9]+:  /{print $NF}' \
-     | tr -d ' ' | sort -u)
-   ```
-   Expected for this plugin: `validate` and `workflow-security`.
-2. Build the canonical ruleset JSON (write to a tmpfile —
-   never inline in the shell with `${{ }}` interpolation):
-   ```json
-   {
-     "name": "default-branch-ruleset",
-     "target": "branch",
-     "enforcement": "active",
-     "conditions": {
-       "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] }
-     },
-     "rules": [
-       {
-         "type": "required_status_checks",
-         "parameters": {
-           "strict_required_status_checks_policy": true,
-           "required_status_checks": [
-             { "context": "validate" },
-             { "context": "workflow-security" }
-           ]
-         }
-       },
-       { "type": "non_fast_forward" },
-       { "type": "deletion" }
-     ]
-   }
-   ```
-3. Discover existing ruleset by name:
-   ```bash
-   RULESET_ID=$(gh api "repos/$REPO/rulesets" \
-     --jq '[.[] | select(.name=="default-branch-ruleset")] | .[0].id // empty')
-   ```
-4. POST or PUT:
-   ```bash
-   if [ -z "$RULESET_ID" ]; then
-     gh api -X POST "repos/$REPO/rulesets" --input /tmp/ruleset-$$.json
-   else
-     gh api -X PUT "repos/$REPO/rulesets/$RULESET_ID" --input /tmp/ruleset-$$.json
-   fi
-   ```
-5. Verify post-apply:
-   ```bash
-   gh ruleset list --repo "$REPO" | grep default-branch-ruleset
-   ```
-6. Write report under
-   `$MAIN_ROOT/reports/workflow-protect-branch/<ts>-ruleset.json`
-   (before + after states + diff).
-7. Return:
-   ```json
-   {
-     "action": "created" | "updated" | "noop",
-     "ruleset_id": <int>,
-     "required_checks": ["validate", "workflow-security"],
-     "report": "<path>"
-   }
-   ```
+1. Auto-detect required status check names by greping every
+   `.github/workflows/*.yml` for two-space-indented job keys.
+2. Build the canonical ruleset JSON in a tmpfile (no inline
+   `${{ }}` interpolation).
+3. List existing rulesets, find one named
+   `default-branch-ruleset`, capture its id (empty if none).
+4. POST `/repos/{owner}/{repo}/rulesets` to create, or PUT
+   `/repos/{owner}/{repo}/rulesets/{id}` to update.
+5. Verify post-apply via `gh ruleset list` + `gh ruleset view`.
+6. Write before/after ruleset state under
+   `$MAIN_ROOT/reports/workflow-protect-branch/`.
 
-## Constraints
+Full commands and the canonical JSON body: see
+[references/instructions.md](references/instructions.md).
 
-- ONLY targets the default branch (`~DEFAULT_BRANCH` magic ref).
-- Does NOT require PR reviews (single-maintainer plugin pattern).
-- Stops if `gh auth token` lacks admin permission on the repo.
-- NEVER deletes a ruleset.
-- NEVER edits any other ruleset (only `default-branch-ruleset`).
-- All API writes via `--input <tmpfile>` — no inline JSON with
-  context interpolation.
+## Output
+
+A JSON object with `action` (`created` / `updated` / `noop`),
+`ruleset_id`, `required_checks`, and `report` fields, plus the
+post-apply ruleset in place on the default branch.
+
+## Error Handling
+
+| Error | Action |
+|-------|--------|
+| `gh auth token` empty | Stop, surface |
+| `.permissions.admin` returns `false` | Stop, surface "needs admin" |
+| `gh api -X POST` returns 4xx (other than 404) | Stop, capture response body in report |
+| `gh api -X PUT` returns 404 (ruleset deleted concurrently) | Retry as POST |
+| Rate-limit hint | Stop, return partial-progress disposition |
+
+## Examples
+
+First-time apply (no existing ruleset):
+
+```
+User: "apply branch protection to main"
+→ Detect jobs: validate, workflow-security
+→ GET /rulesets → empty
+→ POST /rulesets with the canonical JSON
+→ Return: {action: "created", ruleset_id: 12345, ...}
+```
+
+Re-run after the same skill:
+
+```
+User: "apply branch protection to main"
+→ GET /rulesets → found id=12345 named default-branch-ruleset
+→ PUT /rulesets/12345 with the same JSON
+→ Return: {action: "updated", ruleset_id: 12345, ...}
+```
 
 ## Resources
 
-- Rulesets REST API: <https://docs.github.com/en/rest/repos/rules>
-- Companion skills: `workflow-scan`, `workflow-fix-safe`, `workflow-pin-actions`.
+- Rulesets REST API:
+  <https://docs.github.com/en/rest/repos/rules>
+- Companion skills: `workflow-scan`, `workflow-fix-safe`,
+  `workflow-pin-actions`.
+- [Full step-by-step instructions](references/instructions.md)

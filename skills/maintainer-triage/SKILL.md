@@ -22,7 +22,6 @@ description: |
   "show me issue N" queries — those go straight to gh issue view.
   Trigger with phrases like "triage issue #N", "classify issue
   #N", or "decide what to do with issue #N".
-allowed-tools: "Bash(gh:*), Bash(git:*), Read, Write, Grep, Glob, Agent"
 ---
 
 # Maintainer Triage — Issue Classification

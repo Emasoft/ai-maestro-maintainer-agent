@@ -23,7 +23,6 @@ description: |
   Trigger with phrases like "scan workflows", "audit github
   actions", "audit workflow security", "zizmor scan", or
   "check workflow security".
-allowed-tools: "Bash(uvx:*), Bash(zizmor:*), Bash(actionlint:*), Bash(gh:*), Bash(git:*), Read, Write, Grep, Glob"
 ---
 
 # workflow-scan — read-only GitHub Actions audit
@@ -32,76 +31,79 @@ Two-tool static analysis of `.github/workflows/`. Zero side
 effects beyond writing a report file (and optionally posting an
 issue comment).
 
-## Prerequisites (all auto-verified, no human input)
+## Overview
 
-- `uvx` on PATH (provided by `uv`, already required by publish.py).
+Wraps `uvx zizmor` (zizmorcore/zizmor) and `actionlint` for a
+read-only audit of every workflow under `.github/workflows/`.
+Writes JSON + markdown reports under
+`$MAIN_ROOT/reports/workflow-scan/`. Optionally posts a summary
+on a linked GitHub issue. No file mutations, no commits, no push.
+
+## Prerequisites
+
+- `uvx` on PATH (provided by `uv`).
 - `actionlint` on PATH (Homebrew formula `actionlint`).
-- `gh auth token` resolves to a valid token (already true on AI
-  Maestro hosts — never run `gh auth login` from this skill).
-- `.github/workflows/` exists in the current clone; if not, the
-  skill returns `{disposition: "skipped", reason: "no workflows"}`.
+- `gh auth token` resolves to a valid token (AI Maestro
+  guarantees this on the host).
+- `.github/workflows/` exists; if not, the skill returns
+  `{disposition: "skipped", reason: "no workflows"}`.
 
-## Workflow
+## Instructions
 
-1. Resolve report path:
-   ```bash
-   MAIN_ROOT="$(git worktree list | head -n1 | awk '{print $1}')"
-   DIR="$MAIN_ROOT/reports/workflow-scan"
-   mkdir -p "$DIR"
-   TS="$(date +%Y%m%d_%H%M%S%z)"
-   JSON="$DIR/$TS-scan.json"
-   MD="$DIR/$TS-scan.md"
-   ```
-2. Run zizmor (JSON for tooling, parses into the markdown):
-   ```bash
-   uvx zizmor --gh-token "$(gh auth token)" --format=json \
-     .github/workflows/ > "$JSON"
-   ZEX=$?  # 0 clean | 11..14 by severity | 1 error
-   ```
-   If the Bash tool prepends "GitHub API rate limit", re-run with
-   `--offline` and note "scanned offline (rate-limit)" in the
-   report header. Never retry the online run inside this skill.
-3. Run actionlint per file (concatenate findings):
-   ```bash
-   for f in .github/workflows/*.yml; do actionlint "$f"; done
-   ```
-4. Render `$MD` per
-   [references/report-layout.md](references/report-layout.md):
-   header (exit code, severity, mode), severity-summary table,
-   per-finding sections (file:line:col + audit ID + doc link).
-5. If an issue number is supplied in context, post the top of `$MD`
-   (header + summary table) as a comment:
-   ```bash
-   gh label create workflow-security-review-needed --force \
-     --color C5DEF5 \
-     --description "zizmor or actionlint surfaced new high finding"
-   gh issue comment "$ISSUE" --body-file <(head -40 "$MD")
-   # Only tag when NEW HIGH findings vs main:
-   if [ "$NEW_HIGH" -gt 0 ]; then
-     gh issue edit "$ISSUE" --add-label workflow-security-review-needed
-   fi
-   ```
-6. Return:
-   ```json
-   {
-     "exit_code": <0|11|12|13|14>,
-     "highest_severity": "none|info|low|medium|high",
-     "total": <int>,
-     "actionlint": <int>,
-     "report_md": "<absolute path>",
-     "report_json": "<absolute path>"
-   }
-   ```
+1. Resolve report path under `$MAIN_ROOT/reports/workflow-scan/`
+   with a `YYYYMMDD_HHMMSS±HHMM` local-time-plus-offset stamp.
+2. Run `uvx zizmor --gh-token "$(gh auth token)" --format=json
+   .github/workflows/` and capture exit code.
+3. Run `actionlint <file>` for every `*.yml` and concatenate.
+4. Render the markdown report per
+   [references/report-layout.md](references/report-layout.md).
+5. On rate-limit hint: re-run with `--offline`, note in header.
+6. If an issue number is in context, post the report's first 40
+   lines as a comment; auto-create the label
+   `workflow-security-review-needed` via `gh label create --force`.
+7. Return a structured disposition (see Output).
 
-## Constraints
+For step-by-step commands see
+[references/instructions.md](references/instructions.md).
 
-- No commits, no pushes, no `git add` of any kind.
-- No `--fix` invocations — that's `workflow-fix-safe`'s job.
-- No `--no-verify`, no `-f`, no destructive operations.
-- Never run `gh auth login` — fail-fast if `gh auth token` is empty.
+## Output
+
+A JSON object with `exit_code`, `highest_severity`,
+`total`, `actionlint`, `report_md`, and `report_json` fields,
+plus the two report files on disk.
+
+## Error Handling
+
+| Error | Action |
+|-------|--------|
+| `uvx` not on PATH | Stop, surface to caller |
+| `gh auth token` empty | Stop, surface to caller |
+| `.github/workflows/` missing | Return `{disposition: "skipped"}` |
+| zizmor exit 1 (tool error) | Capture stderr in report, return error disposition |
+| Rate-limit hint | Re-run `--offline`, note in report header |
+
+## Examples
+
+Manual scan:
+```
+User: "scan workflows for security issues"
+→ uvx zizmor … --format=json .github/workflows/
+→ actionlint .github/workflows/*.yml
+→ Write report to reports/workflow-scan/<ts>-scan.md
+→ Return: {exit_code: 14, highest_severity: "high", total: 12, …}
+```
+
+Chained from maintainer-fix:
+```
+maintainer-fix step 6 (workflow touched):
+→ Run workflow-scan in audit mode with the issue number in context
+→ Post summary as issue comment
+→ Tag workflow-security-review-needed if new highs vs base
+```
 
 ## Resources
 
 - zizmor docs: <https://docs.zizmor.sh/>
 - actionlint docs: <https://github.com/rhysd/actionlint>
 - [Report layout](references/report-layout.md)
+- [Full step-by-step instructions](references/instructions.md)

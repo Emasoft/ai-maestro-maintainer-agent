@@ -22,7 +22,6 @@ description: |
   or on SHA-pinning requests (use workflow-pin-actions). Trigger
   with phrases like "fix workflow security", "harden workflows",
   "apply safe workflow fixes", or "auto-fix workflow findings".
-allowed-tools: "Bash(uvx:*), Bash(zizmor:*), Bash(actionlint:*), Bash(gh:*), Bash(git:*), Read, Write, Edit, Grep, Glob"
 ---
 
 # workflow-fix-safe — apply only conservative auto-fixes
@@ -30,72 +29,72 @@ allowed-tools: "Bash(uvx:*), Bash(zizmor:*), Bash(actionlint:*), Bash(gh:*), Bas
 Pipeline: scan → `zizmor --fix=safe` → idempotent hardening
 edits → stage by name → commit on current branch. Caller pushes.
 
-## Prerequisites (all auto-checked)
+## Overview
 
-- `uvx` on PATH; `gh auth token` returns a value; clone is a git
-  repo with a clean working tree (or only `.github/workflows/`
-  changes already staged).
-- Current branch is a feature branch — never run on `main` /
-  `master` / `release/*` without confirmation. Skill detects via
-  `git rev-parse --abbrev-ref HEAD` and aborts if the branch
-  matches the protected pattern.
+Conservative auto-fix only. NEVER `--fix=all` or
+`--fix=unsafe-only` (those need human review). Runs
+`zizmor --fix=safe`, then layers idempotent hardening (top-level
+permissions, concurrency, timeout-minutes, persist-credentials),
+re-scans for regressions, and commits the diff on the current
+branch. Pushing is the caller's responsibility.
 
-## Workflow
+## Prerequisites
 
-1. Resolve the report-dir for the pre/post scans:
-   ```bash
-   MAIN_ROOT="$(git worktree list | head -n1 | awk '{print $1}')"
-   DIR="$MAIN_ROOT/reports/workflow-fix-safe"
-   mkdir -p "$DIR"
-   ```
-2. Pre-scan baseline: invoke **workflow-scan**, capture finding
-   counts. If 0 findings AND every workflow already has top-level
-   permissions + concurrency + timeout-minutes + persist-creds
-   on every checkout, exit early with disposition `noop`.
-3. Apply zizmor safe auto-fixes:
-   ```bash
-   uvx zizmor --gh-token "$(gh auth token)" --fix=safe \
-     .github/workflows/ 2>&1 | tee "$DIR/zizmor-fix.log"
-   ```
-   Some findings will be "held back" — that's correct (they need
-   `--fix=all` which this skill MUST NOT run). Record the held
-   count in the report; never escalate.
-4. Layer idempotent hardening edits on each workflow file:
-   - Top-level `permissions: contents: read` if missing.
-   - Top-level `concurrency: { group: "${{ github.workflow }}-${{ github.ref }}", cancel-in-progress: false }` if missing.
-   - Per-job `timeout-minutes: 15` if missing.
-   - Every `actions/checkout` step gets `with: persist-credentials: false`.
-   Use the Read+Edit tools (yaml-aware, line-precise) — NEVER
-   shell out to `sed`/`awk` for these edits (YAML round-trip is
-   fragile; let the user see each diff via the tool surface).
-5. Re-scan: run **workflow-scan** post-edit, compare against the
-   baseline. If new findings appeared (unlikely but possible),
-   STOP and surface them — do NOT commit a regression.
-6. Stage and commit (NEVER `git add -A`):
-   ```bash
-   git add .github/workflows/<file1> .github/workflows/<file2> ...
-   git commit -m "chore(ci): apply safe workflow hardening (zizmor --fix=safe)"
-   ```
-7. Return:
-   ```json
-   {
-     "fixed_by_zizmor": <int>,
-     "hardening_edits": <int>,
-     "held_back": <int>,
-     "commit": "<sha>",
-     "report_md": "<path>"
-   }
-   ```
+- `uvx` on PATH; `gh auth token` returns a value.
+- Working tree clean (or only `.github/workflows/` already
+  staged).
+- Current branch is NOT `main` / `master` / `release/*` — skill
+  aborts if so (protected-branch guard).
 
-## Constraints
+## Instructions
 
-- NEVER `--fix=all` or `--fix=unsafe-only`.
-- NEVER `git push` — caller pushes.
-- NEVER force-push, `--no-verify`, `git add -A`, `git reset --hard`.
-- NEVER edit workflows outside `.github/workflows/`.
-- STOP on pre-commit hook failure; surface the failure.
+1. Pre-scan baseline via the **workflow-scan** skill.
+2. Run `uvx zizmor --gh-token "$(gh auth token)" --fix=safe
+   .github/workflows/`.
+3. Layer idempotent hardening on each `.github/workflows/*.yml`:
+   top-level `permissions: contents: read`, `concurrency:`,
+   per-job `timeout-minutes:`, per-checkout
+   `persist-credentials: false`. Use the Read+Edit tools — never
+   sed/awk for YAML edits.
+4. Post-scan via workflow-scan; abort if new findings appeared.
+5. Stage by name (NEVER `git add -A`) and commit:
+   `chore(ci): apply safe workflow hardening`.
+
+Full commands: see
+[references/instructions.md](references/instructions.md).
+
+## Output
+
+A JSON object with `fixed_by_zizmor`, `hardening_edits`,
+`held_back`, `commit`, and `report_md` fields, plus a commit on
+the current branch.
+
+## Error Handling
+
+| Error | Action |
+|-------|--------|
+| Protected branch checked out | Stop, surface "needs a feature branch" |
+| Pre-commit hook fails | Stop, surface the failure (no --no-verify) |
+| Working tree dirty with non-workflow changes | Stop, ask caller to commit first |
+| New zizmor findings in post-scan | Stop, no commit (regression guard) |
+| `gh auth token` empty | Stop, surface |
+
+## Examples
+
+```
+User: "fix the safe zizmor findings"
+→ workflow-scan baseline
+→ uvx zizmor --fix=safe .github/workflows/
+→ Edit validate.yml + release.yml to add missing permissions
+→ workflow-scan post — clean
+→ git add .github/workflows/validate.yml .github/workflows/release.yml
+→ git commit -m "chore(ci): apply safe workflow hardening"
+→ Return: {fixed_by_zizmor: 3, hardening_edits: 2, held_back: 5, ...}
+```
 
 ## Resources
 
 - zizmor fix modes: <https://docs.zizmor.sh/usage/#auto-fixing>
-- Companion skills: `workflow-scan` (read-only), `workflow-pin-actions` (SHA pinning), `workflow-protect-branch` (branch ruleset).
+- Companion skills: `workflow-scan`, `workflow-pin-actions`,
+  `workflow-protect-branch`.
+- [Full step-by-step instructions](references/instructions.md)

@@ -108,13 +108,17 @@ Once the agent session is running:
   re-picked-up on the next cycle with a fresh budget. Tight retry loops
   only deepen GitHub's back-off — the skills will never retry the same
   `gh` call inside one invocation.
-- **Permission prompts.** If you are running the agent unattended and want
-  to reduce permission prompts (e.g. for the `Bash(git:*)`, `Bash(gh:*)`,
-  `Bash(uv:*)` patterns this plugin uses), invoke the
-  `/less-permission-prompts` skill (Claude Code ≥ 2.1.111) once at the
-  start of the session. It walks you through trusting the allow-list
-  declared in each skill's frontmatter — the lists in this plugin are
-  already scoped to the exact subcommands the workflow needs.
+- **Tool surface is dynamic.** Skills and the agent in this plugin
+  intentionally do NOT declare `allowed-tools` / `tools:` /
+  `disallowedTools:` in their frontmatter. AI Maestro provisions the
+  tool surface (built-in Claude Code tools + MCP servers + any
+  ecosystem extensions) dynamically at agent-spawn time, so the
+  available toolset can grow without per-skill edits. If you want
+  to reduce permission prompts when running unattended, invoke the
+  `/less-permission-prompts` skill (Claude Code ≥ 2.1.111) once at
+  the start of the session — it scans your transcripts and adds the
+  observed safe tool patterns to `.claude/settings.json` at the
+  user or project scope.
 - **Observability** (Claude Code ≥ 2.1.145). `claude agents --json` emits a
   machine-readable view of every running agent (including this one), and
   OTEL spans for agent activity expose `agent_id` / `parent_agent_id` so

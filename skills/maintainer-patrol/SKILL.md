@@ -21,7 +21,6 @@ description: |
   entering the polling loop. Trigger with phrases like "start
   patrol", "begin maintenance loop", "resume monitoring", "watch
   for new issues", or "patrol owner/repo".
-allowed-tools: "Bash(gh:*), Bash(git:*), Read, Write, Glob, Grep"
 ---
 
 # Maintainer Patrol — GitHub Issues Polling

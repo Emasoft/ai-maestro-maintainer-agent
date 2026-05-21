@@ -52,8 +52,11 @@ jobs:
           # ran the same validator locally first. A failure here means
           # someone bypassed publish.py — investigate immediately.
           if [ $EXIT_CODE -ne 0 ]; then
-            echo "::error::CPV strict validation failed for pushed tag $GITHUB_REF_NAME (exit $EXIT_CODE)"
-            echo "::error::This tag was likely pushed without going through scripts/publish.py"
-            echo "::error::The GitHub release (if any) should be rolled back by the release owner"
+            MSG1="CPV strict validation failed for tag $GITHUB_REF_NAME (exit $EXIT_CODE)"
+            MSG2="Tag likely pushed bypassing the canonical publish pipeline"
+            MSG3="The release (if any) should be rolled back by the maintainer"
+            echo "::error::$MSG1"
+            echo "::error::$MSG2"
+            echo "::error::$MSG3"
             exit $EXIT_CODE
           fi

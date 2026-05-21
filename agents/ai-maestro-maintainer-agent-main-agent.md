@@ -5,8 +5,6 @@ description:
   bugs autonomously, accepts feature requests only from the authorized
   GitHub user, and fixes valid issues via clone-branch-test-publish.
 model: opus
-tools: Bash, Read, Edit, Write, Grep, Glob, Skill, Agent
-disallowedTools: WebSearch, WebFetch
 skills:
   - maintainer-patrol
   - maintainer-triage

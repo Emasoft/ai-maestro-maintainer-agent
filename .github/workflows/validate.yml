@@ -48,10 +48,10 @@ jobs:
           EXIT_CODE=$?
           set -e
 
-          # Exit codes: 0=PASS, 1=CRITICAL, 2=MAJOR, 3=MINOR, 4=NIT (strict)
-          # Quality gate: ONLY exit 0 passes. All issues block.
+          # Exit codes (strict mode): 0=ok, 1=critical, 2=major, 3=minor, 4=nit.
+          # Quality gate: only exit 0 succeeds. All issues block.
           if [ $EXIT_CODE -eq 0 ]; then
-            echo "=== Validation PASSED (--strict) ==="
+            echo "=== Validation OK (--strict) ==="
           else
             echo "=== BLOCKED: Validation issues found (exit $EXIT_CODE) ==="
             cat validation-report.md 2>/dev/null || true
