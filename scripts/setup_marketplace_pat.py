@@ -91,14 +91,9 @@ def run(cmd: list[str], *, check: bool = True) -> subprocess.CompletedProcess[st
 
 def gh_auth_ok() -> None:
     """Verify gh CLI is authenticated; fail fast otherwise."""
-    r = _safe_proc(
-        ["gh", "auth", "status"], capture_output=True, text=True, timeout=30
-    )
+    r = _safe_proc(["gh", "auth", "status"], capture_output=True, text=True, timeout=30)
     if r.returncode != 0:
-        sys.exit(
-            "FAILED: gh CLI is not authenticated. Run `gh auth login` first, "
-            "or ensure AI Maestro exported a valid gh auth token."
-        )
+        sys.exit("FAILED: gh CLI is not authenticated. Run `gh auth login` first, or ensure AI Maestro exported a valid gh auth token.")
 
 
 def admin_on(repo: str) -> None:
@@ -112,10 +107,7 @@ def admin_on(repo: str) -> None:
     if r.returncode != 0:
         sys.exit(f"FAILED: cannot read repos/{repo} via gh api. Network or 404?")
     if r.stdout.strip() != "true":
-        sys.exit(
-            f"FAILED: authenticated user lacks `admin` permission on {repo} "
-            "(needed to set repo secrets)."
-        )
+        sys.exit(f"FAILED: authenticated user lacks `admin` permission on {repo} (needed to set repo secrets).")
 
 
 def set_secret(repo: str, name: str, value: str) -> None:
@@ -138,9 +130,7 @@ def verify_secret(repo: str, name: str) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Set MARKETPLACE_PAT on plugin + marketplace repos."
-    )
+    parser = argparse.ArgumentParser(description="Set MARKETPLACE_PAT on plugin + marketplace repos.")
     parser.add_argument(
         "--plugin-repo",
         default=DEFAULT_PLUGIN_REPO,
@@ -160,10 +150,7 @@ def main() -> None:
 
     value = os.environ.get(args.secret_name)
     if not value:
-        sys.exit(
-            f"FAILED: ${args.secret_name} is not set in the environment.\n"
-            f"  export {args.secret_name}=<your-PAT>  (or load from a .env)"
-        )
+        sys.exit(f"FAILED: ${args.secret_name} is not set in the environment.\n  export {args.secret_name}=<your-PAT>  (or load from a .env)")
 
     gh_auth_ok()
 
@@ -173,8 +160,7 @@ def main() -> None:
         verify_secret(repo, args.secret_name)
 
     print(
-        f"\nok: {args.secret_name} is set on both "
-        f"{args.plugin_repo} and {args.marketplace_repo}.",
+        f"\nok: {args.secret_name} is set on both {args.plugin_repo} and {args.marketplace_repo}.",
         file=sys.stderr,
     )
 
