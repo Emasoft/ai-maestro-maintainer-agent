@@ -69,8 +69,7 @@ Full per-class commands + routing tables:
 
 - **BASELINE**: `{mode, snapshot_path, t1_count, t2_count, t3_status,
   t4_count, t5_count}` + the refreshed snapshot file.
-- **SCAN**: `{mode, delta, route_decisions[], state_path, report}`
-  + the refreshed state file + (optionally) issues/PRs filed.
+- **SCAN**: `{mode, delta, route_decisions[], state_path, report}` plus the refreshed state file plus (optionally) issues/PRs filed.
 
 ## Error Handling
 

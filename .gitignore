@@ -82,3 +82,9 @@ reports_dev/
 /.trashcan/*
 !/.trashcan/.gitkeep
 !/.trashcan/README.txt
+
+# Added by CPV standardize
+.coverage
+
+# Backup files created by CPV standardize-plugin --force-templates
+*.bak

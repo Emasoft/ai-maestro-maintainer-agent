@@ -25,8 +25,8 @@ esac
 
 Invoke the `workflow-scan` skill, capture finding counts in
 `$BASELINE_JSON`. If baseline is 0 findings AND every workflow
-already has top-level permissions + concurrency + timeout-minutes
-+ persist-credentials, exit early with disposition `noop`.
+already has top-level permissions, concurrency, timeout-minutes,
+and persist-credentials, exit early with disposition `noop`.
 
 ## Step 3: Run zizmor --fix=safe
 

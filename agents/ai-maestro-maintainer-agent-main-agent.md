@@ -4,7 +4,7 @@ description:
   MAINTAINER agent that polls a GitHub repository for new issues, triages
   bugs autonomously, accepts feature requests only from the authorized
   GitHub user, and fixes valid issues via clone-branch-test-publish.
-model: opus
+model: inherit
 skills:
   - maintainer-patrol
   - maintainer-triage
