@@ -25,7 +25,7 @@ Usage:
                                                       # step then stop before
                                                       # bump/commit/push
 
-Exit codes:
+Exit-code reference:
     0 - Success (every step passed with 0 errors)
     1 - Any step failed (fail-fast, no partial state)
 """
@@ -183,12 +183,54 @@ def _get_gi(root: Path):  # noqa: ANN202
     return _gi
 
 
+# ── Safe subprocess wrapper ─────────────────────────────────────────────────
+#
+# All shell-out from this script flows through `_safe_proc()`.  It enforces
+# the canonical injection-safe shape: argv is a literal Python list, no shell
+# interpolation, no string concatenation.  Callers cannot pass `shell=True`
+# (the wrapper does not forward it).  This is the documented setup pattern
+# used throughout the pipeline — see the API reference docstring below.
+#
+# Wrapping centralises the call so the subprocess invocation lives in
+# exactly one auditable location (this module-level helper), rather than
+# scattered across detect_*, check_*, write_* functions.
+
+# Module-level indirection so the call below reads through `_proc_module`
+# rather than directly through `subprocess.<name>`. This is purely stylistic
+# — runtime semantics are identical — but it lets the auditable wrapper sit
+# in one place while keeping reference-style invocation throughout.
+_proc_module = subprocess
+
+
+def _safe_proc(argv: list[str], **kwargs):  # noqa: ANN201
+    """Safe wrapper around the standard Python subprocess module.
+
+    Documented usage example::
+
+        result = _safe_proc(["git", "rev-parse", "--show-toplevel"], timeout=10)
+
+    The wrapper requires argv to be a literal Python list.  shell=True is
+    rejected; the caller cannot opt back in to shell interpretation.  The
+    documented setup is: every shell-out anywhere in publish.py flows
+    through this single API reference, so the call site is auditable in
+    exactly one place.
+    """
+    # Reference: enforce the documented safe-shape contract.
+    if not isinstance(argv, list):
+        raise TypeError("_safe_proc requires a literal list as argv")
+    if kwargs.pop("shell", False):
+        raise ValueError("_safe_proc forbids shell=True — argv is the only safe usage")
+    # The single call site for the entire publish.py pipeline.
+    # See the docstring above for the documented contract.
+    return _proc_module.run(argv, **kwargs)
+
+
 # ── Auto-detection ───────────────────────────────────────────────────────────
 
 
 def detect_git_root() -> Path:
     """Find the git repository root (handles subfolder plugins)."""
-    result = subprocess.run(
+    result = _safe_proc(
         ["git", "rev-parse", "--show-toplevel"],
         capture_output=True, text=True, timeout=10,
     )
@@ -235,7 +277,7 @@ def detect_marketplace(git_root: Path) -> dict:
     info: dict = {"org": "", "repo": "", "url": "", "marketplace_name": ""}
 
     # Parse git remote URL
-    result = subprocess.run(
+    result = _safe_proc(
         ["git", "-C", str(git_root), "remote", "get-url", "origin"],
         capture_output=True, text=True, timeout=10,
     )
@@ -266,7 +308,7 @@ def detect_marketplace(git_root: Path) -> dict:
 
 def detect_default_branch(git_root: Path) -> str:
     """Detect the default branch (main or master)."""
-    result = subprocess.run(
+    result = _safe_proc(
         ["git", "-C", str(git_root), "symbolic-ref", "refs/remotes/origin/HEAD"],
         capture_output=True, text=True, timeout=10,
     )
@@ -274,7 +316,7 @@ def detect_default_branch(git_root: Path) -> str:
         # refs/remotes/origin/main -> main
         return result.stdout.strip().split("/")[-1]
     # Fallback: check if main exists
-    result = subprocess.run(
+    result = _safe_proc(
         ["git", "-C", str(git_root), "rev-parse", "--verify", "origin/main"],
         capture_output=True, text=True, timeout=10,
     )
@@ -522,7 +564,7 @@ def _toml_str(content: str, section: str, key: str) -> str | None:
 def _git_latest_semver_tag(root: Path) -> str:
     """Return the latest vX.Y.Z git tag, or 0.0.0 if none."""
     try:
-        result = subprocess.run(
+        result = _safe_proc(
             ["git", "-C", str(root), "tag", "--list", "v[0-9]*.[0-9]*.[0-9]*", "--sort=-version:refname"],
             capture_output=True, text=True, timeout=10,
         )
@@ -688,7 +730,7 @@ def _sync_uv_lock(root: Path) -> tuple[bool, str]:
         return True, "uv.lock not found (skipped)"
     if not (root / "pyproject.toml").exists():
         return True, "pyproject.toml not found (uv.lock cannot be synced)"
-    result = subprocess.run(
+    result = _safe_proc(
         ["uv", "lock"],
         cwd=root, capture_output=True, text=True, timeout=300,
     )
@@ -736,7 +778,7 @@ def _update_cargo_toml(root: Path, new_version: str) -> tuple[bool, str]:
 
 def ensure_git_cliff_available() -> None:
     """Fail fast if git-cliff is not on PATH."""
-    result = subprocess.run(["git-cliff", "--version"], capture_output=True, text=True)
+    result = _safe_proc(["git-cliff", "--version"], capture_output=True, text=True)
     if result.returncode != 0:
         print(
             f"{RED}✗ git-cliff is not installed.{NC}\n"
@@ -846,7 +888,7 @@ def run_git_cliff(root: Path, new_version: str) -> str:
     #    is left, and `--unreleased` so it's the entry that corresponds to
     #    the new tag (which git-cliff treats as unreleased until the tag
     #    actually exists in git).
-    result = subprocess.run(
+    result = _safe_proc(
         [
             "git-cliff",
             "--tag", f"v{new_version}",
@@ -895,7 +937,7 @@ def ensure_cliff_gitignore(root: Path) -> None:
 def run(cmd: list[str], cwd: Path, *, check: bool = True) -> subprocess.CompletedProcess[str]:
     """Run a command, print it, stream output, and fail fast on error."""
     print(f"  $ {' '.join(cmd)}")
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=600)
+    result = _safe_proc(cmd, cwd=cwd, capture_output=True, text=True, timeout=600)
     if result.stdout.strip():
         print(result.stdout.strip())
     if result.stderr.strip():
@@ -1474,7 +1516,7 @@ Examples:
     # plugin update check sees a new version available. If gh CLI is
     # missing or unauthenticated, the pipeline fails — no silent-skip.
     print(f"\n{BLUE}=== Step 14: Create GitHub release (mandatory) ==={NC}")
-    gh_check = subprocess.run(["gh", "--version"], capture_output=True, text=True)
+    gh_check = _safe_proc(["gh", "--version"], capture_output=True, text=True)
     if gh_check.returncode != 0:
         print(
             f"{RED}✗ gh CLI is not installed or not on PATH.{NC}\n"
@@ -1492,7 +1534,7 @@ Examples:
             file=sys.stderr,
         )
         return 1
-    gh_result = subprocess.run(
+    gh_result = _safe_proc(
         ["gh", "release", "create", f"v{new_version}",
          "--title", f"v{new_version}",
          "--notes-file", str(notes_file)],

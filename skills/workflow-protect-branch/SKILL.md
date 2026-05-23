@@ -1,29 +1,12 @@
 ---
 description: |
   Use when the user wants to QUERY or APPLY the maintained repo's
-  default-branch ruleset via the GitHub Rulesets API. Two modes:
-  (1) SHOW — read-only fetch of the currently-deployed ruleset,
-  cached to $AGENT_DIR/.aimaestro/state/branch-rules.json
-  so other skills and the main agent stay aware of the live rule
-  state across the session. (2) APPLY — auto-detects every CI job
-  name from .github/workflows/*.yml, then POSTs (or PUTs if it
-  already exists) a ruleset named `default-branch-ruleset` that
-  targets the default branch via the ~DEFAULT_BRANCH magic ref,
-  requires the discovered status checks to pass with strict-policy
-  (must be up to date with base), blocks non-fast-forward pushes,
-  and blocks branch deletion. Does NOT require pull request
-  reviews (single-maintainer plugin pattern; the validate gate is
-  the review). Fully idempotent — re-running APPLY converges to
-  the same state; re-running SHOW just refreshes the cache. The
-  authenticated user must have admin rights on the repo for APPLY
-  (SHOW only requires read access). Reports under
-  $MAIN_ROOT/reports/workflow-protect-branch/. Do NOT trigger on
-  audit requests for workflow CONTENTS (use workflow-scan) or on
-  requests to modify branches other than the default.
+  default-branch ruleset via the GitHub Rulesets API. SHOW =
+  read-only fetch + cache. APPLY = auto-detect CI job names,
+  POST/PUT a ruleset requiring those checks, blocks
+  non-fast-forward + deletion. Idempotent.
   Trigger with phrases like "protect main branch", "apply branch
-  rules", "set up branch protection" (apply mode); or "show branch
-  rules", "what branch rules are active", "fetch the ruleset",
-  "refresh branch-rule cache" (show mode).
+  rules" (apply), or "show branch rules" (show).
 ---
 
 # workflow-protect-branch — idempotent default-branch ruleset

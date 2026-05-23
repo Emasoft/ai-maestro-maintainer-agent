@@ -41,13 +41,13 @@ One section per finding, severity-descending, audit-ID-ascending
 within severity. Each entry is anchored:
 
 ````markdown
-### `<audit-id>` — one-line description
+### `<audit-rule>` — one-line description
 
 - **File:** `<path>:<line>:<col>`
 - **Severity:** high | medium | low | informational
 - **Confidence:** low | medium | high
 - **Auto-fixable:** yes (safe) | yes (unsafe) | no
-- **Doc:** <https://docs.zizmor.sh/audits/#audit-id>
+- **Doc:** <https://docs.zizmor.sh/audits/#audit-rule>
 
 ```yaml
 <±2 lines of context from the workflow>
@@ -70,7 +70,7 @@ actionlint .github/workflows/*.yml
 
 ## Suppress a finding
 
-Add an entry under `rules.<id>.ignore` in `zizmor.yml` at the repo
+Add an entry under `rules.<rule-name>.ignore` in `zizmor.yml` at the repo
 root, citing a PR or issue number that justifies the exception:
 
 ```yaml

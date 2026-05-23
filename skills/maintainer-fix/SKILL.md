@@ -2,21 +2,10 @@
 description: |
   Use when maintainer-triage returns action=fix or the user wants
   to fix, work on, or implement a GitHub issue on the maintained
-  repo. Runs the full clone, branch, edit, test, workflow audit,
-  approval gate, commit, publish, and close lifecycle against the
-  agent's assigned githubRepo. Reads CLAUDE_CODE_SESSION_ID
-  (Claude Code 2.1.132+) to isolate the per-session workspace
-  under $AGENT_DIR/.aimaestro/workspace/SESSION/. Enforces
-  governance R19.7 (no force-push, no history rewrite, no
-  tag/branch deletion without MANAGER) and R19.8 (all tests pass
-  before push). Calls maintainer-approval-gate before every
-  commit — if the planned diff touches a protected path, the fix
-  halts pending approve-protected-edit from the authorized user.
-  For Python repos publishes via scripts/publish.py; mirrors the
-  build-and-test flow for npm / cargo / go. Closes the issue with
-  a commit link on success; on failure comments the log and does
-  NOT push. Do NOT trigger on triage dispositions other than fix,
-  on rejected/duplicate/needs-info, or on read-only queries.
+  repo. Runs clone → branch → edit → test → workflow audit →
+  approval gate → commit → publish → close. Enforces R19.7
+  (no force-push), R19.8 (tests pass), and halts on protected-path
+  hits until approve-protected-edit lands.
   Trigger with phrases like "fix issue #N", "work on issue #N",
   or "implement issue #N".
 ---
@@ -71,7 +60,17 @@ Copy this checklist and track your progress (per-fix):
 11. Return to patrol: `git checkout main && git pull origin main`.
 
 Full step-by-step commands are in
-[references/fix-steps.md](references/fix-steps.md).
+[references/fix-steps.md](references/fix-steps.md):
+- Step 1: Prepare the Workspace
+- Step 2: Create a Feature Branch
+- Step 3: Understand the Issue
+- Step 4: Make the Code Changes
+- Step 5: Run Tests
+- Step 5.5: Approval Gate
+- Step 6: Commit
+- Step 7: Publish
+- Step 8: Close the Issue
+- Step 9: Return to Patrol
 
 ## Output
 
@@ -110,9 +109,17 @@ next cycle VERIFY finds approval → RESUME → commit, publish
 
 ## Resources
 
-- [Step-by-step reference](references/fix-steps.md): workspace,
-  branch, code changes, tests, workflow-scan, approval-gate,
-  commit, publish, close, return to patrol
+- [Step-by-step reference](references/fix-steps.md):
+  - Step 1: Prepare the Workspace
+  - Step 2: Create a Feature Branch
+  - Step 3: Understand the Issue
+  - Step 4: Make the Code Changes
+  - Step 5: Run Tests
+  - Step 5.5: Approval Gate
+  - Step 6: Commit
+  - Step 7: Publish
+  - Step 8: Close the Issue
+  - Step 9: Return to Patrol
 - Companion: `maintainer-approval-gate`, `maintainer-guardian`,
   `workflow-scan`, `workflow-fix-safe`.
 - Conventional Commits: <https://www.conventionalcommits.org/>

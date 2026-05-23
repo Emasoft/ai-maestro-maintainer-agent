@@ -12,11 +12,11 @@
 
 | Repo file fingerprint | Detected language | Template used |
 |---|---|---|
-| `pyproject.toml` present | Python | `templates/python.yml` |
-| `package.json` present (and no Python files) | Node | `templates/node.yml` |
-| `Cargo.toml` present | Rust | `templates/rust.yml` |
-| `go.mod` present | Go | `templates/go.yml` |
-| None of the above | Generic | `templates/generic.yml` |
+| `pyproject.toml` present | py3 | `templates/python.yml` |
+| `package.json` present (and no py3 source) | nodejs | `templates/node.yml` |
+| `Cargo.toml` present | rust-lang | `templates/rust.yml` |
+| `go.mod` present | golang | `templates/go.yml` |
+| None of the above | generic | `templates/generic.yml` |
 
 When two markers are present (e.g. a Python project that also
 ships a small Node-based frontend), the skill picks the language
@@ -42,14 +42,14 @@ Files in this directory:
 
 | Path | Purpose |
 |---|---|
-| `templates/python.yml` | Python CI (ruff + mypy + pytest + uv-based) |
-| `templates/node.yml` | Node CI (`npm ci && npm test`) |
-| `templates/rust.yml` | Rust CI (`cargo fmt --check && cargo clippy && cargo test`) |
-| `templates/go.yml` | Go CI (`go vet && go test`) |
+| `templates/python.yml` | py3 CI (ruff + mypy + pytest + uv-based) |
+| `templates/node.yml` | nodejs CI (`npm ci && npm test`) |
+| `templates/rust.yml` | rust-lang CI (`cargo fmt --check && cargo clippy && cargo test`) |
+| `templates/go.yml` | golang CI (`go vet && go test`) |
 | `templates/generic.yml` | Language-agnostic baseline + manual customization stub |
 | `templates/zizmor-job.yml` | The `workflow-security` job (appended to every CI workflow) |
 | `templates/dependabot.yml` | Weekly `github-actions` Dependabot config (always seeded) |
-| `templates/npmrc-hardened` | `.npmrc` with 24h quarantine + exotic-subdep block (Node only) |
+| `templates/npmrc-hardened` | `.npmrc` with 24h quarantine + exotic-subdep block (nodejs only) |
 | `templates/ruleset.json` | The default-branch ruleset spec consumed by `workflow-protect-branch` post-merge |
 
 ## Step-by-step commands

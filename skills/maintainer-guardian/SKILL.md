@@ -1,27 +1,12 @@
 ---
 description: |
-  Use when the maintainer agent needs to proactively scan the
-  maintained repo for supply-chain threats — at session start to
-  capture a baseline, or at every patrol cycle to detect new
-  threats as a delta. Two modes. (1) BASELINE — invoked once at
-  session start by the SessionStart hook; aggregates FIVE threat
-  classes (T1 zizmor/actionlint findings, T2 stale SHA pins,
-  T3 branch-rule state, T4 protected-path activity, T5 secret-leak
-  markers in recent commits) into a JSON snapshot cached to
-  $AGENT_DIR/.aimaestro/state/guardian-baseline.json.
-  (2) SCAN — invoked at every patrol pre-cycle; re-runs the same
-  five detectors, diffs against the baseline, writes the running
-  tally to guardian-state.json, returns a disposition. Critical
-  T1-T5 deltas route to one of three responses: auto-fix-PR
-  (workflow-fix-safe for safe zizmor findings), file-tracking-issue
-  (stale pins, drift), or alert-authorized-user (protected-path
-  edits, secret leaks). Idempotent — re-running either mode just
-  refreshes its file. Reports under
-  $MAIN_ROOT/reports/maintainer-guardian/. Do NOT trigger on
-  one-shot audit requests (use workflow-scan) or on issue triage
-  (use maintainer-triage).
+  Use when the maintainer agent proactively scans the repo for
+  supply-chain threats — at session start (BASELINE) or per
+  patrol cycle (SCAN). Aggregates five threat classes (zizmor /
+  stale pins / branch rules / protected-path activity / secret
+  leaks); SCAN diffs vs baseline and routes critical deltas.
   Trigger with phrases like "guardian baseline", "scan for
-  threats", "run guardian scan", or "check for supply-chain drift".
+  threats", or "check for supply-chain drift".
 ---
 
 # maintainer-guardian — proactive supply-chain sentinel
@@ -70,7 +55,15 @@ maintainer no longer waits for someone to file an issue saying
 5. Return disposition; patrol decides whether to early-exit the cycle.
 
 Full per-class commands + routing tables:
-[references/threat-classes.md](references/threat-classes.md).
+[threat-classes](references/threat-classes.md):
+
+- T1 — Workflow drift
+- T2 — Stale SHA pins
+- T3 — Branch-rule drift
+- T4 — Protected-path activity
+- T5 — Secret-leak markers
+- Routing table
+- Atomic write pattern
 
 ## Output
 
@@ -106,11 +99,13 @@ Patrol cycle 7 → guardian scan
 ## Resources
 
 - [Threat classes + routing](references/threat-classes.md):
-  - T1 workflow drift
-  - T2 stale SHA pins
-  - T3 branch-rule drift
-  - T4 protected-path activity
-  - T5 secret-leak markers
+  - T1 — Workflow drift
+  - T2 — Stale SHA pins
+  - T3 — Branch-rule drift
+  - T4 — Protected-path activity
+  - T5 — Secret-leak markers
+  - Routing table
+  - Atomic write pattern
 - Companions: `workflow-scan`, `workflow-fix-safe`,
   `workflow-protect-branch`, `maintainer-approval-gate`.
 - Inspiration: Atai Barkai, "Supply chain attacks are at an

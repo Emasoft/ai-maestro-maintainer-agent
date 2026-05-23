@@ -1,26 +1,12 @@
 ---
 description: |
   Use when MAINTAINER starts, resumes, or the user requests issue
-  monitoring. Polls the agent's assigned githubRepo for new open
-  GitHub issues at a configurable interval (default 5 minutes,
-  bounded by a 10 second floor and a 1 hour ceiling via
-  MAINTAINER_POLL_INTERVAL_MS), tracks already-processed issues in
-  a persistent JSON ledger at
-  $AGENT_DIR/.aimaestro/state/processed-issues.json,
-  dispatches the maintainer-triage skill for each new issue, and
-  records the returned disposition (triaged, fixed, rejected,
-  duplicate, needs-info, or manual). Resumes cleanly after
-  hibernation by replaying the ledger against the current
-  open-issue list. Honours the GitHub rate-limit hint added in
-  Claude Code 2.1.116: when the Bash tool prepends a GitHub API
-  rate limit warning to a gh issue list call, the loop sleeps for
-  the configured poll interval rather than retrying inside the
-  same cycle, letting the next cycle resume on a fresh API budget.
-  Do NOT trigger on read-only inspection queries like "show me the
-  open issues" — those go straight to gh issue list without
-  entering the polling loop. Trigger with phrases like "start
-  patrol", "begin maintenance loop", "resume monitoring", "watch
-  for new issues", or "patrol owner/repo".
+  monitoring. Polls the assigned githubRepo (default 300s, bounded
+  10s..3600s via MAINTAINER_POLL_INTERVAL_MS), tracks processed
+  issues in the per-agent ledger, dispatches maintainer-triage
+  per new issue. Honours the GitHub rate-limit hint.
+  Trigger with phrases like "start patrol", "begin maintenance
+  loop", or "watch for new issues".
 ---
 
 # maintainer-patrol — GitHub issues polling loop
@@ -76,7 +62,13 @@ Copy this checklist and track your progress (pre-flight):
    against the refreshed state.
 9. `sleep "$POLL_SECONDS"`; repeat from step 4.
 
-Detailed reference: [patrol-loop.md](references/patrol-loop.md).
+Detailed reference: [patrol-loop.md](references/patrol-loop.md):
+- Poll interval and bounds
+- Ledger setup
+- Guardian pre/post hooks
+- Per-cycle loop body
+- Rate-limit handling
+- Stopping the patrol
 
 ## Output
 
@@ -90,7 +82,7 @@ the agent session.
 | Error | Action |
 |-------|--------|
 | `gh issue list` fails (net / auth) | Log error, `sleep $POLL_SECONDS`, retry |
-| Bash tool emits "GitHub API rate limit" hint | Stop iterating, `sleep $POLL_SECONDS`, do NOT retry inside the same cycle |
+| `gh`-tool output reports "GitHub API rate limit" hint | Stop iterating, `sleep $POLL_SECONDS`, do NOT retry inside the same cycle |
 | Triage fails for one issue | Record as `error` in ledger, continue to next |
 | Ledger file corrupted | Recreate as `{"processed":{}}`, re-process all current open issues |
 | `githubRepo` not set | Stop patrol, report to user |
@@ -123,6 +115,7 @@ Resume after hibernation:
 - [Patrol loop reference](references/patrol-loop.md):
   - Poll interval and bounds
   - Ledger setup
+  - Guardian pre/post hooks
   - Per-cycle loop body
   - Rate-limit handling
   - Stopping the patrol

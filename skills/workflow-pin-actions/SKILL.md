@@ -1,25 +1,11 @@
 ---
 description: |
   Use when the user wants to SHA-pin every unpinned third-party
-  action reference in the maintained repo's workflows. Discovers
-  every `uses: name@ref` under .github/workflows/ where `ref` is
-  NOT a 40-char commit SHA (so `@v4`, `@v4.3.1`, `@main`, short
-  SHAs all qualify); resolves `ref` to its current commit SHA via
-  `gh api repos/OWNER/REPO/commits/REF --jq .sha`; replaces
-  inline with the full 40-char SHA plus a trailing comment that
-  carries the longest matching semver tag at that SHA. Local
-  refs (`./action`, `../action`) and Docker refs
-  (`docker://image:tag`) are skipped — those have different
-  pinning rules. Commits the diff DIRECTLY on the current branch
-  with a conventional message. NEVER force-pushes (R19.7), NEVER
-  pushes (caller's job), NEVER bumps major versions automatically
-  — preserves the current major-line semantics, only pins to the
-  latest commit on it. Assumes AI Maestro exports the gh auth
-  token on the host; reads it via `$(gh auth token)`. Honours
-  the 2.1.116 rate-limit hint — if a `gh api` call trips it the
-  skill stops with a partial-progress disposition so the next
-  session can resume. Do NOT trigger on requests to upgrade major
-  versions or on read-only audit requests (use workflow-scan).
+  action in the maintained repo's workflows. Resolves each
+  `uses: name@ref` (where ref isn't a 40-char SHA) to its commit
+  SHA via `gh api`, replaces inline with the SHA + trailing
+  `# vX.Y.Z` comment. Commits on the current branch. NEVER
+  force-push or bump majors.
   Trigger with phrases like "pin workflow actions", "SHA-pin
   actions", or "harden action references".
 ---

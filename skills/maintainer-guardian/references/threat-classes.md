@@ -6,8 +6,8 @@ route (what the Guardian does when a delta is positive).
 
 ## Table of Contents
 
-- [T1 — Workflow drift (zizmor + actionlint)](#t1--workflow-drift)
-- [T2 — Stale SHA pins (Dependabot)](#t2--stale-sha-pins)
+- [T1 — Workflow drift](#t1--workflow-drift)
+- [T2 — Stale SHA pins](#t2--stale-sha-pins)
 - [T3 — Branch-rule drift](#t3--branch-rule-drift)
 - [T4 — Protected-path activity](#t4--protected-path-activity)
 - [T5 — Secret-leak markers](#t5--secret-leak-markers)

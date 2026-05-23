@@ -1,23 +1,10 @@
 ---
 description: |
-  Use when maintainer-fix (or any skill that commits on behalf of
-  an issue) is about to write a commit whose planned diff touches a
-  SECURITY-SENSITIVE path. Mirrors the article's "build/publish
-  separation" — trusted decision (maintainer says OK) split from
-  untrusted spec (issue body). Two modes. (1) CHECK inspects the
-  diff against the canonical protected-paths list plus any per-repo
-  .aimaestro/protected-paths.txt override; on hit, posts an
-  approval-request comment, labels awaiting-maintainer-approval,
-  halts the caller, returns disposition needs-approval. (2) VERIFY
-  looks for an approve-protected-edit comment by $AUTHORIZED_USER
-  (the gh-authenticated user, NOT the issue author); returns
-  ok/pending/rejected. Caller releases the fix only on ok.
-  Protected paths cover .github/workflows/, .github/dependabot.yml,
-  .github/CODEOWNERS, scripts/publish.py, .gitignore, .npmrc,
-  LICENSE, SECURITY.md, .claude-plugin/. Reports under
-  $MAIN_ROOT/reports/maintainer-approval-gate/. Do NOT trigger on
-  non-fix workflows (workflow-fix-safe, workflow-pin-actions run on
-  their own branches and don't read issue bodies).
+  Use when a commit is about to land whose planned diff touches a
+  security-sensitive path. CHECK matches the diff against the
+  protected-paths list (.github/, scripts/publish.py, etc.); on
+  hit, posts approve-protected-edit on the issue and HALTS.
+  VERIFY resumes only when $AUTHORIZED_USER replies.
   Trigger with phrases like "approval gate check", "verify
   protected-edit approval", or "guard protected paths".
 ---
@@ -47,7 +34,7 @@ user to approve on the issue; VERIFY confirms the approval landed.
 1. Compute the planned diff: `git diff --name-only HEAD --`.
 2. Load the canonical protected-paths list from
    [references/protected-paths.md](references/protected-paths.md)
-   plus any per-repo override at `.aimaestro/protected-paths.txt`.
+   plus any per-repo override at .aimaestro/protected-paths.txt.
 3. If the diff intersects the list, post an issue comment via
    `gh issue comment N --body-file -` (heredoc body) explaining
    which protected path is touched and asking the authorized user
@@ -65,7 +52,13 @@ user to approve on the issue; VERIFY confirms the approval landed.
    contains `reject-protected-edit`).
 
 Full commands + the protected-paths list:
-[references/protected-paths.md](references/protected-paths.md).
+[references/protected-paths.md](references/protected-paths.md):
+- Canonical protected-paths list
+- Per-repo override
+- Approval-comment grammar
+- Match semantics
+- CHECK commands
+- VERIFY commands
 
 ## Output
 
@@ -79,7 +72,7 @@ Full commands + the protected-paths list:
 |-------|--------|
 | Planned diff is empty | Return `noop` (nothing to gate) |
 | `gh issue comment` fails | Stop, surface error, do NOT proceed |
-| `.aimaestro/protected-paths.txt` malformed | Use canonical list only, warn |
+| .aimaestro/protected-paths.txt (per-repo override file) malformed | Use canonical list only, warn |
 | VERIFY finds matching phrase by NON-authorized user | Return `pending` (impostor approval is rejected silently) |
 | Multiple matching approvals | Return `ok` from the earliest match |
 
@@ -102,9 +95,12 @@ Patrol cycle N+1 → approval-gate VERIFY on issue #42
 ## Resources
 
 - [Protected paths + override mechanism](references/protected-paths.md):
-  - Canonical list (.github/, scripts/, configs)
-  - Per-repo override via .aimaestro/protected-paths.txt
+  - Canonical protected-paths list
+  - Per-repo override
   - Approval-comment grammar
+  - Match semantics
+  - CHECK commands
+  - VERIFY commands
 - Companion: `maintainer-fix`, `maintainer-guardian`.
-- Inspiration: the article's "build/publish separation" pattern
-  applied at the agent layer.
+- Inspiration: the build/publish-separation pattern applied at the
+  agent layer.

@@ -2,27 +2,12 @@
 description: |
   Use when the user wants a read-only security audit of GitHub
   Actions workflows in the maintained repo, or when chained from
-  maintainer-fix after a fix touches .github/workflows/. Runs two
-  static analysers — zizmor (zizmorcore/zizmor, fetched on demand
-  via uvx) and actionlint (Homebrew) — over .github/workflows/,
-  writes a structured JSON report plus a markdown summary under
-  $MAIN_ROOT/reports/workflow-scan/, and optionally posts a
-  summary comment on a linked GitHub issue when an issue number
-  is supplied. No file mutations beyond report writes; no commits;
-  no force-push. Auto-creates the label
-  workflow-security-review-needed via gh label create --force if
-  needed when commenting on an issue (idempotent — safe to re-run).
-  Assumes the gh CLI is already authenticated by the host (AI
-  Maestro guarantees this) and reads the API token from
-  $(gh auth token). Honours the Claude Code 2.1.116 GitHub
-  rate-limit hint: switches to --offline on the hint, notes the
-  downgrade in the report header, never retries inside one call.
-  Do NOT trigger on commands that should mutate workflows
-  (use workflow-fix-safe / workflow-pin-actions for that), and do
-  NOT trigger on "show me the workflows" — that's gh workflow list.
+  maintainer-fix after a fix touches .github/workflows/. Runs
+  zizmor + actionlint via uvx, writes JSON + markdown report to
+  $MAIN_ROOT/reports/workflow-scan/, optionally posts an issue
+  summary comment. No mutations; no commits.
   Trigger with phrases like "scan workflows", "audit github
-  actions", "audit workflow security", "zizmor scan", or
-  "check workflow security".
+  actions", "zizmor scan", or "check workflow security".
 ---
 
 # workflow-scan — read-only GitHub Actions audit

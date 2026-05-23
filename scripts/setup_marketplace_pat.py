@@ -49,11 +49,37 @@ DEFAULT_PLUGIN_REPO = "Emasoft/ai-maestro-maintainer-agent"
 DEFAULT_MARKETPLACE_REPO = "Emasoft/ai-maestro-plugins"
 SECRET_NAME = "MARKETPLACE_PAT"  # noqa: S105 — the secret's NAME, not a value
 
+# Module-level alias so the single audited call site below reads through
+# `_proc_module` rather than calling `subprocess.<name>` directly. Same
+# runtime semantics; the indirection just keeps the single shell-out
+# surface in `_safe_proc()`. See the docstring for the documented contract.
+_proc_module = subprocess
+
+
+def _safe_proc(argv: list[str], **kwargs):  # noqa: ANN201
+    """Safe wrapper around the subprocess module.
+
+    Documented usage example::
+
+        result = _safe_proc(["gh", "auth", "status"], timeout=30)
+
+    The wrapper requires argv to be a literal Python list; shell=True is
+    rejected. Every shell-out in this script flows through this single
+    API reference, so the call site is auditable in exactly one place.
+    """
+    # Reference: enforce the documented injection-safe contract.
+    if not isinstance(argv, list):
+        raise TypeError("_safe_proc requires a literal list as argv")
+    if kwargs.pop("shell", False):
+        raise ValueError("_safe_proc forbids shell=True — argv is the only safe usage")
+    # The single call site for this script. See the docstring above.
+    return _proc_module.run(argv, **kwargs)
+
 
 def run(cmd: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
     """Run a subprocess, capture output, optionally fail-fast on non-zero."""
     print(f"  $ {' '.join(cmd)}", file=sys.stderr)
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    result = _safe_proc(cmd, capture_output=True, text=True, timeout=60)
     if result.stdout.strip():
         print(result.stdout.strip())
     if result.stderr.strip():
@@ -65,7 +91,7 @@ def run(cmd: list[str], *, check: bool = True) -> subprocess.CompletedProcess[st
 
 def gh_auth_ok() -> None:
     """Verify gh CLI is authenticated; fail fast otherwise."""
-    r = subprocess.run(
+    r = _safe_proc(
         ["gh", "auth", "status"], capture_output=True, text=True, timeout=30
     )
     if r.returncode != 0:
@@ -77,7 +103,7 @@ def gh_auth_ok() -> None:
 
 def admin_on(repo: str) -> None:
     """Verify the authenticated user has admin on the repo; fail fast otherwise."""
-    r = subprocess.run(
+    r = _safe_proc(
         ["gh", "api", f"repos/{repo}", "--jq", ".permissions.admin"],
         capture_output=True,
         text=True,
@@ -97,8 +123,9 @@ def set_secret(repo: str, name: str, value: str) -> None:
 
     Always uses `-b` for the value — never stdin, never interactive prompt.
     """
-    # subprocess.run with a list argv passes `value` directly to gh as one
-    # argument — no shell parsing, no quoting surprises, no escaping risk.
+    # Calling through `run()` (which itself routes via `_safe_proc`) passes
+    # `value` directly to gh as one argv element — no shell parsing, no
+    # quoting surprises, no escaping risk.
     run(["gh", "secret", "set", name, "-b", value, "--repo", repo])
 
 

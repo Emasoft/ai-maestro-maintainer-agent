@@ -1,28 +1,13 @@
 ---
 description: |
-  Use when the maintainer agent is entrusted with a NEW GitHub
-  repo that has no .github/workflows/ yet (or only a broken /
-  insecure skeleton), and the user wants the agent to set up a
-  secure CI baseline from scratch. Detects the primary language
-  (Python via pyproject.toml, Node via package.json, Rust via
-  Cargo.toml, Go via go.mod, else generic), writes a
-  language-appropriate CI workflow plus a zizmor-security job
-  under .github/workflows/, applies all zizmor hardening rules
-  from the start (top-level permissions: contents: read,
-  concurrency:, per-job timeout-minutes, persist-credentials:
-  false on every checkout, no template-injection patterns), seeds
-  .github/dependabot.yml (and .npmrc for Node repos) so SHA pins
-  stay current, drops a baseline branch-ruleset spec, then chains
-  workflow-pin-actions and workflow-scan so the resulting pipeline
-  is hardened on the very first push.
-  REFUSES to overwrite if .github/workflows/ already contains user
-  files — use workflow-fix-safe + workflow-pin-actions instead.
-  Assumes the gh CLI is authenticated by AI Maestro and the
-  authenticated user has admin rights. Commits on
-  chore/bootstrap-ci and stops there — caller opens the PR.
+  Use when entrusted with a NEW repo that has no
+  .github/workflows/ yet. Detects the primary language
+  (Python/Node/Rust/Go/generic), writes a hardened CI workflow,
+  seeds dependabot.yml + .npmrc, chains workflow-pin-actions +
+  workflow-scan, commits on chore/bootstrap-ci. Refuses to
+  overwrite existing workflows.
   Trigger with phrases like "set up workflows", "bootstrap CI",
-  "initialize github actions", or "configure github for this
-  new repo".
+  or "initialize github actions".
 ---
 
 # workflow-bootstrap — first-time secure CI setup
@@ -62,10 +47,12 @@ Copy this checklist and track your progress:
    else generic).
 3. Copy `references/templates/<lang>.yml` to
    `.github/workflows/ci.yml`; substitute placeholders.
-4. Append the zizmor-security job from `templates/zizmor-job.yml`.
+4. Append the zizmor-security job from
+   `references/templates/zizmor-job.yml`.
 5. Seed `.github/dependabot.yml` (always); seed `.npmrc` if
-   `package.json` is present. Stash `templates/ruleset.json` to a
-   tmpfile — `workflow-protect-branch` applies it post-merge.
+   `package.json` is present. Stash
+   `references/templates/ruleset.json` to a tmpfile —
+   `workflow-protect-branch` applies it post-merge.
 6. Create branch `chore/bootstrap-ci` off the default.
 7. Chain **workflow-pin-actions** to SHA-pin every `uses:` ref.
 8. Chain **workflow-scan** — must report 0 findings; STOP if not.
@@ -103,7 +90,13 @@ User: "set up workflows for this new Python repo"
 ```
 
 Per-language walk-throughs (Node, Rust, Go, refusal) live in
-[references/instructions.md](references/instructions.md).
+[instructions](references/instructions.md):
+
+- Language detection table
+- Template inventory
+- Step-by-step commands
+- Post-merge ruleset apply
+- Per-language walk-throughs
 
 ## Constraints
 
@@ -117,7 +110,8 @@ Per-language walk-throughs (Node, Rust, Go, refusal) live in
 - [Step-by-step + templates](references/instructions.md):
   - Language detection table
   - Template inventory
-  - Per-step commands
+  - Step-by-step commands
   - Post-merge ruleset apply
+  - Per-language walk-throughs
 - Companion: `workflow-scan`, `workflow-fix-safe`,
   `workflow-pin-actions`, `workflow-protect-branch`.

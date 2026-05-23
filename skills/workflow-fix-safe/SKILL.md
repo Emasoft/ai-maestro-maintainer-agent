@@ -1,28 +1,13 @@
 ---
 description: |
-  Use when the user wants to apply ONLY safe auto-fixes to the
-  maintained repo's GitHub Actions workflows — never destructive,
-  never unsafe. Runs zizmor in safe-fix mode (the conservative
-  default, no human review needed), then layers idempotent
-  hardening edits: top-level permissions: contents: read,
-  concurrency: { group, cancel-in-progress }, timeout-minutes
-  on every job, persist-credentials: false on every checkout.
-  Commits the resulting diff DIRECTLY on the current git branch
-  with a conventional message. NEVER force-pushes (governance
-  R19.7). NEVER pushes — pushing is the caller's responsibility.
-  NEVER uses --fix=all or --fix=unsafe-only (those need human
-  review and a different skill). Assumes secrets and the gh auth
-  token are exported by AI Maestro on the host; reads the token
-  via $(gh auth token). Honours pre-commit hooks — if a hook
-  fails the skill stops and surfaces the failure rather than
-  bypassing with --no-verify. Skips silently when
-  .github/workflows/ is missing or when the working tree is dirty
-  with non-workflow changes (caller should commit those first).
-  Do NOT trigger on read-only audit requests (use workflow-scan)
-  or on SHA-pinning requests (use workflow-pin-actions).
+  Use when the user wants ONLY safe zizmor auto-fixes applied to
+  the maintained repo's workflows. Runs zizmor --fix=safe, layers
+  idempotent hardening (top-level permissions, concurrency,
+  timeout-minutes, persist-credentials, jq --arg trap audit),
+  commits on the current branch. NEVER force-push (R19.7),
+  --fix=all, or --no-verify.
   Trigger with phrases like "fix workflow security", "harden
-  workflows", "apply safe workflow fixes", or "auto-fix workflow
-  findings".
+  workflows", or "apply safe workflow fixes".
 ---
 
 # workflow-fix-safe — apply only conservative auto-fixes
@@ -97,7 +82,7 @@ User: "fix the safe zizmor findings"
 
 ## Resources
 
-- zizmor fix modes: <https://docs.zizmor.sh/usage/#auto-fixing>
+- zizmor fix-mode reference: <https://docs.zizmor.sh/usage/#auto-fixing>
 - Companion skills: `workflow-scan`, `workflow-pin-actions`,
   `workflow-protect-branch`.
 - [Full step-by-step instructions](references/instructions.md):
