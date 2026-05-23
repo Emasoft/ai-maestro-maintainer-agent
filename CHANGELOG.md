@@ -1,93 +1,50 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
-    ## [1.0.9] - 2026-04-22
-
-### Miscellaneous
-
-- V1.0.9    
-
-    ## [1.0.8] - 2026-04-22
+    ## [1.1.0] - 2026-05-23
 
 ### Bug Fixes
 
-- Include uv.lock in release commit staging    
-
-### Miscellaneous
-
-- V1.0.8    
-
-    ## [1.0.7] - 2026-04-22
-
-### Miscellaneous
-
-- Gitignore .rechecker/ + sync uv.lock to 1.0.6    
-- V1.0.7    
-
-    ## [1.0.6] - 2026-04-22
-
-### Miscellaneous
-
-- Update uv.lock    
-- V1.0.6    
-
-    ## [1.0.5] - 2026-04-22
+- Relocate per-agent state from \$HOME to AGENT_DIR (Phase D)    
+- Drive plugin to CPV strict CRITICAL=0 MAJOR=0 MINOR=0 NIT=0    
 
 ### Documentation
 
-- Sync MAINTAINER messaging rules to R6 v2 graph (closes #1)    
-
-### Miscellaneous
-
-- Add .janitor/, .tldrignore, and /reports/ to ignores    
-- Update uv.lock    
-- V1.0.5    
-
-    ## [1.0.4] - 2026-04-15
+- Backfill v1.0.0–v1.0.9 history via git-cliff    
+- Document rate-limit, less-permission-prompts, claude agents --json    
+- Explain why we keep `git tag -a` over `claude plugin tag`    
+- Document maintainer-workflow-audit + zizmor integration    
 
 ### Features
 
-- Add MAINTAINER_POLL_INTERVAL_MS env var    
+- Adopt Claude Code 2.1.132/2.1.133 env vars    
+- Scope tools and disallow web access (v2.1.119)    
+- Handle gh rate-limit hint and xhigh effort tier    
+- Add maintainer-workflow-audit (zizmor-powered)    
+- Register maintainer-workflow-audit + chain from fix flow    
+- Add workflow-scan (read-only zizmor + actionlint audit)    
+- Add workflow-fix-safe (zizmor --fix=safe + hardening)    
+- Add workflow-pin-actions (SHA-pin unpinned actions)    
+- Add workflow-protect-branch (idempotent ruleset apply)    
+- Add workflow-bootstrap + setup_marketplace_pat.py    
+- Close article-vector gaps GAP-1/2/4 (Phase A)    
+- Guardian core — proactive supply-chain sentinel (Phase B)    
+- Wire Guardian into patrol/triage/fix (Phase C)    
 
 ### Miscellaneous
 
-- V1.0.4    
+- Pin actions to SHAs and harden permissions (zizmor clean)    
+- Dynamic tool surface + CPV Nixtla-strict cleanup    
+- Embed reference TOCs + checklist phrasing nits    
+- Integration audit — close 2 real gaps    
 
-    ## [1.0.3] - 2026-04-15
+### Refactor
 
-### Miscellaneous
+- Drop monolithic workflow-audit, fix CPV regressions    
+- Progressive disclosure for 3 oversize maintainer-* skills    
 
-- Resolve 6 hygiene warnings + align pyproject to sibling plugins    
-- Update uv.lock    
-- V1.0.3    
+### Security
 
-    ## [1.0.2] - 2026-04-13
-
-### Features
-
-- Add notify-marketplace and validate workflows    
-
-### Miscellaneous
-
-- V1.0.2    
-
-    ## [1.0.1] - 2026-04-12
-
-### Bug Fixes
-
-- CPV strict compliance — add required sections, scoped tools, agent.toml quad-match    
-- Extract triage classification paths to reference file (CPV 5000-char limit)    
-- Triage Instructions uses numbered steps (CPV strict requirement)    
-- Add TOC to classification-paths reference (CPV MINOR)    
-- Agent.toml compatible-clients = claude (not claude-code)    
-
-### Features
-
-- Initial scaffolding for ai-maestro-maintainer-agent role-plugin    
-- Main agent persona + 3 skills (patrol, triage, fix)    
-
-### Miscellaneous
-
-- V1.0.1    
+- Add zizmor job (SARIF upload + fail-on-findings)    
 
 
