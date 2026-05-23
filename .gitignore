@@ -88,3 +88,4 @@ reports_dev/
 
 # Backup files created by CPV standardize-plugin --force-templates
 *.bak
+/tests/.pytest-report.jsonl
