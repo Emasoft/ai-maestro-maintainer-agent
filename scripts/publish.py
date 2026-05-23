@@ -69,8 +69,12 @@ from pathlib import Path
 # pattern from ~/.claude/rules/github-timeouts.md). Shipped verbatim
 # from the canonical CPV install via gen_cpv_network_resilience_py().
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+# The fallback shims in the except: branch intentionally have looser
+# signatures than the canonical implementations. Pyright is told explicitly
+# to accept the assignment-type mismatch via reportAssignmentType: ignore
+# on the single-line import. Mypy uses [no-redef,misc] on the shim defs.
 try:
-    from cpv_network_resilience import gh_with_retry, git_with_retry
+    from cpv_network_resilience import gh_with_retry, git_with_retry  # noqa: I001 # pyright: ignore[reportAssignmentType, reportMissingImports]
 except ImportError:
     # Fallback: scripts/cpv_network_resilience.py was not shipped with this
     # plugin (older scaffold). Define no-op shims so publish.py still works,
