@@ -138,7 +138,11 @@ Once the agent session is running:
   snapshot five threat classes — T1 zizmor/actionlint findings, T2
   stale SHA pins, T3 branch-rule state, T4 protected-path activity,
   T5 secret-leak markers in recent commits — to
-  `~/.aimaestro/maintainer/<agentId>/guardian-baseline.json`. At
+  `$AGENT_DIR/.aimaestro/state/guardian-baseline.json` (where
+  `$AGENT_DIR = ${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}`,
+  per the post-v1.1.0 governance fix that relocated state into
+  the agent's working directory so AI Maestro backups + host
+  migration capture it). At
   every patrol cycle, SCAN mode diffs against baseline and routes
   critical deltas: safe-fixable zizmor findings auto-PR via
   `workflow-fix-safe`, stale pins auto-file a tracking issue,
@@ -151,6 +155,53 @@ Once the agent session is running:
   the originating issue — defeating the "malicious bug report
   requesting CI edit" supply-chain pattern documented in Atai
   Barkai's 2026-05-20 article.
+
+  **Guardian flow at a glance.**
+
+  ```
+  Session start (SessionStart hook)
+        │
+        v
+  maintainer-guardian  mode=BASELINE ──> guardian-baseline.json
+  snapshot T1..T5                        ($AGENT_DIR/.aimaestro/state/)
+        │
+        v
+  Patrol cycle (default 5 min) <─────────────────────────────┐
+        │ pre-cycle SCAN                                     │
+        v                                                    │
+  maintainer-guardian  mode=SCAN                             │
+  re-run T1..T5, diff vs baseline → delta per class          │
+        │                                                    │
+        v                                                    │
+  Routing decision:                                          │
+    T1 critical/high → safe-fixable? yes→ workflow-fix-safe PR
+                                     no → tracking issue     │
+    T2 stale pin     → tracking issue (Dependabot link)      │
+    T3 rule drift    → alert authorized user (R6 direct)     │
+    T4 path moved    → alert authorized user (post-hoc)      │
+    T5 secret-leak   → STOP CYCLE + alert (HALT until ack)   │
+        │                                                    │
+        │ T5 hit? → HALT ; else proceed to triage / fix      │
+        v                                                    │
+  maintainer-fix  (planned diff on disk, before git commit)  │
+        │                                                    │
+        v                                                    │
+  maintainer-approval-gate  mode=CHECK                       │
+  diff ∩ protected-paths (.github/, scripts/publish.py,      │
+     .gitignore, .npmrc, LICENSE, .claude-plugin/, ...) ?    │
+        │                                                    │
+        ├── no hit ──> commit + publish ─────────────────────┤
+        │                                                    │
+        └── hit ─> post approve-protected-edit on issue,     │
+                   label awaiting-maintainer-approval, HALT  │
+                        │                                    │
+                        │ next patrol cycle                  │
+                        v                                    │
+                   maintainer-approval-gate  mode=VERIFY     │
+                   ok → resume ; pending → wait ; rejected → abort
+  ────────────────────────────────────────────────────────────┘
+  ```
+
 - **GitHub Actions security.** Five focused skills wrap
   [zizmor](https://github.com/zizmorcore/zizmor) and `actionlint`
   (both via `uvx` / Homebrew — no manual install needed for

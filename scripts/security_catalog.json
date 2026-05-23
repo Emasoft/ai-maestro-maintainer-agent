@@ -1,0 +1,126 @@
+{
+  "_about": "Pattern catalog for fast_security_scan.py. Each entry maps to one rule. See scripts/fast_security_scan.md for the full design rationale.",
+  "_severity_levels": ["CRITICAL", "HIGH", "MEDIUM", "LOW"],
+  "patterns": [
+    {
+      "name": "aws-access-key-id",
+      "severity": "CRITICAL",
+      "description": "AWS access key ID",
+      "regex": "\\bAKIA[0-9A-Z]{16}\\b"
+    },
+    {
+      "name": "github-personal-access-token",
+      "severity": "CRITICAL",
+      "description": "GitHub personal access token",
+      "regex": "\\bghp_[0-9a-zA-Z]{36}\\b"
+    },
+    {
+      "name": "github-oauth-token",
+      "severity": "CRITICAL",
+      "description": "GitHub OAuth token",
+      "regex": "\\bgho_[0-9a-zA-Z]{36}\\b"
+    },
+    {
+      "name": "github-app-token",
+      "severity": "CRITICAL",
+      "description": "GitHub App user-to-server token",
+      "regex": "\\bghu_[0-9a-zA-Z]{36}\\b"
+    },
+    {
+      "name": "github-app-installation-token",
+      "severity": "CRITICAL",
+      "description": "GitHub App server-to-server token",
+      "regex": "\\bghs_[0-9a-zA-Z]{36}\\b"
+    },
+    {
+      "name": "github-refresh-token",
+      "severity": "CRITICAL",
+      "description": "GitHub refresh token",
+      "regex": "\\bghr_[0-9a-zA-Z]{36}\\b"
+    },
+    {
+      "name": "gitlab-pat",
+      "severity": "CRITICAL",
+      "description": "GitLab personal access token",
+      "regex": "\\bglpat-[0-9a-zA-Z\\-_]{20}\\b"
+    },
+    {
+      "name": "slack-token",
+      "severity": "CRITICAL",
+      "description": "Slack token (xoxb / xoxp / xoxa / xoxr / xoxs)",
+      "regex": "\\bxox[baprs]-[0-9a-zA-Z\\-]{10,72}\\b"
+    },
+    {
+      "name": "google-oauth",
+      "severity": "CRITICAL",
+      "description": "Google OAuth access token (ya29.*)",
+      "regex": "\\bya29\\.[0-9A-Za-z\\-_]+"
+    },
+    {
+      "name": "anthropic-api-key",
+      "severity": "CRITICAL",
+      "description": "Anthropic API key shape",
+      "regex": "\\bsk-ant-[a-zA-Z0-9\\-_]{32,}"
+    },
+    {
+      "name": "openai-api-key",
+      "severity": "CRITICAL",
+      "description": "OpenAI API key shape",
+      "regex": "\\bsk-[a-zA-Z0-9]{40,}\\b"
+    },
+    {
+      "name": "stripe-secret-key",
+      "severity": "CRITICAL",
+      "description": "Stripe secret key",
+      "regex": "\\bsk_(live|test)_[0-9a-zA-Z]{24,}"
+    },
+    {
+      "name": "private-key-header",
+      "severity": "CRITICAL",
+      "description": "PEM private-key header",
+      "regex": "-----BEGIN (RSA |DSA |EC |OPENSSH |PGP )?PRIVATE KEY-----"
+    },
+    {
+      "name": "gh-actions-template-injection-run",
+      "severity": "HIGH",
+      "description": "github.event.* interpolation in a run block (route via env: instead)",
+      "regex": "\\$\\{\\{\\s*github\\.(event|head_ref|issue|pull_request)[\\w.\\[\\]'\"]*\\s*\\}\\}"
+    },
+    {
+      "name": "gh-actions-template-injection-actor",
+      "severity": "HIGH",
+      "description": "github.actor / triggering_actor / repository_owner interpolation in a run block",
+      "regex": "\\$\\{\\{\\s*github\\.(actor|triggering_actor|repository_owner)\\s*\\}\\}"
+    },
+    {
+      "name": "curl-pipe-bash",
+      "severity": "HIGH",
+      "description": "Pipe-to-shell remote installer with no integrity check",
+      "regex": "\\b[c]url\\s+[^\\n|]*\\|\\s*(sudo\\s+)?[bs][ah]?sh\\b"
+    },
+    {
+      "name": "wget-pipe-bash",
+      "severity": "HIGH",
+      "description": "wget pipe-to-shell remote installer with no integrity check",
+      "regex": "\\b[w]get\\s+[^\\n|]*\\|\\s*(sudo\\s+)?[bs][ah]?sh\\b"
+    },
+    {
+      "name": "jq-arg-trap",
+      "severity": "HIGH",
+      "description": "VAR inside double-quoted jq filter: bash expands BEFORE jq sees it; use --arg name VAR instead",
+      "regex": "\\bjq[^|\\n]*\"[^\"]*\\$\\{[A-Z_][A-Z0-9_]*\\}"
+    },
+    {
+      "name": "actions-checkout-persist-credentials-default",
+      "severity": "MEDIUM",
+      "description": "actions/checkout missing persist-credentials: false — token leaks to subsequent steps",
+      "regex": "-\\s*uses:\\s*actions/checkout@\\S+\\s*$"
+    },
+    {
+      "name": "pull-request-target-with-fork-checkout",
+      "severity": "HIGH",
+      "description": "pull_request_target trigger — grants forks access to base-branch secrets",
+      "regex": "on:\\s*(\\n|\\\\n)\\s*pull_request_target\\b"
+    }
+  ]
+}

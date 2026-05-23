@@ -142,11 +142,29 @@ catches the edit BEFORE commit, not after.
 
 ## T5 — Secret-leak markers
 
-**Detection.** A basic regex sweep on the last 50 commits looking
-for the patterns: `AKIA[0-9A-Z]{16}` (AWS), `ghp_[0-9a-zA-Z]{36}`
-(GitHub PAT), `glpat-[0-9a-zA-Z\-_]{20}` (GitLab PAT), `xox[baprs]-`
-(Slack token), `ya29\.[0-9A-Za-z\-_]+` (Google OAuth),
-`sk-[a-zA-Z0-9]{32,}` (OpenAI / Anthropic API key shape).
+**Detection (preferred, fast).** Use the bundled
+`scripts/fast_security_scan.py` — a google-re2 RegexSet one-pass
+scanner with multiprocessing fan-out. Builds a single DFA from
+the catalog and matches every pattern in one pass per file
+(O(n) regardless of pattern count). Falls back to Python `re`
+for patterns RE2 can't compile (lookaround / backrefs). Typical
+plugin-sized scans complete in ~150 ms across all workflows + the
+last 48 h of git history.
+
+```bash
+uv run --with google-re2 scripts/fast_security_scan.py \
+  --recent-commits 48 \
+  --severity CRITICAL \
+  --format json
+```
+
+The catalog ships built-in patterns for AWS / GitHub / GitLab /
+Slack / Google / Anthropic / OpenAI / Stripe tokens, PEM private
+keys, and GitHub Actions template-injection markers. Extend via
+`--catalog catalog.json`.
+
+**Detection (fallback, slow).** When `google-re2` is unavailable,
+use shell `grep -nE`:
 
 ```bash
 git log --all --since="48 hours ago" -p \
