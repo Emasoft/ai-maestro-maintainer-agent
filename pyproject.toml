@@ -9,5 +9,19 @@ dependencies = ["pyyaml"]
 [tool.ruff]
 line-length = 320
 
+[tool.ruff.lint.per-file-ignores]
+# Test-file conventions that ruff's strict rule set would otherwise flag:
+#   D2xx — docstring style nits (we use pragmatic one-line + spec-link form)
+#   S101 — `assert` is the standard pytest assertion
+#   S603/S607 — subprocess + partial-executable-path: integration tests
+#               legitimately shell out to git / gh / uv via PATH lookup
+#   T201 — `print` is used by tests/run-all-tests.py for the result table
+#   I001 — import sorting handled by formatter, not ruff
+#   N806 — UPPER_SNAKE local vars in the result-table builder
+#   INP001 — tests/ is intentionally NOT a package (pytest auto-discovers
+#            via conftest.py; adding __init__.py breaks the discovery
+#            invariant the test runner relies on)
+"tests/**/*.py" = ["D205", "D212", "D213", "D301", "S101", "S603", "S607", "T201", "I001", "N806", "INP001"]
+
 [tool.mypy]
 ignore_missing_imports = true
