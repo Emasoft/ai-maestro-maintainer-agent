@@ -3,7 +3,8 @@ description: |
   Use when the user wants a read-only security audit of GitHub
   Actions workflows in the maintained repo, or when chained from
   maintainer-fix after a fix touches .github/workflows/. Runs
-  zizmor + actionlint via uvx, writes JSON + markdown report to
+  zizmor + actionlint + the bundled Sentinel rule engine via uvx,
+  writes JSON + markdown report to
   $MAIN_ROOT/reports/workflow-scan/, optionally posts an issue
   summary comment. No mutations; no commits.
   Trigger with phrases like "scan workflows", "audit github
@@ -12,15 +13,18 @@ description: |
 
 # workflow-scan — read-only GitHub Actions audit
 
-Two-tool static analysis of `.github/workflows/`. Zero side
+Three-engine static analysis of `.github/workflows/`. Zero side
 effects beyond writing a report file (and optionally posting an
 issue comment).
 
 ## Overview
 
-Wraps `uvx zizmor` (zizmorcore/zizmor) and `actionlint` for a
-read-only audit of every workflow under `.github/workflows/`.
-Writes JSON + markdown reports under
+Wraps `uvx zizmor` (zizmorcore/zizmor), `actionlint`, and the
+bundled `scripts/sentinel_scan.py` (a Python port of the Sentinel
+scanner — 32 deterministic rules covering the structural classes
+zizmor does not, such as build/publish credential exposure and
+IDE-config injection) for a read-only audit of every workflow under
+`.github/workflows/`. Writes JSON + markdown reports under
 `$MAIN_ROOT/reports/workflow-scan/`. Optionally posts a summary
 on a linked GitHub issue. No file mutations, no commits, no push.
 
@@ -39,7 +43,9 @@ on a linked GitHub issue. No file mutations, no commits, no push.
    with a `YYYYMMDD_HHMMSS±HHMM` local-time-plus-offset stamp.
 2. Run `uvx zizmor --gh-token "$(gh auth token)" --format=json
    .github/workflows/` and capture exit code.
-3. Run `actionlint <file>` for every `*.yml` and concatenate.
+3. Run `actionlint <file>` for every `*.yml`, then run
+   `uv run --with pyyaml scripts/sentinel_scan.py scan --format json .`
+   and merge all three engines' findings.
 4. Render the markdown report per
    [references/report-layout.md](references/report-layout.md).
 5. On rate-limit hint: re-run with `--offline`, note in header.
@@ -90,6 +96,8 @@ maintainer-fix step 6 (workflow touched):
 
 - zizmor docs: <https://docs.zizmor.sh/>
 - actionlint docs: <https://github.com/rhysd/actionlint>
+- Sentinel port: `scripts/sentinel_scan.py` (32 deterministic
+  rules; `scan` + `fix` subcommands)
 - [Report layout](references/report-layout.md):
   - File header
   - Severity summary

@@ -56,12 +56,22 @@ done
 Each file is run separately so one bad file does not abort the
 rest.
 
+Then run the bundled Sentinel port (32 deterministic rules; covers
+the structural classes zizmor does not):
+
+```bash
+SENTINEL_JSON="$DIR/$TS-sentinel.json"
+uv run --with pyyaml "$MAIN_ROOT/scripts/sentinel_scan.py" scan \
+  --format json --severity low . > "$SENTINEL_JSON"
+SENTINEL_EX=$?   # 0 = no critical/high, 1 = critical/high present
+```
+
 ## Step 4: Render markdown report
 
-Parse `$JSON` with `jq` and render per
-[report-layout.md](report-layout.md). Group by severity
-descending, then audit ID ascending. Include actionlint findings
-in their own section.
+Parse `$JSON` (zizmor) and `$SENTINEL_JSON` (Sentinel) with `jq` and
+render per [report-layout.md](report-layout.md). Group by severity
+descending, then audit/rule ID ascending. Include the actionlint and
+Sentinel findings in their own sections.
 
 ## Step 5: Rate-limit handling
 

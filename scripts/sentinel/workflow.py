@@ -1,0 +1,146 @@
+"""YAML-aware workflow wrapper with line-mapping helpers.
+
+Port of lib/workflow.rb. Exposes the exact surface every rule depends on:
+raw_lines, line_content, line_of, lines_of, triggers, jobs, steps,
+permissions, env, uses_actions, run_blocks, data, parse_error.
+
+PyYAML parses a bare `on:` key as the Python boolean ``True`` (YAML 1.1
+treats on/off/yes/no as booleans), exactly like Ruby's Psych — so
+``triggers()`` checks both the "on" string key and the ``True`` key.
+"""
+
+from __future__ import annotations
+
+import re
+from typing import Any, Union
+
+import yaml
+
+# A rule may pass a precompiled pattern or a raw string.
+PatternLike = Union[str, "re.Pattern[str]"]
+
+
+def _rx(pattern: PatternLike) -> "re.Pattern[str]":
+    """Compile a string pattern; pass through an already-compiled one."""
+    return pattern if isinstance(pattern, re.Pattern) else re.compile(pattern)
+
+
+class Workflow:
+    """One parsed workflow file. Construction never raises on bad YAML."""
+
+    def __init__(self, filename: str, content: str) -> None:
+        self.filename = filename
+        self.raw = content
+        # keepends=True mirrors Ruby String#lines (trailing "\n" retained).
+        self.raw_lines = content.splitlines(keepends=True)
+        self._parse_error: str | None = None
+        try:
+            data = yaml.safe_load(content)
+            self.data: dict[Any, Any] = data if isinstance(data, dict) else {}
+        except yaml.YAMLError as exc:
+            self.data = {}
+            self._parse_error = str(exc)
+
+    def parse_error(self) -> bool:
+        """True iff the YAML failed to parse."""
+        return self._parse_error is not None
+
+    def triggers(self) -> Any:
+        """The `on:` mapping/list/string (handles the on->True YAML quirk)."""
+        if "on" in self.data and self.data["on"]:
+            return self.data["on"]
+        if True in self.data and self.data[True]:
+            return self.data[True]
+        return {}
+
+    def jobs(self) -> dict[str, Any]:
+        """The `jobs:` mapping, or {} when absent/malformed."""
+        j = self.data.get("jobs")
+        return j if isinstance(j, dict) else {}
+
+    def steps(self, job: Any) -> list[Any]:
+        """Steps for a job (by id or by job hash)."""
+        job_hash = self.jobs().get(job) if isinstance(job, str) else job
+        if not isinstance(job_hash, dict):
+            return []
+        s = job_hash.get("steps")
+        return s if isinstance(s, list) else []
+
+    def permissions(self, scope: str = "workflow", job: Any = None) -> Any:
+        """Workflow-level or job-level `permissions:` block."""
+        if scope == "workflow":
+            return self.data.get("permissions")
+        if scope == "job":
+            j = self.jobs().get(job) if isinstance(job, str) else job
+            return j.get("permissions") if isinstance(j, dict) else None
+        return None
+
+    def env(self, scope: str = "workflow", step: Any = None) -> dict[str, Any]:
+        """Workflow-level or step-level `env:` mapping."""
+        if scope == "workflow":
+            e = self.data.get("env")
+            return e if isinstance(e, dict) else {}
+        if scope == "step":
+            e = step.get("env") if isinstance(step, dict) else None
+            return e if isinstance(e, dict) else {}
+        return {}
+
+    def line_of(self, pattern: PatternLike) -> int | None:
+        """1-based line number of the first line matching `pattern`, else None."""
+        rx = _rx(pattern)
+        for i, line in enumerate(self.raw_lines):
+            if rx.search(line):
+                return i + 1
+        return None
+
+    def lines_of(self, pattern: PatternLike) -> list[int]:
+        """All 1-based line numbers whose line matches `pattern`."""
+        rx = _rx(pattern)
+        return [i + 1 for i, line in enumerate(self.raw_lines) if rx.search(line)]
+
+    def line_content(self, num: int | None) -> str | None:
+        """rstrip'd content of 1-based line `num`, or None when out of range."""
+        if num is None or num < 1 or num > len(self.raw_lines):
+            return None
+        return self.raw_lines[num - 1].rstrip()
+
+    def uses_actions(self) -> list[dict[str, Any]]:
+        """Every `uses:` step with its source line, deduping repeated refs."""
+        results: list[dict[str, Any]] = []
+        seen_lines: dict[str, int] = {}
+        for job_hash in self.jobs().values():
+            for step in self.steps(job_hash):
+                uses = step.get("uses") if isinstance(step, dict) else None
+                if not uses:
+                    continue
+                all_lines = self.lines_of(re.compile(r"uses:\s*" + re.escape(str(uses))))
+                idx = seen_lines.get(uses, 0)
+                if idx < len(all_lines):
+                    line = all_lines[idx]
+                elif all_lines:
+                    line = all_lines[-1]
+                else:
+                    line = None
+                seen_lines[uses] = idx + 1
+                results.append({"uses": uses, "step": step, "line": line})
+        return results
+
+    def run_blocks(self) -> list[dict[str, Any]]:
+        """Every `run:` step with its source line and resolved env."""
+        results: list[dict[str, Any]] = []
+        all_run_lines = self.lines_of(re.compile(r"^\s+run:\s*[|>]?\s*"))
+        run_idx = 0
+        for job_hash in self.jobs().values():
+            for step in self.steps(job_hash):
+                run = step.get("run") if isinstance(step, dict) else None
+                if not run:
+                    continue
+                if run_idx < len(all_run_lines):
+                    line = all_run_lines[run_idx]
+                elif all_run_lines:
+                    line = all_run_lines[-1]
+                else:
+                    line = None
+                run_idx += 1
+                results.append({"run": run, "step": step, "env": step.get("env") or {}, "line": line})
+        return results

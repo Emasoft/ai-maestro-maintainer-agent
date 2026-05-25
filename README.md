@@ -135,9 +135,10 @@ Once the agent session is running:
 - **Guardian Mode.** The maintainer is the **guardian of the repo**,
   not merely a reactive issue-fixer. At session start, the SessionStart
   hook fires the `maintainer-guardian` skill in BASELINE mode to
-  snapshot five threat classes — T1 zizmor/actionlint findings, T2
-  stale SHA pins, T3 branch-rule state, T4 protected-path activity,
-  T5 secret-leak markers in recent commits — to
+  snapshot five threat classes — T1 zizmor/actionlint **plus the
+  bundled Sentinel port (`scripts/sentinel_scan.py`, 32 deterministic
+  rules)** findings, T2 stale SHA pins, T3 branch-rule state, T4
+  protected-path activity, T5 secret-leak markers in recent commits — to
   `$AGENT_DIR/.aimaestro/state/guardian-baseline.json` (where
   `$AGENT_DIR = ${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}`,
   per the post-v1.1.0 governance fix that relocated state into
@@ -203,18 +204,25 @@ Once the agent session is running:
   ```
 
 - **GitHub Actions security.** Five focused skills wrap
-  [zizmor](https://github.com/zizmorcore/zizmor) and `actionlint`
-  (both via `uvx` / Homebrew — no manual install needed for
-  zizmor; actionlint is a Homebrew formula):
+  [zizmor](https://github.com/zizmorcore/zizmor), `actionlint`, and
+  the bundled **Sentinel port** (`scripts/sentinel_scan.py` — a
+  faithful Python port of [jpr5/sentinel](https://sentinel.copilotkit.dev),
+  32 deterministic rules with 6 mechanical auto-fixers; pure stdlib +
+  PyYAML, run via `uv run`). zizmor + actionlint come via `uvx` /
+  Homebrew — no manual install needed:
     - `workflow-bootstrap` — first-time scaffold for a repo with no
       `.github/workflows/` yet. Detects language (Python / Node /
       Rust / Go / generic), writes a hardened CI workflow +
       `workflow-security` job from templates, drops a ruleset spec,
       chains pin-actions + scan to verify, commits on
       `chore/bootstrap-ci`. Refuses to overwrite existing workflows.
-    - `workflow-scan` — read-only audit; JSON + markdown reports
+    - `workflow-scan` — read-only audit running all three engines
+      (zizmor + actionlint + Sentinel); JSON + markdown reports
       under `$MAIN_ROOT/reports/workflow-scan/`. Posts a summary on
-      the linked issue when chained from `maintainer-fix`.
+      the linked issue when chained from `maintainer-fix`. Sentinel
+      adds the structural classes zizmor misses — `build-publish-same-job`,
+      `credential-window`, `ide-config-injection`,
+      `missing-frozen-lockfile`, and more.
     - `workflow-fix-safe` — runs `zizmor --fix=safe` and adds
       missing hardening (`permissions: contents: read`,
       `concurrency:`, `timeout-minutes:`). Commits on the current

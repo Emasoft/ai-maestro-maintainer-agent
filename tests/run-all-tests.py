@@ -78,6 +78,11 @@ def collect_test_docstrings() -> dict[str, str]:
                 while j < len(lines) and lines[j].strip() == "":
                     j += 1
                 docstring_line = lines[j].strip() if j < len(lines) else ""
+                # Strip a leading string-literal prefix (r/u/b/f, any case) so
+                # raw docstrings like r"""...\n...""" are recognised, not just
+                # plain triple-quoted ones.
+                if len(docstring_line) >= 4 and docstring_line[0] in "rRuUbBfF" and docstring_line[1:4] in ('"""', "'''"):
+                    docstring_line = docstring_line[1:]
                 # Extract first NON-EMPTY line of docstring
                 doc = ""
                 if docstring_line.startswith('"""') or docstring_line.startswith("'''"):

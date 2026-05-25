@@ -19,9 +19,24 @@ route (what the Guardian does when a delta is positive).
 ## T1 — Workflow drift
 
 **Detection.** Chain the `workflow-scan` skill (read-only). It runs
-`uvx zizmor` + `actionlint` on `.github/workflows/` and writes
-report under `$MAIN_ROOT/reports/workflow-scan/`. Parse the report
-into a per-severity finding count `{critical, high, medium, low}`.
+TWO deterministic engines on `.github/workflows/` and writes a
+report under `$MAIN_ROOT/reports/workflow-scan/`:
+
+1. `uvx zizmor` + `actionlint` (upstream static analysis).
+2. The bundled `scripts/sentinel_scan.py` — a faithful Python port
+   of the Sentinel scanner (32 deterministic rules). It catches the
+   structural classes zizmor does not, e.g. `build-publish-same-job`,
+   `credential-window`, `ide-config-injection`,
+   `missing-frozen-lockfile`, `dangerous-lifecycle-scripts`,
+   `jq-arg-escape-sequences`. Run it in JSON mode:
+
+   ```bash
+   uv run --with pyyaml scripts/sentinel_scan.py scan \
+     --format json --severity low .
+   ```
+
+Parse both into a per-severity finding count `{critical, high,
+medium, low}`.
 
 **Baseline shape:**
 
@@ -29,18 +44,30 @@ into a per-severity finding count `{critical, high, medium, low}`.
 {
   "t1": {
     "zizmor": {"critical": 0, "high": 0, "medium": 0, "low": 0},
-    "actionlint": {"errors": 0}
+    "actionlint": {"errors": 0},
+    "sentinel": {"critical": 0, "high": 0, "medium": 0, "low": 0}
   }
 }
 ```
 
-**Delta.** Any positive delta on `critical` or `high` is a hit.
-Medium/low deltas accumulate but do not trigger a route on their own.
+**Delta.** Any positive delta on `critical` or `high` (from EITHER
+engine) is a hit. Medium/low deltas accumulate but do not trigger a
+route on their own.
 
-**Route.** If the new finding is in zizmor's safe-fix set, propose
-an auto-fix PR via `workflow-fix-safe` on a new branch
-`chore/guardian-T1-<ts>`. Otherwise file a tracking issue with the
-zizmor finding ID and link to the report.
+**Route.** If the new finding is mechanically fixable, propose an
+auto-fix PR on a new branch `chore/guardian-T1-<ts>`:
+
+- For a Sentinel finding in its 6-rule mechanical set
+  (`unpinned-actions`, `shell-injection-expr`,
+  `missing-persist-credentials`, `workflow-dispatch-injection`,
+  `missing-permissions`, `missing-timeouts`) run
+  `uv run --with pyyaml scripts/sentinel_scan.py fix --rule <name> .`
+  (use `--dry-run` first to preview the diff).
+- Otherwise, if it is in zizmor's safe-fix set, use `workflow-fix-safe`.
+
+Either auto-fix path STILL passes through the `maintainer-approval-gate`
+before commit (workflow files are protected paths). If no mechanical
+fix applies, file a tracking issue with the rule ID + report link.
 
 ---
 

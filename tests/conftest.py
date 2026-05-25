@@ -10,11 +10,18 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+SCRIPTS_ROOT = REPO_ROOT / "scripts"
+# Put scripts/ on sys.path so tests can `import sentinel` (the package at
+# scripts/sentinel/) directly instead of shelling out per case.
+if str(SCRIPTS_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_ROOT))
+
 SKILLS_ROOT = REPO_ROOT / "skills"
 GUARDIAN_REFS = SKILLS_ROOT / "maintainer-guardian" / "references"
 APPROVAL_REFS = SKILLS_ROOT / "maintainer-approval-gate" / "references"

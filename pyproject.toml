@@ -25,3 +25,8 @@ line-length = 320
 
 [tool.mypy]
 ignore_missing_imports = true
+# The `sentinel` package lives under scripts/ (run via `uv run
+# scripts/sentinel_scan.py`, which puts scripts/ on sys.path). Tell mypy
+# where to find it so intra-package imports resolve. Pyright reads the
+# matching extraPaths from pyrightconfig.json.
+mypy_path = "scripts"
