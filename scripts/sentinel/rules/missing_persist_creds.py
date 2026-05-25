@@ -1,14 +1,27 @@
 """actions/checkout without persist-credentials: false.
 
-Port of lib/rules/missing_persist_creds.rb. The default checkout leaves
-the job token in .git/config, where any later step (or compromised
-dependency) can read it. Faithful 1:1 behaviour.
+Port of lib/rules/missing_persist_creds.rb with one calibrated divergence on
+the deliberate-persister exemption. The default checkout leaves the job token
+in .git/config, where any later step (or compromised dependency) can read it.
+
+The Ruby original exempted a checkout only when the job pushed AND the step set
+``persist-credentials: true`` (it detected pushes by grepping run: blocks for
+``git push`` etc.). That missed deliberate persisters whose push lives in a
+called script or action — tiangolo/fastapi's contributors.py / latest-changes
+jobs and astral-sh/ruff's ``git -C ruff push`` all set ``persist-credentials:
+true`` explicitly but were still flagged as high-severity false positives whose
+suggested fix (``persist-credentials: false``) would break the push. Here an
+explicit ``persist-credentials: true`` is treated as the author's own
+acknowledgment and always exempts the step, regardless of whether the push is
+statically visible. The actionable finding stays the IMPLICIT default — no key
+set, credentials persisted unintentionally (e.g. sindresorhus/got's read-only
+CI checkout) — which is still flagged so the author opts in explicitly.
 """
 
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from sentinel.finding import Finding
 from sentinel.rules.base import Rule
@@ -17,8 +30,6 @@ if TYPE_CHECKING:
     from sentinel.workflow import Workflow
 
 _CHECKOUT_RX = re.compile(r"actions/checkout[@\s]|actions/checkout$")
-_PUSH_RUN_RX = re.compile(r"git push|gh pr create|peter-evans/create-pull-request")
-_PUSH_USES_RX = re.compile(r"create-pull-request|yaml-update-action")
 
 
 class MissingPersistCreds(Rule):
@@ -34,8 +45,6 @@ class MissingPersistCreds(Rule):
         seen_checkout_lines: dict[str, int] = {}
 
         for _job_id, job in workflow.jobs().items():
-            job_pushes = self._job_does_push(job, workflow)
-
             for step in workflow.steps(job):
                 uses = step.get("uses") if isinstance(step, dict) else None
                 if not (uses and _CHECKOUT_RX.search(str(uses))):
@@ -44,11 +53,12 @@ class MissingPersistCreds(Rule):
                 with_block = step.get("with") if isinstance(step.get("with"), dict) else {}
                 persist = with_block.get("persist-credentials")
 
-                # Ruby: next if persist == false || persist == "false"
+                # persist-credentials: false — mitigated, no finding.
                 if persist is False or persist == "false":
                     continue
-                # Ruby: next if job_pushes && persist == true
-                if job_pushes and persist is True:
+                # Explicit persist-credentials: true — deliberate persister (see
+                # module docstring); exempt regardless of where the push lives.
+                if persist is True or persist == "true":
                     continue
 
                 all_lines = workflow.lines_of(re.compile(r"uses:\s*" + re.escape(str(uses))))
@@ -67,16 +77,3 @@ class MissingPersistCreds(Rule):
                 )
 
         return findings
-
-    def _job_does_push(self, job: Any, workflow: "Workflow") -> bool:
-        """True iff any step in the job pushes via git, gh, or a PR-creating action."""
-        for s in workflow.steps(job):
-            if not isinstance(s, dict):
-                continue
-            run = str(s.get("run")) if s.get("run") is not None else None
-            if run is not None and _PUSH_RUN_RX.search(run):
-                return True
-            uses = s.get("uses")
-            if uses and _PUSH_USES_RX.search(str(uses)):
-                return True
-        return False

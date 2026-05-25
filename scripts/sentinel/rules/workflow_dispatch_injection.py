@@ -12,7 +12,6 @@ import re
 from typing import TYPE_CHECKING
 
 from sentinel.rules.base import Rule
-from sentinel.rules.guard_patterns import GuardPatterns
 
 if TYPE_CHECKING:
     from sentinel.finding import Finding
@@ -28,7 +27,7 @@ PATTERN: "re.Pattern[str]" = re.compile(r"\$\{\{\s*(?:inputs\.|github\.event\.in
 _INPUT_CAPTURE: "re.Pattern[str]" = re.compile(r"\$\{\{\s*((?:inputs|github\.event\.inputs)\.[^\s}]+)")
 
 
-class WorkflowDispatchInjection(Rule, GuardPatterns):
+class WorkflowDispatchInjection(Rule):
     """${{ inputs.* }} interpolated into a run: block (shell injection)."""
 
     name = "workflow-dispatch-injection"
@@ -37,6 +36,7 @@ class WorkflowDispatchInjection(Rule, GuardPatterns):
 
     def check(self, workflow: "Workflow") -> list["Finding"]:
         findings: list["Finding"] = []
+        run_lines = workflow.run_content_lines()
 
         for line_num in workflow.lines_of(PATTERN):
             line = workflow.line_content(line_num)
@@ -44,7 +44,7 @@ class WorkflowDispatchInjection(Rule, GuardPatterns):
                 continue
             if line.strip().startswith("#"):
                 continue
-            if not self._in_run_block(workflow, line_num):
+            if line_num not in run_lines:
                 continue
             match = _INPUT_CAPTURE.search(line)
             if not match:
@@ -62,27 +62,3 @@ class WorkflowDispatchInjection(Rule, GuardPatterns):
             )
 
         return findings
-
-    def _in_run_block(self, workflow: "Workflow", target_line: int) -> bool:
-        target_content = workflow.raw_lines[target_line - 1] if 0 <= target_line - 1 < len(workflow.raw_lines) else None
-        target_indent = len(re.match(r"^\s*", target_content).group(0)) if target_content else 0  # type: ignore[union-attr]
-
-        lower = max(target_line - 20, 0)
-        for i in range(target_line - 1, lower - 1, -1):
-            if i < 0 or i >= len(workflow.raw_lines):
-                continue
-            content = workflow.raw_lines[i]
-            if not content:
-                continue
-
-            if re.search(r"^\s+run:\s*[|>]?\s*$", content) or re.search(r"^\s+run:\s+\S", content):
-                return True
-            if re.search(r"^\s+-\s+run:\s*[|>]?\s*$", content) or re.search(r"^\s+-\s+run:\s+\S", content):
-                return True
-
-            if re.search(r"^\s+(uses|with|if|id|name|env):", content) or re.search(r"^\s+-\s+name:", content):
-                line_indent = len(re.match(r"^\s*", content).group(0))  # type: ignore[union-attr]
-                if target_indent <= line_indent + 2:
-                    return False
-
-        return False

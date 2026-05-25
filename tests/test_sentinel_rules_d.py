@@ -164,14 +164,33 @@ def test_missing_env_protection_safe_when_environment_is_set() -> None:
     assert MissingEnvProtection().check(wf) == []
 
 
-def test_missing_env_protection_flags_oidc_without_environment() -> None:
-    """Flags a job with id-token: write but no environment protection."""
+def test_missing_env_protection_oidc_alone_is_not_flagged() -> None:
+    """id-token: write WITHOUT a real publish indicator is not a publish job.
+
+    Calibration 2026-05-25: OIDC id-token: write is used for codecov, cloud-auth
+    in tests, attestation and Pages deploys, so it is no longer a standalone
+    publish signal — a job that only holds it (no publish command/action) and
+    just runs `echo` is not flagged (was a false positive on CI/test/scan jobs).
+    """
     yaml = 'on: push\njobs:\n  release:\n    runs-on: ubuntu-latest\n    permissions:\n      id-token: write\n      contents: read\n    steps:\n      - run: echo "deploying"\n'
+    wf = Workflow(filename="release.yml", content=yaml)
+    assert MissingEnvProtection().check(wf) == []
+
+
+def test_missing_env_protection_flags_publish_action_without_environment() -> None:
+    """A known publish action (pypa/gh-action-pypi-publish) with no environment flags."""
+    yaml = "on: push\njobs:\n  release:\n    runs-on: ubuntu-latest\n    permissions:\n      id-token: write\n    steps:\n      - uses: pypa/gh-action-pypi-publish@release/v1\n"
     wf = Workflow(filename="release.yml", content=yaml)
     findings = MissingEnvProtection().check(wf)
     assert len(findings) == 1
-    assert findings[0].severity == "medium"
     assert findings[0].rule == "missing-env-protection"
+
+
+def test_missing_env_protection_dry_run_publish_is_not_flagged() -> None:
+    """A `--dry-run` publish uploads nothing, so it is not a real publication."""
+    yaml = "on: push\njobs:\n  check:\n    runs-on: ubuntu-latest\n    steps:\n      - run: cargo publish --workspace --dry-run\n"
+    wf = Workflow(filename="check.yml", content=yaml)
+    assert MissingEnvProtection().check(wf) == []
 
 
 def test_missing_env_protection_flags_pnpm_publish_without_environment() -> None:

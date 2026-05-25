@@ -36,9 +36,17 @@ class UnpinnedArtifact(Rule):
 
             step = action["step"]
             with_block = step.get("with")
-            has_name = isinstance(with_block, dict) and "name" in with_block and with_block["name"] is not None and str(with_block["name"]).strip() != ""
+            with_block = with_block if isinstance(with_block, dict) else {}
 
-            if not has_name:
+            # download-artifact@v4+ narrows the download with `name:` (exact),
+            # `pattern:` (glob), OR `artifact-ids:` (explicit IDs). Only a step
+            # with none of these actually downloads every artifact in the run —
+            # the message's premise. (pallets/flask and psf/requests both select
+            # via `artifact-ids: ${{ needs.build.outputs.artifact-id }}`, which
+            # is just as specific as a name and must NOT be flagged.)
+            has_selector = any(with_block.get(k) is not None and str(with_block.get(k)).strip() != "" for k in ("name", "pattern", "artifact-ids"))
+
+            if not has_selector:
                 findings.append(
                     self.finding(
                         workflow,

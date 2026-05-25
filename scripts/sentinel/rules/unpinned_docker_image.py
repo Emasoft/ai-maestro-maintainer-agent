@@ -18,6 +18,9 @@ if TYPE_CHECKING:
 
 # Each line is a single raw_lines element, so no re.MULTILINE is needed.
 _LATEST_LINE = re.compile(r"docker://.*:latest|image:.*:latest|uses:.*:latest|docker:.*:latest|container:.*:latest")
+# A digest pin (`@sha256:...`) makes the reference immutable regardless of the
+# tag — `python:latest-dev@sha256:abc…` is reproducible, so it must NOT flag.
+_DIGEST_PINNED = re.compile(r"@sha256:[0-9a-fA-F]{64}")
 
 
 class UnpinnedDockerImage(Rule):
@@ -33,6 +36,9 @@ class UnpinnedDockerImage(Rule):
         for line_num in workflow.lines_of(re.compile(r":latest\b")):
             line = workflow.line_content(line_num)
             if not (line and _LATEST_LINE.search(line)):
+                continue
+            # Digest-pinned references are immutable despite the tag.
+            if _DIGEST_PINNED.search(line):
                 continue
 
             findings.append(

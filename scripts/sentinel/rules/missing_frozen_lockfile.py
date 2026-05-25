@@ -20,6 +20,12 @@ if TYPE_CHECKING:
 # JavaScript/TypeScript
 NPM_INSTALL = re.compile(r"\bnpm\s+install\b")
 NPM_SAFE = re.compile(r"--ci\b|\bnpm\s+ci\b")
+# A global install (`npm install -g <tool>`) installs a CLI tool, not project
+# dependencies — `npm ci` (which reads package-lock.json into node_modules) does
+# not apply, and such tools are usually version-pinned anyway
+# (`npm install -g npm@11.12.0` in astral-sh/ruff). The "use npm ci" premise is
+# false, so a global install must not be flagged.
+NPM_GLOBAL = re.compile(r"\s-g(?=\s|$)|--global\b")
 
 PNPM_INSTALL = re.compile(r"\bpnpm\s+install\b")
 PNPM_SAFE = re.compile(r"--frozen-lockfile")
@@ -33,7 +39,39 @@ BUN_SAFE = re.compile(r"--frozen-lockfile")
 # Python
 PIP_INSTALL = re.compile(r"\b(?:pip3?|uv\s+pip)\s+install\b")
 PIP_SAFE = re.compile(r"-r\b|--requirement\b|-c\b|--constraint\b|--require-hashes")
-PIP_LOCAL = re.compile(r"\binstall\s+(?:-e\s+)?\.(?:\s|$|\[)")
+# Install forms that do NOT fetch unpinned deps from a package index, so the
+# "unpinned packages" premise is false:
+#   --no-index ........ registry disabled (installs only from local --find-links)
+#   -e / --editable ... editable install of a local path
+#   *.whl / *.tar.gz .. a specific local (or fixed-URL) wheel / sdist artifact
+#   . / .[extra] / ./x  current-dir or relative-path install
+PIP_LOCAL = re.compile(
+    r"--no-index"
+    r"|(?:\s-e\b|--editable\b)"
+    r"|\.(?:whl|tar\.gz|tgz|zip|tar\.bz2)(?:\b|$)"
+    r"|\binstall\s+(?:-e\s+)?\.(?:\s|$|\[|/)"
+)
+# Bootstrapping the packaging toolchain (`pip install -U pip`,
+# `pip install --upgrade pip setuptools wheel`, `.venv/bin/pip install --upgrade
+# pip;`) is not a project-dependency install — the rule's remedy
+# (`-r requirements.txt --require-hashes`) is inapplicable to upgrading pip
+# itself, so flagging it is noise. Matches `install [-U|--upgrade] <tool>...`
+# only when EVERY target is a packaging tool and nothing else follows (a real
+# package alongside pip, e.g. `pip install -U pip mypkg`, still fails to match
+# and is flagged). astral-sh/uv build-release-binaries.yml has ~13 of these.
+# `(?:[=<>!~][^\s;#&|]*)?` tolerates a version pin on a tool so a pinned
+# toolchain install (`pip install build==1.4.0`, `pip install pip==26.0.1` in
+# psf/requests) is exempted just like the unpinned `pip install -U pip` form —
+# installing the packaging toolchain is never the project-dependency install the
+# rule targets, pinned or not.
+_BOOT_TOOL = r"(?:pip|setuptools|wheel|build|uv|virtualenv|pip-tools)(?:[=<>!~][^\s;#&|]*)?"
+PIP_BOOTSTRAP = re.compile(
+    r"\binstall\s+(?:(?:-U|--upgrade)\s+)?"
+    + _BOOT_TOOL
+    + r"(?:\s+"
+    + _BOOT_TOOL
+    + r")*\s*(?:[;#&|]|$)"
+)
 
 # Ruby
 BUNDLE_INSTALL = re.compile(r"\bbundle\b(?:\s+install\b)?")
@@ -54,6 +92,7 @@ CHECKS: list[dict[str, Any]] = [
     {
         "match": NPM_INSTALL,
         "safe": NPM_SAFE,
+        "safe_alt": NPM_GLOBAL,
         "message": "npm install without lockfile enforcement — dependency resolution may differ from tested versions",
         "fix": "Use `npm ci` instead of `npm install`",
     },
@@ -79,6 +118,7 @@ CHECKS: list[dict[str, Any]] = [
         "match": PIP_INSTALL,
         "safe": PIP_SAFE,
         "safe_alt": PIP_LOCAL,
+        "safe_alt2": PIP_BOOTSTRAP,
         "message": "pip install with unpinned packages — no lockfile or constraints file ensuring reproducibility",
         "fix": "Use `pip install -r requirements.txt --require-hashes` or a constraints file",
     },
@@ -131,6 +171,8 @@ class MissingFrozenLockfile(Rule):
                 if chk.get("safe") and chk["safe"].search(line):
                     continue
                 if chk.get("safe_alt") and chk["safe_alt"].search(line):
+                    continue
+                if chk.get("safe_alt2") and chk["safe_alt2"].search(line):
                     continue
 
                 findings.append(

@@ -25,6 +25,14 @@ def _rx(pattern: PatternLike) -> "re.Pattern[str]":
     return pattern if isinstance(pattern, re.Pattern) else re.compile(pattern)
 
 
+# A `run:` step key (optionally a sequence item) and whatever follows the colon.
+_RUN_KEY_RE = re.compile(r"^(\s*(?:-\s+)?)run:(.*)$")
+# A block-scalar header after `run:` — `|`, `>`, with optional chomp/indent
+# indicators (`|-`, `>+`, `|2`, `|2-`, …) and an optional trailing comment.
+_BLOCK_SCALAR_RE = re.compile(r"^[|>][0-9+-]*\s*(?:#.*)?$")
+_LEAD_WS_RE = re.compile(r"[ \t]*")
+
+
 class Workflow:
     """One parsed workflow file. Construction never raises on bad YAML."""
 
@@ -34,6 +42,7 @@ class Workflow:
         # keepends=True mirrors Ruby String#lines (trailing "\n" retained).
         self.raw_lines = content.splitlines(keepends=True)
         self._parse_error: str | None = None
+        self._run_content_cache: set[int] | None = None
         try:
             data = yaml.safe_load(content)
             self.data: dict[Any, Any] = data if isinstance(data, dict) else {}
@@ -98,6 +107,46 @@ class Workflow:
         rx = _rx(pattern)
         return [i + 1 for i, line in enumerate(self.raw_lines) if rx.search(line)]
 
+    def job_line(self, job_id: str) -> int | None:
+        """1-based line of the real ``<job_id>:`` key directly under ``jobs:``.
+
+        A bare ``line_of(r"^\\s+<job_id>:")`` search returns the *first*
+        indented occurrence of the name, which may be a same-named entry in
+        some job's ``outputs:`` / ``with:`` / ``env:`` block — e.g. astral-sh/uv
+        ci.yml has both an output ``test-integration:`` (6-space indent, line 29)
+        and a job ``test-integration:`` (2-space indent, line 218). This walks
+        to the top-level ``jobs:`` mapping, learns the job-key indent from the
+        first child key, and matches only a key at exactly that indent, so it
+        always lands on the job *definition*. Returns None when not locatable;
+        callers fall back to ``line_of`` / 0.
+        """
+        jobs_idx: int | None = None
+        for i, line in enumerate(self.raw_lines):
+            if re.match(r"^jobs:\s*(?:#.*)?$", line):
+                jobs_idx = i
+                break
+        if jobs_idx is None:
+            return None
+
+        child_key_re = re.compile(r"^(\s+)[^\s:#][^:]*:")
+        child_indent: int | None = None
+        for line in self.raw_lines[jobs_idx + 1 :]:
+            if line.strip() == "" or line.lstrip().startswith("#"):
+                continue
+            m = child_key_re.match(line)
+            if m is None:
+                break  # first real line under jobs: isn't an indented key
+            child_indent = len(m.group(1))
+            break
+        if child_indent is None:
+            return None
+
+        job_re = re.compile(r"^ {" + str(child_indent) + r"}" + re.escape(job_id) + r":")
+        for i in range(jobs_idx + 1, len(self.raw_lines)):
+            if job_re.match(self.raw_lines[i]):
+                return i + 1
+        return None
+
     def line_content(self, num: int | None) -> str | None:
         """rstrip'd content of 1-based line `num`, or None when out of range."""
         if num is None or num < 1 or num > len(self.raw_lines):
@@ -113,7 +162,11 @@ class Workflow:
                 uses = step.get("uses") if isinstance(step, dict) else None
                 if not uses:
                     continue
-                all_lines = self.lines_of(re.compile(r"uses:\s*" + re.escape(str(uses))))
+                # YAML strips quotes from the parsed value, but the raw line may
+                # quote it (`uses: "actions/checkout@v4"`, as psf/requests does
+                # throughout). Allow an optional surrounding quote so the source
+                # line still resolves — otherwise the finding reports line 0.
+                all_lines = self.lines_of(re.compile(r"""uses:\s*["']?""" + re.escape(str(uses))))
                 idx = seen_lines.get(uses, 0)
                 if idx < len(all_lines):
                     line = all_lines[idx]
@@ -144,3 +197,53 @@ class Workflow:
                 run_idx += 1
                 results.append({"run": run, "step": step, "env": step.get("env") or {}, "line": line})
         return results
+
+    def run_content_lines(self) -> set[int]:
+        """1-based line numbers that lie inside a `run:` step's shell content.
+
+        Covers the inline form (`run: cmd` — that one line) and the
+        block-scalar form (`run: |` / `run: >` — every following line
+        indented deeper than the `run:` key, blank lines included). The
+        shell-injection rules confine their `${{ }}` / `${VAR}` detection
+        to this set so an expression in a job `outputs:` / step `with:`
+        block is never mistaken for a run-block injection. Computed from raw
+        lines (not the YAML tree) so the reported line numbers stay exact.
+        """
+        if self._run_content_cache is not None:
+            return self._run_content_cache
+
+        result: set[int] = set()
+        lines = self.raw_lines
+        n = len(lines)
+        i = 0
+        while i < n:
+            m = _RUN_KEY_RE.match(lines[i])
+            if not m:
+                i += 1
+                continue
+            run_col = len(m.group(1))
+            rest = m.group(2).strip()
+            if rest and not _BLOCK_SCALAR_RE.match(rest):
+                # Inline `run: cmd` — the command lives on this line.
+                result.add(i + 1)
+                i += 1
+                continue
+            # Block scalar (`run: |`/`>`) or bare `run:` — the content is the
+            # following run of lines indented deeper than the `run:` key.
+            j = i + 1
+            while j < n:
+                cl = lines[j]
+                if cl.strip() == "":
+                    result.add(j + 1)
+                    j += 1
+                    continue
+                cind = len(_LEAD_WS_RE.match(cl).group(0))  # type: ignore[union-attr]
+                if cind > run_col:
+                    result.add(j + 1)
+                    j += 1
+                else:
+                    break
+            i = j
+
+        self._run_content_cache = result
+        return result

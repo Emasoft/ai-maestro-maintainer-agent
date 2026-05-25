@@ -52,3 +52,21 @@ class LocalClient:
             return data if isinstance(data, dict) else None
         except (OSError, yaml.YAMLError):
             return None
+
+    def fetch_precommit_config(self, _repo: Any = None) -> str | None:
+        """Raw `.pre-commit-config.yaml` (or .yml) text, or None when absent.
+
+        Returned as raw text (not parsed) because the only consumer scans it
+        for a zizmor invocation — many repos run zizmor as a pre-commit hook
+        rather than a dedicated workflow, and the missing-zizmor probe must see
+        that to avoid a false positive.
+        """
+        for name in (".pre-commit-config.yaml", ".pre-commit-config.yml"):
+            path = os.path.join(self.path, name)
+            if os.path.exists(path):
+                try:
+                    with open(path, encoding="utf-8") as fh:
+                        return fh.read()
+                except OSError:
+                    return None
+        return None

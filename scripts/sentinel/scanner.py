@@ -22,6 +22,27 @@ class _Client(Protocol):
 
     def fetch_workflows(self, repo: Any = None) -> list[dict[str, str]]: ...
     def fetch_dependabot_config(self, repo: Any = None) -> dict[str, Any] | None: ...
+    def fetch_precommit_config(self, repo: Any = None) -> str | None: ...
+
+
+# Real zizmor invocation (NOT a bare `# zizmor: ignore` suppression comment,
+# which would falsely imply analysis). Covers the action / pre-commit repo refs
+# (`zizmorcore/zizmor`, `zizmorcore/zizmor-action`, `zizmorcore/zizmor-pre-commit`),
+# CLI invocations (`uvx zizmor`, `uv run zizmor`, `pipx run zizmor`,
+# `pip install … zizmor`), and pre-commit hook declarations (`id: zizmor`,
+# `entry: … zizmor`). astral-sh/ruff and tiangolo/fastapi run zizmor via
+# pre-commit (no zizmor-named workflow file), so a filename-only probe flagged
+# them as missing-zizmor — a false positive this widens detection to remove.
+_ZIZMOR_INVOKE = re.compile(
+    r"zizmorcore/zizmor"
+    r"|uvx\s+zizmor"
+    r"|uv\s+run\s+zizmor"
+    r"|pipx\s+run\s+zizmor"
+    r"|pip\s+install\s+[^\n]*\bzizmor\b"
+    r"|^\s*-?\s*id:\s*zizmor\b"
+    r"|entry:[^\n]*\bzizmor\b",
+    re.IGNORECASE | re.MULTILINE,
+)
 
 
 class _Formatter(Protocol):
@@ -53,7 +74,12 @@ class Scanner:
         workflow_count = len(workflows)
 
         dependabot = self.client.fetch_dependabot_config(repo)
-        has_zizmor = any(re.search(r"zizmor", w.filename, re.IGNORECASE) for w in workflows)
+        precommit = self.client.fetch_precommit_config(repo)
+        has_zizmor = (
+            any(re.search(r"zizmor", w.filename, re.IGNORECASE) for w in workflows)
+            or any(_ZIZMOR_INVOKE.search(w.raw) for w in workflows)
+            or (precommit is not None and bool(_ZIZMOR_INVOKE.search(precommit)))
+        )
         has_dependabot_actions = self._dependabot_has_actions(dependabot)
 
         for wf in workflows:

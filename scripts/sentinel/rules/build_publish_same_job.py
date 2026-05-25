@@ -163,8 +163,7 @@ class BuildPublishSameJob(Rule):
             all_env = job_env + step_envs
 
             if PUBLISH_SECRETS.search(all_env) or _SECRETS_CTX.search(all_env):
-                # Ruby interpolates job_id raw into the pattern (no escape).
-                line = workflow.line_of(f"{job_id}:")
+                line = workflow.job_line(job_id)
                 findings.append(
                     self.finding(
                         workflow,

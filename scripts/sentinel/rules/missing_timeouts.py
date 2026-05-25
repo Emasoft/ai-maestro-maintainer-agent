@@ -6,7 +6,6 @@ inherits the 360-minute (6-hour) default — flag each such job.
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 
 from sentinel.rules.base import Rule
@@ -29,8 +28,14 @@ class MissingTimeouts(Rule):
         for job_id, job in workflow.jobs().items():
             if isinstance(job, dict) and "timeout-minutes" in job:
                 continue
+            # A job that calls a reusable workflow (`uses:` at job level) cannot
+            # legally carry `timeout-minutes` — GitHub rejects that key on such
+            # jobs (the timeout belongs inside the called workflow). Flagging it
+            # would be an impossible-to-apply fix, i.e. a false positive.
+            if isinstance(job, dict) and "uses" in job:
+                continue
 
-            line = workflow.line_of(re.compile(r"^\s+" + re.escape(job_id) + r":"))
+            line = workflow.job_line(job_id)
             findings.append(
                 self.finding(
                     workflow,

@@ -1,8 +1,22 @@
 """Publish/deploy job without GitHub Environment protection.
 
-Port of lib/rules/missing_env_protection.rb. A job that publishes a
-package or deploys infrastructure (or holds an OIDC ``id-token: write``)
-but has no ``environment:`` lacks a human gate before publication.
+Port of lib/rules/missing_env_protection.rb, with one calibrated divergence.
+
+The Ruby original treats a bare OIDC ``id-token: write`` permission as a
+sufficient publish/deploy signal on its own. In practice ``id-token: write``
+is used for far more than publishing — codecov uploads, cloud-auth in
+integration tests, Sigstore attestation, GitHub Pages deploys — so the
+standalone-OIDC trigger fired on ordinary CI/test/scan jobs and labelled them
+"publish/deploy job", a false positive (observed on astral-sh/ruff ci.yaml,
+astral-sh/uv ci.yml's ``test-integration`` reusable-workflow call, and
+expressjs/express scorecard.yml). This port therefore requires a *concrete*
+publish indicator: a real publish/deploy **run command** (``PUBLISH_INDICATORS``
+minus ``--dry-run``) or a known publish **action** (``PUBLISH_ACTIONS``). A job
+whose only publish signal is ``id-token: write`` is no longer flagged. True
+positives — e.g. a job running ``uv publish`` with no ``environment:`` — are
+unaffected; a publish job that delegates to a reusable workflow is caught when
+that reusable workflow is scanned as its own file (the ``environment:`` belongs
+on the real publish job, not the caller).
 """
 
 from __future__ import annotations
@@ -56,9 +70,25 @@ _PUBLISH_SOURCES: list[str] = [
 
 PUBLISH_INDICATORS: "re.Pattern[str]" = re.compile("|".join(_PUBLISH_SOURCES))
 
+# A `--dry-run` publish (e.g. `cargo publish --dry-run`, `npm publish
+# --dry-run`) uploads nothing, so it is NOT a real publication and must not
+# trigger the rule — astral-sh/uv check-publish.yml runs `cargo publish
+# --workspace --dry-run` purely as a CI smoke check.
+_DRY_RUN = re.compile(r"--dry-run\b")
+
+# Known publish/deploy *actions* (the `uses:` equivalents of PUBLISH_INDICATORS).
+# These cover trusted-publishing-via-action, where there is no run command to
+# match. Kept deliberately narrow to unambiguous registry-publish actions so a
+# build/test job that merely happens to use them is not misclassified.
+PUBLISH_ACTIONS: list["re.Pattern[str]"] = [
+    re.compile(r"\bpypa/gh-action-pypi-publish\b"),
+    re.compile(r"\bJS-DevTools/npm-publish\b"),
+    re.compile(r"\brubygems/release-gem\b"),
+]
+
 
 class MissingEnvProtection(Rule):
-    """Publish/deploy (or OIDC) job missing GitHub Environment protection."""
+    """Publish/deploy job missing GitHub Environment protection."""
 
     name = "missing-env-protection"
     description = "Publish/deploy job without GitHub Environment protection"
@@ -72,25 +102,33 @@ class MissingEnvProtection(Rule):
                 continue
 
             steps = workflow.steps(job)
-            has_publish = any(isinstance(s, dict) and s.get("run") and PUBLISH_INDICATORS.search(s["run"]) for s in steps)
+            if not self._publishes(steps):
+                continue
 
-            has_oidc = self._oidc_id_token(workflow.permissions(scope="job", job=job)) or self._oidc_id_token(workflow.permissions(scope="workflow"))
-
-            if has_publish or has_oidc:
-                line = workflow.line_of(re.compile(r"^\s+" + re.escape(job_id) + r":"))
-                findings.append(
-                    self.finding(
-                        workflow,
-                        line=line or 0,
-                        code=f"{job_id}:",
-                        message="Publish/deploy job without environment protection — no human gate before publication",
-                        fix="Add environment: <name> with required reviewers",
-                    )
+            line = workflow.job_line(job_id)
+            findings.append(
+                self.finding(
+                    workflow,
+                    line=line or 0,
+                    code=f"{job_id}:",
+                    message="Publish/deploy job without environment protection — no human gate before publication",
+                    fix="Add environment: <name> with required reviewers",
                 )
+            )
 
         return findings
 
-    def _oidc_id_token(self, perms: Any) -> bool:
-        if not isinstance(perms, dict):
-            return False
-        return perms.get("id-token") == "write"
+    def _publishes(self, steps: list[Any]) -> bool:
+        """True iff a step performs a real publish — a non-dry-run publish run
+        command or a known publish action. OIDC alone is intentionally NOT a
+        publish signal here (see module docstring)."""
+        for step in steps:
+            if not isinstance(step, dict):
+                continue
+            run = step.get("run")
+            if isinstance(run, str) and PUBLISH_INDICATORS.search(run) and not _DRY_RUN.search(run):
+                return True
+            uses = step.get("uses")
+            if isinstance(uses, str) and any(p.search(uses) for p in PUBLISH_ACTIONS):
+                return True
+        return False
