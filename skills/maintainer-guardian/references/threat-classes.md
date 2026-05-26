@@ -11,6 +11,7 @@ route (what the Guardian does when a delta is positive).
 - [T3 — Branch-rule drift](#t3--branch-rule-drift)
 - [T4 — Protected-path activity](#t4--protected-path-activity)
 - [T5 — Secret-leak markers](#t5--secret-leak-markers)
+- [T6 — Package-manager safety-config drift](#t6--package-manager-safety-config-drift)
 - [Routing table](#routing-table)
 - [Atomic write pattern](#atomic-write-pattern)
 
@@ -220,6 +221,102 @@ other patrol task until the user acknowledges.
 
 ---
 
+## T6 — Package-manager safety-config drift
+
+**Why this class exists.** The 2026-05 `art-template` npm compromise
+(versions 4.13.{3,4,5,6}, distributing an iOS exploit kit) is the
+canonical example of why per-repo package-manager safety knobs MUST
+be present *and* MUST stay present. The knobs the maintainer
+guarantees on every Node repo it guards:
+
+| Knob | Required value | Defends against |
+|---|---|---|
+| `minimum-release-age` (pnpm) / `minimumReleaseAge` | `>= 7200` (minutes; ~5 d) | publish-then-delete short attack windows |
+| `trust-policy` (pnpm) / `trustPolicy` | `no-downgrade` | install-malicious-then-republish-older-good-version cleanup |
+| `block-exotic-subdeps` (pnpm) / `blockExoticSubdeps` | `true` | transitive deps escaping the registry via git/tarball URLs |
+| `frozen-lockfile` (pnpm) / `--frozen-lockfile` (CI) | `true` | lockfile drift between local and CI |
+
+Source files in priority order (first hit wins per knob):
+
+1. `package.json` &nbsp;→ &nbsp;`.pnpm` field (camelCase keys).
+2. `.npmrc` &nbsp;at repo root (kebab-case keys).
+3. `pnpm-workspace.yaml` &nbsp;→ &nbsp;top-level keys.
+
+**Detection (Node repos only — skip if no `package.json`).** Read
+each source file, normalise camelCase ↔ kebab-case, and project the
+four knobs into a flat dict. The seed template lives at
+`workflow-bootstrap/references/templates/npmrc-hardened` so a brand-
+new repo bootstrapped by the maintainer already complies.
+
+```bash
+# Quick read — JSON-parses package.json, greps the two flat files.
+test -f package.json || exit 0
+{
+  jq -r '.pnpm // {} | to_entries | map("\(.key)=\(.value|tostring)") | .[]' \
+      package.json 2>/dev/null
+  grep -E '^(minimum-release-age|trust-policy|block-exotic-subdeps|frozen-lockfile)=' \
+      .npmrc 2>/dev/null
+  yq -r 'with_entries(select(.key|test("^(minimumReleaseAge|trustPolicy|blockExoticSubdeps|frozenLockfile)$"))) | to_entries | map("\(.key)=\(.value)") | .[]' \
+      pnpm-workspace.yaml 2>/dev/null
+} | awk -F= '{
+  # last-set wins per knob (matches pnpm config precedence).
+  k=$1; sub(/^[A-Z]/, "", k); gsub(/[A-Z]/, "-&", $1);  # normalise
+  s[tolower($1)] = $2
+} END { for (k in s) print k "=" s[k] }'
+```
+
+**Baseline shape:**
+
+```json
+{
+  "t6": {
+    "is_node_repo": true,
+    "minimum-release-age": 7200,
+    "trust-policy": "no-downgrade",
+    "block-exotic-subdeps": true,
+    "frozen-lockfile": true,
+    "source_file_shas": {
+      "package.json": "ab12cd...",
+      ".npmrc": "ef34gh...",
+      "pnpm-workspace.yaml": null
+    }
+  }
+}
+```
+
+`is_node_repo: false` → the entire T6 detector is a no-op for this
+repo (no source file SHAs captured, no delta possible).
+
+**Delta — three failure modes, each a hit.**
+
+1. **Weakening.** Any required knob has been LOWERED, REMOVED, or
+   FLIPPED to an unsafe value (e.g. `minimum-release-age` drops
+   below `7200`, `trust-policy` removed, `block-exotic-subdeps`
+   becomes `false`). The source file's SHA also changed since
+   baseline.
+2. **Silent strip.** A source file existed at baseline and now
+   does not (e.g. someone deleted `.npmrc`) AND the package.json
+   `.pnpm` block does not carry the missing knobs.
+3. **Missing on a Node repo.** Baseline observed the repo lacked
+   one or more knobs entirely; subsequent SCANs accumulate this as
+   a standing finding until remediated. (NOT a delta, but emitted
+   on every SCAN until the knob is set.)
+
+**Route.**
+
+- Failure mode (1) or (2) → ALERT the authorized user immediately.
+  These are *active* removals of supply-chain defences; an agent
+  must NEVER apply this kind of change without explicit human
+  approval (see also the janitor's global PreToolUse hook that
+  refuses min-age bypass flags, tracked at
+  `Emasoft/ai-maestro-janitor#TBD`). Refuse to push.
+- Failure mode (3) → File a tracking issue labeled `supply-chain`
+  with a one-click fix that pastes the relevant block from
+  `workflow-bootstrap/references/templates/npmrc-hardened`. Not
+  blocking; the agent may continue other work.
+
+---
+
 ## Routing table
 
 | Class | Delta | Route |
@@ -230,6 +327,8 @@ other patrol task until the user acknowledges.
 | T3 | any change | alert authorized user (R6 direct edge) |
 | T4 | any path moved | alert authorized user (post-hoc, observability) |
 | T5 | +N | STOP CYCLE + alert (secret in history is critical) |
+| T6 weakening / strip | any | alert authorized user; refuse to push |
+| T6 missing-on-Node-repo | standing | file tracking issue with template paste |
 
 ## Atomic write pattern
 

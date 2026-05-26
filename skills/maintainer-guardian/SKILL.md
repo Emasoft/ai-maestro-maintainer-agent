@@ -2,9 +2,10 @@
 description: |
   Use when the maintainer agent proactively scans the repo for
   supply-chain threats — at session start (BASELINE) or per
-  patrol cycle (SCAN). Aggregates five threat classes (zizmor /
+  patrol cycle (SCAN). Aggregates six threat classes (zizmor /
   stale pins / branch rules / protected-path activity / secret
-  leaks); SCAN diffs vs baseline and routes critical deltas.
+  leaks / package-manager safety-config drift); SCAN diffs vs
+  baseline and routes critical deltas.
   Trigger with phrases like "guardian baseline", "scan for
   threats", or "check for supply-chain drift".
 ---
@@ -37,12 +38,15 @@ maintainer no longer waits for someone to file an issue saying
    `maintainer-approval-gate/references/protected-paths.md`); for
    each path, capture its last-modified commit SHA.
 4. Run the secret-leak regex scan on the last 50 commits.
-5. Aggregate into `guardian-baseline.json` and write atomically to
+5. If `package.json` exists, snapshot the four pkg-manager safety
+   knobs from `.pnpm` / `.npmrc` / `pnpm-workspace.yaml` and the
+   source-file SHAs (T6); else mark `is_node_repo: false` and skip.
+6. Aggregate into `guardian-baseline.json` and write atomically to
    `$AGENT_DIR/.aimaestro/state/guardian-baseline.json`.
 
 **SCAN** (mode=scan, invoked at every patrol pre-cycle):
 
-1. Re-run all 5 detectors.
+1. Re-run all 6 detectors.
 2. Diff against the baseline; produce a per-class delta.
 3. Route each delta:
    - T1 new zizmor finding → if safe-fixable, propose workflow-fix-safe
@@ -51,6 +55,9 @@ maintainer no longer waits for someone to file an issue saying
    - T3 branch-rule drift → alert authorized user; refuse to push.
    - T4 protected-path touched → alert authorized user.
    - T5 secret-leak marker → STOP everything, alert immediately.
+   - T6 pkg-manager safety knob weakened/stripped → alert authorized
+     user, refuse to push; standing-missing on a Node repo → file
+     tracking issue with template paste from workflow-bootstrap.
 4. Write the running tally to `guardian-state.json`.
 5. Return disposition; patrol decides whether to early-exit the cycle.
 
@@ -62,13 +69,15 @@ Full per-class commands + routing tables:
 - T3 — Branch-rule drift
 - T4 — Protected-path activity
 - T5 — Secret-leak markers
+- T6 — Package-manager safety-config drift
 - Routing table
 - Atomic write pattern
 
 ## Output
 
 - **BASELINE**: `{mode, snapshot_path, t1_count, t2_count, t3_status,
-  t4_count, t5_count}` + the refreshed snapshot file.
+  t4_count, t5_count, t6_status}` + the refreshed snapshot file.
+  (`t6_status` is `clean`, `missing-knobs`, or `not-a-node-repo`.)
 - **SCAN**: `{mode, delta, route_decisions[], state_path, report}` plus the refreshed state file plus (optionally) issues/PRs filed.
 
 ## Error Handling
@@ -103,6 +112,7 @@ Patrol cycle 7 → guardian scan
   - T3 — Branch-rule drift
   - T4 — Protected-path activity
   - T5 — Secret-leak markers
+  - T6 — Package-manager safety-config drift
   - Routing table
   - Atomic write pattern
 - Companions: `workflow-scan`, `workflow-fix-safe`,

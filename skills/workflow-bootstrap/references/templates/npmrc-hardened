@@ -1,20 +1,29 @@
 # pnpm / npm supply-chain hardening.
 #
-# Seeded by workflow-bootstrap into Node repos. Applies the two
-# defences the Atai-Barkai supply-chain article calls out for npm /
-# pnpm projects: a 24h quarantine on freshly published packages
-# (defeats the npm-publish-then-delete short attack window) and a
-# block on transitive deps that escape the registry via git/tarball
-# URLs.
+# Seeded by workflow-bootstrap into Node repos. Applies the defences
+# the Atai-Barkai supply-chain article calls out for npm / pnpm
+# projects: a multi-day quarantine on freshly published packages
+# (defeats the publish-then-delete short attack window — see the
+# 2026-05 art-template compromise where v4.13.{3,4,5,6} carried an
+# iOS exploit-kit distributor), a block on transitive deps that
+# escape the registry via git/tarball URLs, and a refusal to silently
+# accept a downgraded lockfile (defeats the install-malicious-then-
+# republish-an-older-good-version cleanup pattern).
 
-# 24-hour quarantine on newly published packages (pnpm)
-minimum-release-age=1440
+# Quarantine: refuse packages published in the last 7200 minutes
+# (= 5 days). pnpm reads this value in minutes. 1440 (24h) was the
+# prior default; the article's recommended floor is 7200.
+minimum-release-age=7200
 
-# Block transitive deps that use Git/tarball URLs (pnpm)
+# Reject a lockfile that downgrades any already-installed version
+# (pnpm 9+).
+trust-policy=no-downgrade
+
+# Block transitive deps that use Git/tarball URLs (pnpm 9+).
 block-exotic-subdeps=true
 
-# Treat lockfile-out-of-sync as an error in CI (pnpm)
+# Treat lockfile-out-of-sync as an error in CI (pnpm).
 frozen-lockfile=true
 
-# Refuse to install unless integrity hash matches (npm + pnpm)
+# Refuse to install unless integrity hash matches (npm + pnpm).
 audit-level=high
