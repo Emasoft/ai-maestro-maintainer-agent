@@ -1,0 +1,66 @@
+# Runtime-guard shootout: baseline vs Aikido Safe Chain vs Socket Firewall.
+# Runs the same install matrix under three tool images and produces a
+# side-by-side markdown report. Network is enabled (registries are remote)
+# but every container is otherwise locked down per the harness defaults.
+#
+# Invoke:
+#   uv run scripts/sandbox/sandbox.py shootout \
+#     scripts/sandbox/recipes/runtime-guard-shootout.yaml
+
+name: runtime-guard-shootout
+
+# scratch project — a tiny package.json the tools can install into.
+project:
+  type: scratch
+  files:
+    package.json: |
+      {
+        "name": "aimm-shootout",
+        "version": "0.0.0",
+        "private": true
+      }
+
+# Registries are remote; opt into bridge networking explicitly.
+network: bridge
+time_budget: 240
+
+matrix:
+  - tool: baseline
+    image: aimm-sandbox:node-baseline
+  - tool: safe-chain
+    image: aimm-sandbox:node-safe-chain
+  - tool: sfw
+    image: aimm-sandbox:node-sfw
+
+commands:
+  # 1. A known-good, widely-pinned package (`axios`) at a recent stable
+  #    version — should succeed in every cell. Measures install latency
+  #    overhead of each tool.
+  - name: install-axios-stable
+    cmd: |
+      npm install --no-audit --no-fund --no-package-lock axios@1.7.7 2>&1 | tail -50
+
+  # 2. A pinned older `event-stream` (4.0.1 — the post-incident clean
+  #    version). Should succeed everywhere; baseline check that recent
+  #    historically-flagged packages do not false-trip the guards.
+  - name: install-event-stream-clean
+    cmd: |
+      npm install --no-audit --no-fund --no-package-lock event-stream@4.0.1 2>&1 | tail -50
+
+  # 3. `event-stream@3.3.6` — the version that shipped the historical
+  #    flatmap-stream malware. baseline should install successfully (no
+  #    intrinsic block); safe-chain / sfw should block or warn. This
+  #    cell is the rule's value proof.
+  - name: install-event-stream-malicious
+    cmd: |
+      npm install --no-audit --no-fund --no-package-lock event-stream@3.3.6 2>&1 | tail -80
+
+  # 4. `sfw` wrapping ON a sfw-shipped image. Confirms that ad-hoc
+  #    opt-in works (different from safe-chain's shell-init model).
+  - name: install-event-stream-malicious-via-sfw-wrapper
+    cmd: |
+      if command -v sfw >/dev/null 2>&1; then
+        sfw npm install --no-audit --no-fund --no-package-lock event-stream@3.3.6 2>&1 | tail -80
+      else
+        echo "sfw not installed in this image — skipping"
+      fi
