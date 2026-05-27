@@ -1,12 +1,13 @@
 ---
 description: |
-  Use to test something without touching the host: third-party tools
-  before recommending, suspicious npm/pypi packages before installing,
-  external-repo bug repros, or side-by-side (shootout) tool comparisons.
-  Drives a Docker harness under scripts/sandbox/; default is no network,
-  read-only project mount, orphan reap on exit. Trigger with "sandbox
-  this", "run in a sandbox", "test this package without installing",
-  "shootout these two tools", "reproduce in a clean container".
+  Use when testing something without touching the host: third-party
+  tools before recommending, suspicious npm/pypi packages before
+  installing, external-repo bug repros, or side-by-side (shootout)
+  tool comparisons. Drives a Docker harness under scripts/sandbox/;
+  default is no network, read-only project mount, orphan reap on
+  exit. Trigger with "sandbox this", "run in a sandbox", "test this
+  package without installing", "shootout these two tools",
+  "reproduce in a clean container", "verify before recommending".
 ---
 
 # maintainer-sandbox — Docker-isolated runner for the maintainer agent

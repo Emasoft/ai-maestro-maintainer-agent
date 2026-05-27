@@ -130,9 +130,12 @@ canonical protected-paths list — `.github/workflows/**`,
 plus any per-repo override at `.aimaestro/protected-paths.txt`.
 
 ```bash
-# Invoke approval-gate CHECK (returns "noop" / "needs-approval")
-# See skills/maintainer-approval-gate/references/protected-paths.md
-# for the full command surface.
+# Dispatch the maintainer-approval-gate skill in CHECK mode.
+# `invoke` is NOT a real CLI — it is shorthand for "the agent now
+# loads the next skill via Claude Code skill orchestration". The
+# documented command surface lives at
+# skills/maintainer-approval-gate/references/protected-paths.md.
+# CHECK returns one of: noop | needs-approval | error.
 GATE_RESULT="$(invoke maintainer-approval-gate CHECK \
   --issue "$ISSUE_NUM" --repo "$REPO")"
 

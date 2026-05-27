@@ -173,7 +173,7 @@ patrol skill handles:
 - Fetching open issues via `gh issue list`
 - Comparing against the processed-issues ledger
 - Triggering triage for each new unprocessed issue
-- Running on a continuous loop at the configured interval (default 5 min, overridable via `MAINTAINER_POLL_INTERVAL_MS`; floor 10 s, ceiling 1 h)
+- Running on a continuous loop at the configured interval (default 5 min, overridable via `MAINTAINER_POLL_INTERVAL_MS`; floor 10 s, ceiling 1 h — see `skills/maintainer-patrol/references/patrol-loop.md` "Poll interval and bounds" for the clamp logic)
 
 Read the `maintainer-patrol` skill for the full polling protocol.
 

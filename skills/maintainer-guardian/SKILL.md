@@ -104,6 +104,15 @@ Patrol cycle 7 → guardian scan
 → Returns: {delta: {t1: +2}, routes: ["auto-fix-pr#42"]}
 ```
 
+```
+Patrol cycle 11 → guardian scan
+→ T6 delta: .npmrc shipped without minimum-release-age, or
+  pyproject.toml [tool.uv] missing trust-policy=no-downgrade
+→ Route: file tracking issue + alert authorized user
+→ Returns: {delta: {t6: [".npmrc:5 missing min-release-age"]},
+            routes: ["issue#88", "alert#$AUTHORIZED_USER"]}
+```
+
 ## Resources
 
 - [Threat classes + routing](references/threat-classes.md):
