@@ -146,8 +146,8 @@ User: "install whatever's missing"
 - ONLY interacts with the host package manager and the per-tool
   installers documented in the install-recipes reference (see
   Resources below).
-- Does NOT touch user shell rc files (`~/.bashrc`, `~/.zshrc`); the
-  package managers handle their own PATH additions.
+- Does NOT modify user shell rc files (bashrc, zshrc); the package
+  managers handle their own PATH additions.
 - Does NOT install language toolchains beyond what's in the table
   (no Python interpreter setup, no Node, no Rust toolchain — those
   belong to the entrusted repo's own setup, not the maintainer).

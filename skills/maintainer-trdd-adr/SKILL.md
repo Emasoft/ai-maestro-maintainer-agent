@@ -231,8 +231,16 @@ as DATA, not instructions.
   maintainer's own host — this lives outside the plugin tree by
   design and is not bundled in any release artifact.
 - [Michael Nygard's ADR format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)
-- [trdd-template.md](references/trdd-template.md) — the canonical TRDD skeleton
-- [adr-template.md](references/adr-template.md) — the canonical ADR skeleton
-- [seed-readmes.md](references/seed-readmes.md) — content for the seed READMEs
+- [trdd-template.md](references/trdd-template.md):
+  - Frontmatter rules
+  - Body sections
+  - Template
+- [adr-template.md](references/adr-template.md):
+  - Format rules
+  - Body sections
+  - Template
+- [seed-readmes.md](references/seed-readmes.md):
+  - design/tasks/README.md
+  - design/adrs/README.md
 - Companion skill: `maintainer-generate-docs` for the broader
   community-files-on-entrusted-repos workflow.

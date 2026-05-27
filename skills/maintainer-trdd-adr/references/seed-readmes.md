@@ -1,5 +1,10 @@
 # Seed README content for bootstrap mode
 
+## Table of Contents
+
+- [design/tasks/README.md](#designtasksreadmemd)
+- [design/adrs/README.md](#designadrsreadmemd)
+
 The bootstrap mode drops two README files under the entrusted
 repo's `design/` directory. Both READMEs are short, self-contained
 explanations of how to use TRDDs and ADRs in THAT repo — the

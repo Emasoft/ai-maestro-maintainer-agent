@@ -1,5 +1,11 @@
 # ADR template (canonical Michael Nygard format)
 
+## Table of Contents
+
+- [Format rules](#format-rules)
+- [Body sections](#body-sections)
+- [Template](#template)
+
 The template below is what `new-adr` mode writes after substituting
 `$NNNN` (zero-padded 4-digit number from the index in
 `design/adrs/README.md`), `$SLUG` (short kebab-case), `$ISO` (full

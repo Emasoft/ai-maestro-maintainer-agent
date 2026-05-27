@@ -1,5 +1,11 @@
 # TRDD template (canonical)
 
+## Table of Contents
+
+- [Frontmatter rules](#frontmatter-rules-mandatory-per-claude-rules-trdd-design-tasks-md)
+- [Body sections](#body-sections)
+- [Template](#template)
+
 The template below is what `new-trdd` mode writes after
 substituting `$UID` (full UUID), `$SHORT` (first 8 chars),
 `$ISO` (full ISO 8601 datetime with TZ offset), and `$SLUG`

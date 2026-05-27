@@ -98,7 +98,8 @@ and the SARIF schema with their complete TOCs.
 - `$MAIN_ROOT/reports/maintainer-config-lint/<ts>-config-lint.sarif.json`
   — SARIF 2.1.0 with one `run` per linter.
 - `$MAIN_ROOT/reports/maintainer-config-lint/<ts>-config-lint.md` —
-  human-readable summary; NEVER contains `.env` values.
+  human-readable summary; NEVER contains environment-variable
+  values from dot-env config files (the linter logs only line shape).
 - stdout: the SARIF file's absolute path.
 - stderr: short summary line (`N files scanned, H high, M medium, L low`).
 

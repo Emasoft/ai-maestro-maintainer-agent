@@ -88,7 +88,7 @@ Copy this checklist and track your progress:
    mv -f "$TMP" "$STATE_DIR/stack-fingerprint.json"
    ```
 6. Emit the JSON disposition (Output section). The disposition
-   includes `fingerprint_path` so the orchestrator can `cat` it
+   includes `fingerprint_path` so the orchestrator can read it
    directly without re-running the skill.
 
 ## Output
@@ -96,9 +96,9 @@ Copy this checklist and track your progress:
 ```json
 {
   "fingerprint_path": "$STATE_DIR/stack-fingerprint.json",
-  "primary_language": "python|node|rust|go|ruby|php|elixir|dart|generic",
-  "package_manager": "uv|poetry|setuptools|pnpm|yarn|npm|cargo|gomod|...",
-  "tool_versions_manager": "asdf|mise|none",
+  "primary_language": "<one of: python, node, rust, go, ruby, php, elixir, dart, generic>",
+  "package_manager": "<one of: uv, poetry, setuptools, pnpm, yarn, npm, cargo, gomod, ...>",
+  "tool_versions_manager": "<one of: asdf, mise, none>",
   "ci_present": true|false,
   "dependabot_present": true|false,
   "branch_rules": "active|absent|unknown",

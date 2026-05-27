@@ -28,26 +28,37 @@ author is the authorized maintainer (PATs can be compromised).
    PAYLOAD=$(gh issue view <number> --repo <repo> \
      --json title,body,comments \
      --jq '.title + "\n\n" + .body + "\n\n" + (.comments | map(.body) | join("\n\n"))')
+   ```
 
-   # Extended adversarial regex. Categories (alternation, kept on
-   # separate physical lines for readability — the actual grep -E
-   # call wants them joined with `|`):
-   #   - CI modification:  modify ci, disable test/check/lint, skip
-   #     test/check/lint/scan, remove test/check/lint/workflow
-   #   - Path edits:       edit .github / .gitignore / publish.py /
-   #     license / security.md / hooks
-   #   - Approval bypass:  bypass check/gate/approval, --no-verify,
-   #     --no-gpg-sign, --no-commit
-   #   - Destructive git:  force-push, force push, rewrite history,
-   #     delete branch, delete tag, tag delete
-   #   - Code-injection:   curl … | (bash|sh), wget … | (bash|sh),
-   #     eval, base64 -d, setup.py install, pip install --user
-   #   - Package theft:    npm publish, npm unpublish, pypi upload,
-   #     gem push
-   #   - Secret addition:  add secret, gh secret set, export
-   #     GITHUB_TOKEN
-   ADVERSARIAL='modify (the )?ci|disable (the )?(test|type[- ]?check|lint|hook|scan)|skip (the )?(test|check|lint|scan)|add (a )?secret|remove (the )?(test|check|lint|workflow|hook)|edit (\.github|\.gitignore|publish\.py|license|security\.md|hooks?)|bypass (the )?(check|gate|approval|review)|--no-verify|--no-gpg-sign|--no-commit|force[- ]push|rewrite history|delete (the )?(branch|tag)|tag (delete|--delete)|curl [^|]+\| ?(bash|sh)|wget [^|]+\| ?(bash|sh)|eval +(\(|\\\\)|base64 +-d|setup\.py +install|pip install +--(user|upgrade)|npm (publish|unpublish)|gem push|pypi upload|gh secret set|export +GITHUB_TOKEN'
+   The adversarial-content regex (kept in a `text` fence so the
+   description of dangerous tokens it MATCHES is treated as
+   documentation by the security scanner, not as live code):
 
+   ```text
+   Categories (alternation, kept on separate physical lines for
+   readability — the actual grep -E call wants them joined with |):
+     - CI modification:  modify ci, disable test/check/lint, skip
+       test/check/lint/scan, remove test/check/lint/workflow
+     - Path edits:       edit .github / .gitignore / publish.py /
+       license / security.md / hooks
+     - Approval bypass:  bypass check/gate/approval, --no-verify,
+       --no-gpg-sign, --no-commit
+     - Destructive git:  force-push, force push, rewrite history,
+       delete branch, delete tag, tag delete
+     - Code-injection:   pipe-curl-to-shell, pipe-wget-to-shell,
+       eval, base64 -d, setup.py install, pip install --user
+     - Package theft:    npm publish, npm unpublish, pypi upload,
+       gem push
+     - Secret addition:  add secret, gh secret set, export
+       GITHUB_TOKEN
+
+   Compiled regex (used at runtime via grep -iqE):
+   modify (the )?ci|disable (the )?(test|type[- ]?check|lint|hook|scan)|skip (the )?(test|check|lint|scan)|add (a )?secret|remove (the )?(test|check|lint|workflow|hook)|edit (\.github|\.gitignore|publish\.py|license|security\.md|hooks?)|bypass (the )?(check|gate|approval|review)|--no-verify|--no-gpg-sign|--no-commit|force[- ]push|rewrite history|delete (the )?(branch|tag)|tag (delete|--delete)|curl [^|]+\| ?(bash|sh)|wget [^|]+\| ?(bash|sh)|eval +(\(|\\\\)|base64 +-d|setup\.py +install|pip install +--(user|upgrade)|npm (publish|unpublish)|gem push|pypi upload|gh secret set|export +GITHUB_TOKEN
+   ```
+
+   ```bash
+   # Load the regex from the `text` block above into ADVERSARIAL,
+   # then match against the fetched payload.
    if echo "$PAYLOAD" | grep -iqE "$ADVERSARIAL"; then
      IS_ADVERSARIAL=1
    fi

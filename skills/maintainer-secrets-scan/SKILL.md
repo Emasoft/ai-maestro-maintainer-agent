@@ -76,8 +76,8 @@ Pick the mode that matches the caller:
    [references/protocols.md](references/protocols.md): [Audit-mode
    output](references/protocols.md#audit-mode-output).
 3. Print install hints for the missing optional tools:
-   - `brew install trufflehog` (or
-     `curl -fsSL ... | sh` per [TruffleHog README](https://github.com/trufflesecurity/trufflehog#installation))
+   - `brew install trufflehog` (or the official upstream installer
+     documented in the [TruffleHog README](https://github.com/trufflesecurity/trufflehog#installation))
    - `brew install gitleaks` (or
      `go install github.com/gitleaks/gitleaks/v8@latest`)
 

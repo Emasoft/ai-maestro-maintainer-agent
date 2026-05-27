@@ -6,6 +6,8 @@ created: 2026-05-27T14:00:00+0200
 updated: 2026-05-27T14:00:00+0200
 ---
 
+<!-- markdownlint-disable MD025 MD004 -->
+
 # TRDD-e1c2677a — Full plugin audit + remediation pass
 
 **Filename:** `design/tasks/TRDD-20260527_140000+0200-e1c2677a-full-plugin-audit-fix.md`
