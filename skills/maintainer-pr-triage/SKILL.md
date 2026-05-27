@@ -60,8 +60,8 @@ author equals `$AUTHORIZED_USER` (PATs can be compromised).
    gh pr view <N> --repo "$REPO" --json \
      number,title,body,author,headRepository,headRepositoryOwner,headRefName,headRefOid,baseRefName,labels,commits,comments,files
    ```
-4. **Determine 3-case routing** (see
-   [references/classification-paths.md](references/classification-paths.md)):
+4. **Determine 3-case routing** (see the classification-paths
+   reference in Resources for the file path and complete TOC):
    - Case A — trusted internal PR: author = `$AUTHORIZED_USER`
      AND `headRepositoryOwner.login` = base repo owner.
    - Case B — trusted external PR: author = `$AUTHORIZED_USER`
@@ -88,9 +88,9 @@ author equals `$AUTHORIZED_USER` (PATs can be compromised).
      `auto-merge-ok` (same as Case A; fork-origin alone is not a
      red flag when the author is the authorized user).
    - Case C: ALWAYS `human-review-required` regardless of diff.
-     Run the untrusted-PR sandbox precheck (see
-     [references/untrusted-pr-protocol.md](references/untrusted-pr-protocol.md)),
-     post a structured observation comment, then return
+     Run the untrusted-PR sandbox precheck (see the untrusted-pr
+     protocol reference in Resources for the file path and complete
+     TOC), post a structured observation comment, then return
      `human-review-required`. NEVER auto-merge.
 8. Return the structured disposition to the patrol skill.
 
@@ -172,18 +172,20 @@ sandbox/`.
 
 - [Classification paths](references/classification-paths.md):
   - 3-case decision tree
-  - Case A (trusted internal PR)
-  - Case B (trusted external PR / fork by maintainer)
-  - Case C (untrusted external PR)
-  - PR metadata fetch (`gh pr view --json …`)
-  - Diff fetch (`gh pr diff` / `gh api`)
+  - Case A — trusted internal PR
+  - Case B — trusted external PR (fork by maintainer)
+  - Case C — untrusted external PR
+  - PR metadata fetch
+  - Diff fetch
   - Adversarial scan invocation
   - Protected-paths cross-reference
 - [Untrusted-PR sandbox protocol](references/untrusted-pr-protocol.md):
+  - Why a sandbox
   - Clone the PR head into a sandbox
-  - Run tests under `--network bridge`
-  - Capture observations (exit code, stdout/stderr digest)
-  - Post the structured observation comment
+  - Run tests under controlled network
+  - Capture observations
+  - Post the observation comment
+  - Failure modes
 - Effort scaling: shared with `maintainer-triage`
   (`skills/maintainer-triage/references/effort-scaling.md`).
 - Companion: `maintainer-triage` (issues),

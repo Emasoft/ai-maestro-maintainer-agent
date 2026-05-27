@@ -62,9 +62,8 @@ Copy this checklist and track your progress (per-PR):
 
 Each category emits zero or more **flags**. The skill collects
 flags into a single ordered list, renders them into the comment
-template (see
-[references/comment-template.md](references/comment-template.md)),
-and posts the comment. Every category has an early-exit on "not
+template (see Resources for the file path and complete TOC), and
+posts the comment. Every category has an early-exit on "not
 applicable".
 
 1. **Fetch the patch + file list** once:
@@ -96,14 +95,14 @@ applicable".
    added lines matching `uses: <new-action>@<tag>` in workflow
    files. Existing actions (already pinned in `main`) are
    skipped — Dependabot covers updates.
-9. **Render & post** the comment via heredoc (see
-   [references/comment-template.md](references/comment-template.md)).
+9. **Render & post** the comment via heredoc (see the comment
+   template in Resources for the file path and complete TOC).
 10. **NEVER** call `gh pr review --approve`. Optionally call
     `gh pr review --comment --body-file <file>` to attach as a
     formal review-comment rather than a plain PR comment.
 
-Per-category commands + grep recipes live in
-[references/review-checklist.md](references/review-checklist.md).
+Per-category commands + grep recipes live in the review-checklist
+reference (see Resources for the file path and complete TOC).
 
 ## Output
 
@@ -174,17 +173,21 @@ high finding (inherited from `workflow-scan`).
 ## Resources
 
 - [Review checklist (7 categories with commands)](references/review-checklist.md):
-  - Cat 1: Workflow changes
-  - Cat 2: Protected-path edits
-  - Cat 3: Lifecycle-script additions
-  - Cat 4: Lockfile churn
-  - Cat 5: Test/prod balance
-  - Cat 6: Diff size
-  - Cat 7: Untrusted-action additions
+  - Cat 1 — Workflow changes
+  - Cat 2 — Protected-path edits
+  - Cat 3 — Lifecycle-script additions
+  - Cat 4 — Lockfile churn
+  - Cat 5 — Test/prod balance
+  - Cat 6 — Diff size
+  - Cat 7 — Untrusted-action additions
+  - Shared diff helpers
 - [Comment template](references/comment-template.md):
-  - Heredoc body for the review comment
-  - Header + per-flag block + footer
+  - Header
+  - Per-flag block
+  - Footer
+  - Heredoc invocation
   - Markdown invariants
+  - Empty-flags variant
 - Companion: `maintainer-pr-triage` (upstream stage),
   `workflow-scan` (Cat 1 implementation),
   `maintainer-approval-gate` (Cat 2 protected-paths source).

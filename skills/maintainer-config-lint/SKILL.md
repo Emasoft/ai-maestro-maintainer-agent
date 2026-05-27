@@ -61,9 +61,10 @@ invoking it and degrades gracefully when one is missing.
    except `.github/`, `.vscode/`, `.idea/`.
 
 3. **Per-format dispatch** — classify each file by extension and
-   shebang. Run the linter from [references/per-format-linters.md](references/per-format-linters.md).
-   Each runner returns a list of `{rule, severity, line, col, message}`
-   tuples; the SARIF builder collects them.
+   shebang. Run the linter from the per-format table (see Resources
+   for the table location and TOC). Each runner returns a list of
+   `{rule, severity, line, col, message}` tuples; the SARIF builder
+   collects them.
 
 4. **Mode**:
    - `scan` (default) — full walk, emit report. Exit `0` if no
@@ -76,9 +77,9 @@ invoking it and degrades gracefully when one is missing.
    - `audit-installed` — only probe linters (no walk). Print a
      table of `{linter, found, version}`.
 
-5. **Emit SARIF** — write per the schema in
-   [references/sarif-output.md](references/sarif-output.md). Each
-   linter is one `tool.driver`; findings group under their respective
+5. **Emit SARIF** — write per the SARIF schema bundled with this
+   skill (see Resources for the file path and TOC). Each linter is
+   one `tool.driver`; findings group under their respective
    `runs[].results[]`.
 
 6. **Emit markdown summary** — render a short table:
@@ -89,10 +90,8 @@ invoking it and degrades gracefully when one is missing.
 7. **Return** stdout: absolute path of the SARIF file. Exit code
    per the mode rules above.
 
-For exact per-format commands, see
-[references/per-format-linters.md](references/per-format-linters.md).
-For the SARIF schema, see
-[references/sarif-output.md](references/sarif-output.md).
+See the Resources section below for the per-format command table
+and the SARIF schema with their complete TOCs.
 
 ## Output
 
@@ -163,23 +162,27 @@ User: "what config linters do I have?"
 
 ## Resources
 
-- [references/per-format-linters.md](references/per-format-linters.md) —
-  per-format command table:
-  - JSON syntax check + JSON Schema validation
-  - YAML lint via uvx yamllint
-  - TOML via Python tomllib
-  - Plist via plutil (macOS) / xmllint (Linux)
-  - CFG / INI via Python configparser
-  - .env structural lint (no value logging)
-  - Dockerfile via hadolint (optional)
-  - File-extension to format mapping
-- [references/sarif-output.md](references/sarif-output.md) — SARIF
-  2.1.0 schema the skill emits:
+- [references/per-format-linters.md](references/per-format-linters.md):
+  - File extension to format map
+  - JSON
+  - YAML
+  - TOML
+  - Plist
+  - CFG / INI
+  - .env
+  - Dockerfile
+  - Generic fallthrough
+  - Severity scheme
+- [references/sarif-output.md](references/sarif-output.md):
+  - Why SARIF
   - Top-level structure
-  - `tool.driver` entries per linter
-  - `results[]` shape and severity mapping
-  - Reading the report
+  - `tool.driver` per linter
+  - `results[]` shape
+  - Severity mapping
+  - Suppressions
   - Markdown summary layout
+  - Reading the report
+  - Privacy invariants
 - Companion skills: `maintainer-tool-bootstrap` (install the
   optional linters this skill calls), `workflow-scan` (the YAML
   linter for GitHub Actions YAML files is `actionlint` — runs

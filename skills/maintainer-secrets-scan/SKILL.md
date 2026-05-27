@@ -42,14 +42,14 @@ Pick the mode that matches the caller:
 
 ### Mode: `scan` (default audit, every patrol cycle)
 
-1. Resolve which scanner to use — see
-   [references/protocols.md](references/protocols.md): [Tool detection
-   chain](references/protocols.md#tool-detection-chain).
+1. Resolve which scanner to use — see the protocols reference in
+   Resources below for the file path and complete TOC (Tool
+   detection chain is the relevant section).
 2. Run the scanner against (a) the working tree and (b) the last
    50 commits of git history (`git log -p -n 50`).
 3. Apply the false-positive suppression file if present — see
-   [references/false-positive-suppression.md](references/false-positive-suppression.md):
-   [Suppression file format](references/false-positive-suppression.md#suppression-file-format).
+   the false-positive-suppression reference in Resources below for
+   the file path and complete TOC.
 4. Bucket findings by severity (CRITICAL / HIGH / MEDIUM / LOW).
 5. Write a JSON + Markdown report to
    `$MAIN_ROOT/reports/maintainer-secrets-scan/<TS>-scan.{json,md}`.
@@ -170,18 +170,18 @@ commit, push, or modify any file outside `$MAIN_ROOT/reports/`.
 ## Resources
 
 - [Per-tool invocation + JSON schema + severity mapping](references/protocols.md):
-  - [Tool detection chain](references/protocols.md#tool-detection-chain)
-  - [trufflehog invocation](references/protocols.md#trufflehog-invocation)
-  - [gitleaks invocation](references/protocols.md#gitleaks-invocation)
-  - [fast_security_scan.py invocation](references/protocols.md#fast_security_scanpy-invocation)
-  - [Severity mapping](references/protocols.md#severity-mapping)
-  - [Output schema](references/protocols.md#output-schema)
-  - [Audit-mode output](references/protocols.md#audit-mode-output)
+  - Tool detection chain
+  - trufflehog invocation
+  - gitleaks invocation
+  - fast_security_scan.py invocation
+  - Severity mapping
+  - Output schema
+  - Audit-mode output
 - [False-positive suppression (.maintainer-secrets-ignore)](references/false-positive-suppression.md):
-  - [Suppression file format](references/false-positive-suppression.md#suppression-file-format)
-  - [Match semantics](references/false-positive-suppression.md#match-semantics)
-  - [Authoring rules](references/false-positive-suppression.md#authoring-rules)
-  - [Tool-specific propagation](references/false-positive-suppression.md#tool-specific-propagation)
+  - Suppression file format
+  - Match semantics
+  - Authoring rules
+  - Tool-specific propagation
 - Source: `scripts/fast_security_scan.py` (bundled fallback —
   always available, DO NOT modify from this skill).
 - Companion skills: `maintainer-redact` (prose-level scrub),

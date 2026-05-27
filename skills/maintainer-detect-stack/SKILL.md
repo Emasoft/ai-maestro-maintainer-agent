@@ -60,12 +60,11 @@ Copy this checklist and track your progress:
    mkdir -p "$STATE_DIR"
    cd "$TARGET_REPO"
    ```
-2. Scan the 10 dimensions per
-   [detection-matrix.md](references/detection-matrix.md). Each
-   dimension is a single file-existence test plus, where relevant,
-   a tiny `grep`/`jq` read of one field. The matrix lists ALL
-   signals + the implication (which downstream skill consumes the
-   answer).
+2. Scan the 10 dimensions per the detection matrix (see Resources
+   for the file path and complete TOC). Each dimension is a single
+   file-existence test plus, where relevant, a tiny `grep`/`jq`
+   read of one field. The matrix lists ALL signals + the implication
+   (which downstream skill consumes the answer).
 3. Aggregate the dimensions into the JSON object described by
    [fingerprint-schema.json](references/fingerprint-schema.json).
 4. Build the `suggestions[]` array — one entry per actionable
@@ -166,9 +165,20 @@ Patrol cycle 5 — user added .tool-versions:
 
 ## Resources
 
-- [`references/detection-matrix.md`](references/detection-matrix.md)
-  — the full 10-dimension table (signal → file → implication).
-- [`references/fingerprint-schema.json`](references/fingerprint-schema.json)
+- [references/detection-matrix.md](references/detection-matrix.md):
+  - 1. Primary language
+  - 2. Package manager / sub-detect
+  - 3. Tool-versions manager
+  - 4. CI presence
+  - 5. Dependabot
+  - 6. Branch rules
+  - 7. Hooks present
+  - 8. Test framework
+  - 9. Lint setup
+  - 10. Docs + TRDD/ADR
+  - Suggestion-build rules
+  - Worked example
+- [references/fingerprint-schema.json](references/fingerprint-schema.json)
   — JSON Schema downstream skills validate against.
 - Companions: `workflow-bootstrap` (consumes
   `primary_language` + `package_manager`); `maintainer-commit-msg-why`

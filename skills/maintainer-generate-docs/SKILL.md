@@ -65,22 +65,22 @@ Copy this checklist and track your progress:
    with the list otherwise.
 2. **generate** — for each MISSING file, substitute placeholders
    and write. If a file already exists, REFUSE (suggest `diff` to
-   compare). Read the placeholder source map in
-   [references/placeholder-map.md](references/placeholder-map.md).
+   compare). Read the placeholder source map (see Resources for
+   the file path and complete TOC).
 3. **diff** — render the would-be template for a file and `diff`
    it against the existing file. No writes.
 4. **update-stale** — for each STALE file, copy the existing file
    to `<file>.bak-<TIMESTAMP>` (local time + GMT offset), then
    regenerate. Print a recovery hint pointing at the `.bak-*` file.
-5. **validate** — for each existing file, run the checklist in
-   [references/validate-checks.md](references/validate-checks.md)
-   (e.g. CONTRIBUTING mentions the test command; SECURITY has a
-   disclosure address). Return list of failures.
+5. **validate** — for each existing file, run the validate-checks
+   checklist (see Resources for the file path and complete TOC) —
+   e.g. CONTRIBUTING mentions the test command; SECURITY has a
+   disclosure address. Return list of failures.
 
 ### Placeholder substitution
 
-The full mapping (`$VAR` → source field) is in
-[references/placeholder-map.md](references/placeholder-map.md).
+The full mapping (`$VAR` → source field) is in the placeholder
+source map (see Resources for the file path and complete TOC).
 Summary:
 
 | Placeholder | Source (first match wins) |
@@ -169,10 +169,16 @@ Repo: my-django-app (no community files at all)
 ## Resources
 
 - [Placeholder source map](references/placeholder-map.md):
-  per-`$VAR` resolution order with fallback rules
+  - Placeholder reference
+  - Resolution helpers (shell)
+  - Normalisation rules
+  - Examples
+  - Caller overrides
 - [Validate-mode checklist](references/validate-checks.md):
-  per-file content requirements (test command in CONTRIBUTING,
-  disclosure address in SECURITY, contact in CODE_OF_CONDUCT, etc.)
+  - Why content checks (not just presence)
+  - Per-file checklist
+  - Failure shape
+  - Stale heuristic
 - Templates: `references/templates/*.template`
 - Companion: `workflow-bootstrap` (CI scaffold),
   `maintainer-trdd-adr` (design-docs scaffold).

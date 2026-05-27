@@ -28,8 +28,8 @@ without re-running detection.
 **Mandatory tools** for the maintainer core: `gh` (≥2.40),
 `git` (≥2.30), `uv` (≥0.4), `bash` (≥4.0).
 
-**Per-skill optional tools** are listed under
-[references/install-recipes.md](references/install-recipes.md).
+**Per-skill optional tools** are listed under the install-recipes
+reference (see Resources below for the file path and complete TOC).
 
 ## Prerequisites
 
@@ -65,11 +65,11 @@ without re-running detection.
 
    - `audit` — for each required tool: run `command -v <tool>` and
      `<tool> --version` (or the tool's idiomatic version flag), parse
-     out the version, compare against the minimum. Emit JSON per
-     [references/audit-format.md](references/audit-format.md). Exit
-     `0` only if every **mandatory** tool is present and meets its
-     minimum; exit `1` if any mandatory is missing/too-old; exit `2`
-     if a required *optional* tool is missing (caller decides).
+     out the version, compare against the minimum. Emit JSON per the
+     audit-format reference (see Resources below). Exit `0` only if
+     every **mandatory** tool is present and meets its minimum;
+     exit `1` if any mandatory is missing/too-old; exit `2` if a
+     required *optional* tool is missing (caller decides).
 
    - `recipe` — print platform-specific install recipes for every
      missing tool to stdout. No installations performed. Exit `0`.
@@ -85,10 +85,9 @@ without re-running detection.
    echo the path to stdout. Stderr carries a human-readable summary
    table.
 
-For the full per-platform install matrix and verification snippets,
-see [references/install-recipes.md](references/install-recipes.md).
-For the JSON schema, see
-[references/audit-format.md](references/audit-format.md).
+For the full per-platform install matrix, verification snippets,
+and JSON schema, see Resources below for the canonical file paths
+and complete TOCs.
 
 ## Output
 
@@ -145,8 +144,8 @@ User: "install whatever's missing"
 ## Scope
 
 - ONLY interacts with the host package manager and the per-tool
-  installers documented in
-  [references/install-recipes.md](references/install-recipes.md).
+  installers documented in the install-recipes reference (see
+  Resources below).
 - Does NOT touch user shell rc files (`~/.bashrc`, `~/.zshrc`); the
   package managers handle their own PATH additions.
 - Does NOT install language toolchains beyond what's in the table
@@ -159,17 +158,18 @@ User: "install whatever's missing"
 
 ## Resources
 
-- [references/install-recipes.md](references/install-recipes.md) —
-  per-platform package names, install commands, and direct-download
-  URLs for tools not in any PM:
-  - Mandatory tools (gh, git, uv, bash)
-  - Optional tools (actionlint, docker, jq, trufflehog, gitleaks, hadolint, yamllint, plutil)
-  - Per-platform installation matrix
+- [references/install-recipes.md](references/install-recipes.md):
+  - Platform IDs
+  - Mandatory tools
+  - Optional tools
   - Verification snippets
-- [references/audit-format.md](references/audit-format.md) — the
-  JSON schema the skill emits in `audit` mode:
-  - Top-level disposition fields
-  - Per-tool fields and status enum
-  - Reading the report from a downstream skill
+  - Direct-download fallback URLs
+- [references/audit-format.md](references/audit-format.md):
+  - Top-level fields
+  - Tool entry
+  - Disposition enum
+  - Status enum
+  - Worked example
+  - Reading the report from another skill
 - Companion skills: `maintainer-config-lint` (uses several optional
   tools listed here), `workflow-scan` (uses zizmor + actionlint).
