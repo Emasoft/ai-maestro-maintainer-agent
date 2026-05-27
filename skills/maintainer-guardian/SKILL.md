@@ -113,6 +113,23 @@ Patrol cycle 11 → guardian scan
             routes: ["issue#88", "alert#$AUTHORIZED_USER"]}
 ```
 
+## Scope
+
+ONLY runs supply-chain detectors T1-T6 against the entrusted repo
+(BASELINE writes a snapshot; SCAN diffs vs the snapshot). Does NOT:
+
+- Apply fixes directly — it ROUTES findings to the right
+  remediation skill (`workflow-fix-safe`, `workflow-pin-actions`,
+  `maintainer-approval-gate`) or files a tracking issue.
+- Push, force-push, or rewrite history.
+- Trigger on a clean delta — every detection requires a concrete
+  diff vs baseline.
+- Run third-party scanners other than the documented six classes
+  (zizmor + actionlint are reused via `workflow-scan`; everything
+  else is in-repo logic).
+
+Idempotent — re-running BASELINE replaces the snapshot atomically.
+
 ## Resources
 
 - [Threat classes + routing](references/threat-classes.md):

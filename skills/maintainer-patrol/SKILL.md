@@ -110,6 +110,22 @@ Resume after hibernation:
 → Continue patrol loop
 ```
 
+## Scope
+
+ONLY runs the patrol loop: pre-cycle Guardian → fetch open issues
+→ dispatch triage → post-cycle workflow-protect-branch SHOW → sleep.
+Does NOT:
+
+- Triage issues itself — that's `maintainer-triage`'s job.
+- Fix issues itself — triage's `action: fix` disposition routes
+  to `maintainer-fix` separately.
+- Process closed or already-ledgered issues.
+- Override the configured interval at runtime — the bounds are
+  enforced once at startup; mid-run mutation requires a restart.
+
+Idempotent across hibernation: the ledger persists across session
+boundaries and only NEW issues are re-triaged on resume.
+
 ## Resources
 
 - [Patrol loop reference](references/patrol-loop.md):

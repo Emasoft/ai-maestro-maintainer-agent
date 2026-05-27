@@ -151,17 +151,21 @@ Patrol cycle 5 — user added .tool-versions:
   version from .tool-versions
 ```
 
-## Constraints
+## Scope
 
-- NEVER edits the entrusted repo's files — strictly read-only.
-- NEVER runs the repo's own scripts (no `npm install`, no
-  `pyproject.toml` exec).
-- NEVER pushes; NEVER opens issues; NEVER calls `gh api -X POST`.
-- Output file is the ONLY side effect (plus stdout JSON).
-- Idempotent — re-running on the same repo overwrites the
-  previous fingerprint atomically.
-- Works on ANY entrusted repo (per memory
-  `feedback_plugin_scope_is_entrusted_repos`).
+ONLY fingerprints the entrusted repo (read-only). Does NOT:
+
+- Edit the entrusted repo's files — strictly read-only.
+- Run the repo's own scripts (no `npm install`, no `pyproject.toml`
+  exec) — `package.json scripts` blocks are treated as descriptive,
+  never executed.
+- Push, open issues, or call `gh api -X POST`.
+- Touch anything outside `$STATE_DIR/stack-fingerprint.json` — the
+  output file is the ONLY side effect (plus stdout JSON).
+
+Idempotent — re-running on the same repo atomically overwrites the
+previous fingerprint. Works on ANY entrusted repo (per memory
+`feedback_plugin_scope_is_entrusted_repos`).
 
 ## Resources
 

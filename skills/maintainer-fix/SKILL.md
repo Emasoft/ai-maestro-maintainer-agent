@@ -110,11 +110,18 @@ approval-gate CHECK requests approve-protected-edit → HALT;
 next cycle VERIFY finds approval → RESUME → commit, publish
 ```
 
-## Constraints
+## Scope
 
-- NEVER force-push (R19.7); never rewrite history.
-- ALL tests pass before push (R19.8); NEVER `--no-verify`.
-- One fix per issue — never bundle multiple fixes.
+ONLY implements one fix per issue end-to-end (clone → branch →
+edit → test → commit → push → close). Does NOT:
+
+- Force-push (R19.7); never rewrites history.
+- Skip tests — ALL tests must pass before push (R19.8); NEVER
+  `--no-verify`.
+- Bundle multiple fixes — one issue per fix-branch.
+- Edit protected paths without `maintainer-approval-gate` clearance.
+- Triage issues — that's `maintainer-triage`'s job; this skill
+  starts only after action=fix lands.
 
 ## Resources
 

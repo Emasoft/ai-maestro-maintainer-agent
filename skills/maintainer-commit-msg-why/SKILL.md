@@ -134,15 +134,18 @@ Emergency rebase — set COMMIT_MSG_HOOK_BYPASS=1
 → next audit surfaces those commits as BYPASS
 ```
 
-## Constraints
+## Scope
 
-- NEVER overwrites a pre-existing hook without backing it up first.
-- NEVER edits commit history. Audit only REPORTS — it does not
-  amend, rebase, or rewrite.
-- NEVER runs `git push` or any network op.
-- Hook is bash + standard POSIX tools — no Python / Node / jq.
-- The skill works on ANY entrusted repo, not just the plugin's
-  own. The target repo is resolved at the top of every mode.
+ONLY installs / audits / uninstalls a `commit-msg` git hook in the
+entrusted repo. Does NOT:
+
+- Overwrite a pre-existing hook without backing it up first.
+- Edit commit history. Audit only REPORTS — it does not amend,
+  rebase, or rewrite.
+- Run `git push` or any network op.
+- Require Python / Node / jq — pure bash + POSIX (awk, grep, sed).
+- Assume the entrusted repo is THIS plugin. The target repo is
+  resolved at the top of every mode via `$TARGET_REPO`.
 
 ## Resources
 

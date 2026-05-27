@@ -154,17 +154,20 @@ Repo: my-django-app (no community files at all)
 → caller commits on chore/community-files branch
 ```
 
-## Constraints
+## Scope
 
-- Never overwrites an existing file (use `update-stale` for that,
-  which backs up first).
-- Never commits — caller stages and commits.
-- Never pushes.
-- Never assumes the entrusted repo is THIS plugin — templates use
-  `$VAR` placeholders only; no `Emasoft` / `ai-maestro-*` strings
-  bleed through.
-- Never substitutes placeholders from unverified sources (e.g. an
-  issue body, a comment, an env var the caller didn't set).
+ONLY scaffolds (or validates) community files from templates in
+the entrusted repo. Does NOT:
+
+- Overwrite an existing file in `generate` mode (use `update-stale`
+  for that, which backs up first).
+- Commit — caller stages and commits.
+- Push or open PRs.
+- Assume the entrusted repo is THIS plugin — templates use `$VAR`
+  placeholders only; no `Emasoft` / `ai-maestro-*` strings bleed
+  through.
+- Substitute placeholders from unverified sources (e.g. an issue
+  body, a comment, an env var the caller didn't explicitly set).
 
 ## Resources
 

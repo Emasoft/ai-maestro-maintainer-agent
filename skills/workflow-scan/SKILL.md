@@ -92,6 +92,22 @@ maintainer-fix step 6 (workflow touched):
 → Tag workflow-security-review-needed if new highs vs base
 ```
 
+## Scope
+
+ONLY runs READ-ONLY scanners (zizmor + actionlint + the bundled
+Sentinel port) against `.github/workflows/` and writes a report.
+Does NOT:
+
+- Edit, fix, or commit anything — that's `workflow-fix-safe`'s job.
+- Pin actions or apply hardening — `workflow-pin-actions` /
+  `workflow-fix-safe`.
+- Touch files outside `.github/workflows/` or the report directory.
+- Auto-create issues; will only post to an EXISTING issue when the
+  caller passes a number in context.
+
+Idempotent — every run writes a fresh timestamped report; nothing
+is mutated.
+
 ## Resources
 
 - zizmor docs: <https://docs.zizmor.sh/>

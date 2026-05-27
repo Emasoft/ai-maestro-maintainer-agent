@@ -92,6 +92,20 @@ Patrol cycle N+1 → approval-gate VERIFY on issue #42
 → disposition: ok → fix RESUMES
 ```
 
+## Scope
+
+ONLY checks a planned diff against protected-paths and (in VERIFY
+mode) looks for a maintainer approval comment. Does NOT:
+
+- Decide WHAT the protected paths are at runtime — the canonical
+  list is checked into the skill's references; per-repo overrides
+  live in `.aimaestro/protected-paths.txt`.
+- Mutate the planned diff — only halts or releases the caller.
+- Accept approvals from any user other than `$AUTHORIZED_USER` —
+  impostor approvals are silently rejected (returned as `pending`).
+- Verify approval freshness — once an `approve-protected-edit`
+  reply lands, it stays valid for the lifetime of the issue.
+
 ## Resources
 
 - [Protected paths + override mechanism](references/protected-paths.md):

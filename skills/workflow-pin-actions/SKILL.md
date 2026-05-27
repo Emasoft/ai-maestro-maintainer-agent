@@ -82,6 +82,21 @@ User: "SHA-pin every action in the workflows"
 → Return: {pinned: 5, skipped_local: 0, commit: "abc1234", …}
 ```
 
+## Scope
+
+ONLY resolves unpinned `uses: name@ref` references to 40-char SHAs
++ trailing semver comment. Does NOT:
+
+- Bump major versions — preserves the existing `vN` constraint.
+- Pin first-party `actions/*` / `github/*` references — those are
+  excluded by convention (use the canonical owner-maintained refs).
+- Run on protected branches (`main`, `master`, `release/*`).
+- Force-push or push at all — caller pushes.
+- Modify YAML other than the `uses:` field (no formatting, no
+  reflow, no comment removal).
+
+Idempotent — re-running on an already-pinned workflow is a no-op.
+
 ## Resources
 
 - zizmor unpinned-uses rule:

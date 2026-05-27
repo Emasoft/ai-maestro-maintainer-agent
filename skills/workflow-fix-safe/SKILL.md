@@ -80,6 +80,22 @@ User: "fix the safe zizmor findings"
 → Return: {fixed_by_zizmor: 3, hardening_edits: 2, held_back: 5, ...}
 ```
 
+## Scope
+
+ONLY applies SAFE zizmor auto-fixes plus the documented idempotent
+hardening edits to `.github/workflows/*.yml`. Does NOT:
+
+- Pass `--fix=all` or `--fix=unsafe-only` — those need human review.
+- Force-push (R19.7) or use `--no-verify`.
+- Run on `main` / `master` / `release/*` — protected-branch guard
+  aborts the flow.
+- Edit anything outside `.github/workflows/` — does not touch
+  `dependabot.yml`, scripts, source code, or docs.
+- Push the resulting commit — caller pushes.
+
+If post-scan finds a NEW finding the safe fixes introduced, the
+skill aborts without committing — regression guard.
+
 ## Resources
 
 - zizmor fix-mode reference: <https://docs.zizmor.sh/usage/#auto-fixing>

@@ -94,6 +94,22 @@ More walk-throughs (first-time apply, idempotent re-apply,
 fresh-repo zero-rulesets case):
 [references/instructions.md](references/instructions.md).
 
+## Scope
+
+ONLY queries (SHOW) or applies (APPLY) the
+`default-branch-ruleset` via the GitHub Rulesets REST API. Does NOT:
+
+- Manage non-default branches — ruleset target is hard-coded to
+  `~DEFAULT_BRANCH`.
+- Set or modify environment-level protections (those are a separate
+  API surface).
+- Apply org-level rulesets — repo-level only.
+- Push, commit, or modify the entrusted repo's working tree.
+- Configure required reviews — only required_status_checks +
+  non_fast_forward + deletion blocking.
+
+Idempotent — re-running APPLY converges to the same ruleset state.
+
 ## Resources
 
 - Rulesets API: <https://docs.github.com/en/rest/repos/rules>

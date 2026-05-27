@@ -107,12 +107,19 @@ Per-language walk-throughs (Node, Rust, Go, refusal) live in
 - Post-merge ruleset apply
 - Per-language walk-throughs
 
-## Constraints
+## Scope
 
-- Never overwrites existing workflow files.
-- Never commits on `main`/`master` — always `chore/bootstrap-ci`.
-- Never pushes — caller pushes via PR.
-- Never sets secrets here; use `-b` form in helper scripts.
+ONLY scaffolds first-time CI on repos with NO existing workflows.
+Does NOT:
+
+- Overwrite existing workflow files — refuses; suggests
+  `workflow-fix-safe` + `workflow-pin-actions` instead.
+- Commit on `main`/`master` — always uses `chore/bootstrap-ci`.
+- Push — caller pushes via PR.
+- Set secrets — secret seeding is out of scope; helper scripts
+  use `gh secret set -b` form when needed.
+- Apply branch protection inline — that's `workflow-protect-branch`'s
+  post-merge job.
 
 ## Resources
 
