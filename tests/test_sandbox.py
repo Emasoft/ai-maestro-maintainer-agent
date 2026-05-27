@@ -261,3 +261,183 @@ def test_clone_handles_real_repo(tmp_path: Path):
     assert (dest / ".git").is_dir()
     manifest = json.loads((dest / ".aimm-sandbox.json").read_text(encoding="utf-8"))
     assert manifest["repo"] == "octocat/Spoon-Knife"
+
+
+# -- CLI dispatch unit tests (Audit B-COV-1) ---------------------------------
+#
+# These tests target the cmd_* dispatch funcs and _materialise_scratch_project
+# directly, with monkey-patched SCRATCH_ROOT so nothing leaks into /tmp/aimm-
+# sandbox/ on the host. They all run in milliseconds and need only Python +
+# filesystem — no docker. The point is the input-validation half of every
+# dispatch func, which was at 0% line coverage before this audit.
+
+
+def test_materialise_scratch_project_writes_string_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """_materialise_scratch_project writes every file in spec['files'] as-is."""
+    monkeypatch.setattr(sb, "SCRATCH_ROOT", tmp_path)
+    spec = {"files": {"a.txt": "hello", "b.txt": "world"}}
+    dest = sb._materialise_scratch_project(spec)
+    assert dest.is_dir()
+    assert dest.parent == tmp_path
+    assert (dest / "a.txt").read_text(encoding="utf-8") == "hello"
+    assert (dest / "b.txt").read_text(encoding="utf-8") == "world"
+
+
+def test_materialise_scratch_project_dict_body_encoded_as_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A dict body is serialised as JSON (package.json shape used by precheck)."""
+    monkeypatch.setattr(sb, "SCRATCH_ROOT", tmp_path)
+    spec = {"files": {"package.json": {"name": "x", "version": "0.0.0"}}}
+    dest = sb._materialise_scratch_project(spec)
+    parsed = json.loads((dest / "package.json").read_text(encoding="utf-8"))
+    assert parsed == {"name": "x", "version": "0.0.0"}
+
+
+def test_materialise_scratch_project_creates_nested_subdirs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Files with '/' in the key auto-create the intermediate directory."""
+    monkeypatch.setattr(sb, "SCRATCH_ROOT", tmp_path)
+    spec = {"files": {"src/index.js": "console.log(1)", "deep/a/b/c.txt": "x"}}
+    dest = sb._materialise_scratch_project(spec)
+    assert (dest / "src/index.js").is_file()
+    assert (dest / "deep/a/b/c.txt").is_file()
+
+
+def test_materialise_scratch_project_empty_spec_returns_empty_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A spec with no files: key returns an empty scratch dir, no exception."""
+    monkeypatch.setattr(sb, "SCRATCH_ROOT", tmp_path)
+    dest = sb._materialise_scratch_project({})
+    assert dest.is_dir()
+    assert list(dest.iterdir()) == []
+
+
+def test_cmd_precheck_unknown_ecosystem_returns_1(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """precheck refuses unknown ecosystems before touching docker."""
+    ns = argparse.Namespace(package="anything@1.0", ecosystem="cargo", time_budget=60)
+    assert sb.cmd_precheck(ns) == 1
+    assert "unknown ecosystem" in capsys.readouterr().err
+
+
+def test_cmd_shootout_missing_recipe_file_returns_1(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """shootout exits non-zero when the recipe path does not exist."""
+    ns = argparse.Namespace(recipe=str(tmp_path / "no-such-recipe.yaml"))
+    assert sb.cmd_shootout(ns) == 1
+    assert "recipe not found" in capsys.readouterr().err
+
+
+def test_cmd_shootout_invalid_yaml_shape_returns_1(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """shootout refuses a recipe whose YAML root is not a mapping."""
+    recipe = tmp_path / "rec.yaml"
+    recipe.write_text("- just\n- a\n- list\n", encoding="utf-8")
+    ns = argparse.Namespace(recipe=str(recipe))
+    assert sb.cmd_shootout(ns) == 1
+    assert "YAML mapping" in capsys.readouterr().err
+
+
+def test_cmd_shootout_missing_matrix_returns_1(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """shootout requires both matrix: and commands: at the top level."""
+    recipe = tmp_path / "rec.yaml"
+    recipe.write_text("name: x\nmatrix: []\ncommands: []\n", encoding="utf-8")
+    ns = argparse.Namespace(recipe=str(recipe))
+    assert sb.cmd_shootout(ns) == 1
+    assert "non-empty matrix" in capsys.readouterr().err
+
+
+def test_cmd_shootout_unknown_project_type_returns_1(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """shootout refuses project.type values other than scratch / clone."""
+    recipe = tmp_path / "rec.yaml"
+    recipe.write_text(
+        "name: x\n"
+        "project:\n"
+        "  type: ftp-mount\n"
+        "matrix:\n  - {tool: a, image: aimm-sandbox:node-baseline}\n"
+        "commands:\n  - {name: hi, cmd: echo hi}\n",
+        encoding="utf-8",
+    )
+    ns = argparse.Namespace(recipe=str(recipe))
+    assert sb.cmd_shootout(ns) == 1
+    assert "unknown project.type" in capsys.readouterr().err
+
+
+def test_cmd_shootout_clone_missing_repo_returns_1(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """shootout requires project.repo when project.type=clone."""
+    recipe = tmp_path / "rec.yaml"
+    recipe.write_text(
+        "name: x\n"
+        "project:\n  type: clone\n"
+        "matrix:\n  - {tool: a, image: aimm-sandbox:node-baseline}\n"
+        "commands:\n  - {name: hi, cmd: echo hi}\n",
+        encoding="utf-8",
+    )
+    ns = argparse.Namespace(recipe=str(recipe))
+    assert sb.cmd_shootout(ns) == 1
+    assert "requires project.repo" in capsys.readouterr().err
+
+
+def test_cmd_build_images_unknown_variant_returns_1(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """build-images refuses a --variant that does not match a Dockerfile stem."""
+    ns = argparse.Namespace(variant="this-variant-does-not-exist")
+    assert sb.cmd_build_images(ns) == 1
+    assert "not found under" in capsys.readouterr().err
+
+
+def test_cmd_build_images_missing_dockerfiles_dir_returns_1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """build-images aborts when DOCKERFILES_DIR is absent (e.g. broken install)."""
+    monkeypatch.setattr(sb, "DOCKERFILES_DIR", tmp_path / "nope")
+    ns = argparse.Namespace(variant=None)
+    assert sb.cmd_build_images(ns) == 1
+    assert "no dockerfiles dir" in capsys.readouterr().err
+
+
+def test_cmd_run_invalid_network_returns_1(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """cmd_run catches the ValueError raised by _do_run on a bad network arg."""
+    ns = argparse.Namespace(
+        image="aimm-sandbox:node-baseline",
+        project_dir=str(tmp_path),
+        cmd="echo hi",
+        network="rogue-tunnel",
+        time_budget=10,
+        allow_writes=False,
+    )
+    assert sb.cmd_run(ns) == 1
+    assert "network must be" in capsys.readouterr().err
+
+
+def test_cmd_run_missing_project_dir_returns_1(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """cmd_run catches FileNotFoundError when project_dir does not exist."""
+    ns = argparse.Namespace(
+        image="aimm-sandbox:node-baseline",
+        project_dir=str(tmp_path / "ghost"),
+        cmd="echo hi",
+        network="none",
+        time_budget=10,
+        allow_writes=False,
+    )
+    assert sb.cmd_run(ns) == 1
+    assert "does not exist" in capsys.readouterr().err
