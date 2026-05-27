@@ -9,7 +9,7 @@ SARIF reader. A human-readable markdown summary accompanies it.
 - [Why SARIF](#why-sarif)
 - [Top-level structure](#top-level-structure)
 - [`tool.driver` per linter](#tooldriver-per-linter)
-- [`results[]` shape](#results-shape)
+- [Results array shape](#results-shape)
 - [Severity mapping](#severity-mapping)
 - [Suppressions](#suppressions)
 - [Markdown summary layout](#markdown-summary-layout)
@@ -92,7 +92,7 @@ Drivers per format:
 | .env | `maintainer-config-lint-dotenv` |
 | Dockerfile | `hadolint` |
 
-## `results[]` shape
+## Results array shape
 
 ```json
 {

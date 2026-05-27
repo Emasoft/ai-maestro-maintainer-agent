@@ -177,7 +177,7 @@ User: "what config linters do I have?"
   - Why SARIF
   - Top-level structure
   - tool.driver per linter
-  - results[] shape
+  - Results array shape
   - Severity mapping
   - Suppressions
   - Markdown summary layout
