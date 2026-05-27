@@ -20,11 +20,12 @@ route (what the Guardian does when a delta is positive).
 ## T1 — Workflow drift
 
 **Detection.** Chain the `workflow-scan` skill (read-only). It runs
-TWO deterministic engines on `.github/workflows/` and writes a
+THREE deterministic engines on `.github/workflows/` and writes a
 report under `$MAIN_ROOT/reports/workflow-scan/`:
 
-1. `uvx zizmor` + `actionlint` (upstream static analysis).
-2. The bundled `scripts/sentinel_scan.py` — a faithful Python port
+1. `uvx zizmor` (supply-chain + permission analysis).
+2. `actionlint` (YAML / shellcheck-of-`run:`-blocks / glob analysis).
+3. The bundled `scripts/sentinel_scan.py` — a faithful Python port
    of the Sentinel scanner (32 deterministic rules). It catches the
    structural classes zizmor does not, e.g. `build-publish-same-job`,
    `credential-window`, `ide-config-injection`,

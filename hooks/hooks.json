@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '[ai-maestro-maintainer-agent] Guardian Mode active. Before the first patrol cycle, invoke the maintainer-guardian skill in baseline mode to capture a clean security snapshot for T1-T5 threat detection. The skill is idempotent — re-running just refreshes the baseline at $AGENT_DIR/.aimaestro/state/guardian-baseline.json. The maintainer is the guardian of the repo, not a reactive issue-fixer.'"
+            "command": "echo '[ai-maestro-maintainer-agent] Guardian Mode active. The patrol skill auto-baselines if the snapshot is missing; to refresh manually, invoke maintainer-guardian in baseline mode. The skill is idempotent — re-running just refreshes the baseline at $AGENT_DIR/.aimaestro/state/guardian-baseline.json. Baseline covers T1-T6 threat detection (T1 workflow scanners, T2 stale SHA pins, T3 branch-rule drift, T4 protected-path activity, T5 secret-leak markers, T6 package-manager safety-config drift). The maintainer is the guardian of the repo, not a reactive issue-fixer.'"
           }
         ]
       }

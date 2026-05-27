@@ -17,7 +17,7 @@ description: |
 The maintainer agent IS the guardian of the repo. This skill runs
 the proactive half of that job. BASELINE captures a clean snapshot
 at session start; SCAN diffs every patrol cycle against it and
-routes T1-T5 detections to auto-fix / file-issue / alert. The
+routes T1-T6 detections to auto-fix / file-issue / alert. The
 inspiration is Atai Barkai's 2026-05-20 supply-chain article — the
 maintainer no longer waits for someone to file an issue saying
 "your CI is broken", it watches and reacts.

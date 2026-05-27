@@ -20,9 +20,21 @@ on:
 permissions:
   contents: read
 
+# Cancel in-progress runs on the same ref (PR force-push / rapid main pushes)
+# so we don't burn Actions minutes on stale work. Tag / release workflows
+# (release.yml) intentionally do NOT enable this — every release tag deserves
+# its own run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
+    # Hard cap. CPV strict is bounded; the only reason this could exceed 15 min
+    # is a network flake on `uvx --from git+https://...`. Failing fast is better
+    # than burning the default 360-min ceiling.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
         with:
@@ -37,6 +49,28 @@ jobs:
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5.4.2
         with:
           enable-cache: false
+
+      - name: Lint (ruff)
+        # Local-vs-CI parity — `uv run ruff check` is part of pre-push but a
+        # PR from a contributor without that hook would otherwise skip lint.
+        # Fail-fast on any ruff finding (E/W/F/I/etc rules).
+        run: |
+          uv run ruff check scripts/ tests/
+
+      - name: Type-check (mypy)
+        # Same parity argument as ruff. `pyproject.toml [tool.mypy]` sets
+        # `mypy_path = "scripts"` so `mypy scripts/` resolves intra-package
+        # imports correctly. ignore-missing-imports is on for third-party.
+        run: |
+          uv run --with mypy mypy scripts/
+
+      - name: Run unit tests (pytest)
+        # 421 tests across 16 files. Docker-dependent tests auto-skip via
+        # the @needs_docker / @needs_node_baseline guards in test_sandbox.py
+        # — CI never has Docker, so those skip cleanly.
+        run: |
+          uv run --with pytest --with pytest-reportlog --with pyyaml \
+            pytest tests/ -q
 
       - name: Run CPV validation (--strict via remote launcher)
         run: |
@@ -82,6 +116,8 @@ jobs:
   # set at the workflow level.
   workflow-security:
     runs-on: ubuntu-latest
+    # zizmor scans 3 workflow files + SARIF upload. 10 min is generous.
+    timeout-minutes: 10
     permissions:
       contents: read
       security-events: write

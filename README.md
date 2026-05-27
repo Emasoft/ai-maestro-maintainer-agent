@@ -71,6 +71,7 @@ Once the agent session is running:
 | `workflow-fix-safe` | "fix workflow security", "harden workflows" |
 | `workflow-pin-actions` | "pin workflow actions", "SHA-pin actions" |
 | `workflow-protect-branch` | SHOW: "show branch rules", "what branch rules are active", "refresh branch-rule cache" · APPLY: "protect main branch", "apply branch rules" |
+| `maintainer-sandbox` | "sandbox this", "run in a sandbox", "test this package without installing", "shootout these two tools", "reproduce in a clean container", "verify before recommending" |
 
 ## Governance Rules
 
@@ -135,10 +136,13 @@ Once the agent session is running:
 - **Guardian Mode.** The maintainer is the **guardian of the repo**,
   not merely a reactive issue-fixer. At session start, the SessionStart
   hook fires the `maintainer-guardian` skill in BASELINE mode to
-  snapshot five threat classes — T1 zizmor/actionlint **plus the
+  snapshot **six** threat classes — T1 zizmor/actionlint **plus the
   bundled Sentinel port (`scripts/sentinel_scan.py`, 32 deterministic
   rules)** findings, T2 stale SHA pins, T3 branch-rule state, T4
-  protected-path activity, T5 secret-leak markers in recent commits — to
+  protected-path activity, T5 secret-leak markers in recent commits,
+  T6 package-manager safety-config drift (`.npmrc` / `pnpm-workspace.yaml` /
+  `pyproject.toml [tool.uv]` knobs — `min-release-age`, `trust-policy`,
+  `frozen-lockfile`, `blockExoticSubdeps`) — to
   `$AGENT_DIR/.aimaestro/state/guardian-baseline.json` (where
   `$AGENT_DIR = ${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}`,
   per the post-v1.1.0 governance fix that relocated state into
@@ -203,7 +207,7 @@ Once the agent session is running:
   ────────────────────────────────────────────────────────────┘
   ```
 
-- **GitHub Actions security.** Five focused skills wrap
+- **GitHub Actions security.** Six focused skills wrap
   [zizmor](https://github.com/zizmorcore/zizmor), `actionlint`, and
   the bundled **Sentinel port** (`scripts/sentinel_scan.py` — a
   faithful Python port of [jpr5/sentinel](https://sentinel.copilotkit.dev),

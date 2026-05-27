@@ -133,12 +133,15 @@ body in the report and surface to the caller.
 ## Step 6: Verify post-apply
 
 ```bash
-gh ruleset list --repo "$REPO" \
-  | grep default-branch-ruleset \
-  || { echo "VERIFY FAIL: ruleset not present post-apply" >&2; exit 65; }
-
+# Use the REST API directly — `gh ruleset list` requires gh ≥ 2.44 and is
+# absent on older hosts. The REST endpoint has been stable since gh 2.4.
 NEW_ID="$(gh api "repos/$REPO/rulesets" \
   --jq '[.[] | select(.name=="default-branch-ruleset")] | .[0].id')"
+
+if [ -z "$NEW_ID" ] || [ "$NEW_ID" = "null" ]; then
+  echo "VERIFY FAIL: ruleset not present post-apply" >&2
+  exit 65
+fi
 ```
 
 ## Step 7: Write report + refresh agent cache

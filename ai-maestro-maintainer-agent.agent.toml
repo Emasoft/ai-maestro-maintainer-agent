@@ -14,7 +14,7 @@ tech_stack = ["python", "typescript", "rust", "go"]
 
 [skills]
 primary = ["maintainer-patrol", "maintainer-triage", "maintainer-fix", "maintainer-guardian", "maintainer-approval-gate"]
-secondary = ["workflow-bootstrap", "workflow-scan", "workflow-fix-safe", "workflow-pin-actions", "workflow-protect-branch"]
+secondary = ["workflow-bootstrap", "workflow-scan", "workflow-fix-safe", "workflow-pin-actions", "workflow-protect-branch", "maintainer-sandbox"]
 specialized = []
 
 [agents]
