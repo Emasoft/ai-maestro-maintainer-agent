@@ -48,6 +48,21 @@ classifiers = [
 ]
 dependencies = ["pyyaml"]
 
+# Dev / test dependencies — kept out of `dependencies` so a downstream
+# `pip install` of this plugin doesn't pull pytest / mypy / ruff onto the
+# user's host. `uv sync` + `uv sync --group dev` is the test-env path.
+# Why this matters: publish.py invokes `uv run pytest ...` which uses
+# the project env. Without pytest in any group, uv falls back to tool-run
+# (ephemeral env) where the runtime `pyyaml` dep is unavailable, breaking
+# every test that touches the sandbox harness (yaml-loaded recipes).
+[dependency-groups]
+dev = [
+  "pytest",
+  "pytest-reportlog",
+  "ruff",
+  "mypy",
+]
+
 [project.urls]
 Homepage = "https://github.com/Emasoft/ai-maestro-maintainer-agent"
 Repository = "https://github.com/Emasoft/ai-maestro-maintainer-agent"
