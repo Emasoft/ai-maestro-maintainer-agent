@@ -1,0 +1,146 @@
+name: Bug report
+description: Report a defect in ai-maestro-maintainer-agent. Bug reports are welcome from any GitHub user.
+title: "[bug] <one-line description>"
+labels:
+  - bug
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug. Please redact any host-specific
+        paths from your reproduction (`/Users/<name>/...` → `$HOME/...`)
+        before submitting — see `CONTRIBUTING.md` for details.
+
+  - type: input
+    id: plugin_version
+    attributes:
+      label: Plugin version
+      description: "Run: `cat .claude-plugin/plugin.json | jq .version`"
+      placeholder: "1.2.0"
+    validations:
+      required: true
+
+  - type: input
+    id: claude_version
+    attributes:
+      label: Claude Code version
+      description: "Run: `claude --version`"
+      placeholder: "2.1.x"
+    validations:
+      required: true
+
+  - type: input
+    id: gh_version
+    attributes:
+      label: GitHub CLI version
+      description: "Run: `gh --version | head -1`"
+      placeholder: "gh version 2.x.x"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux (x86_64)
+        - Linux (aarch64)
+        - Windows (WSL2)
+        - Windows (native — not supported, but file anyway)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: poll_interval
+    attributes:
+      label: MAINTAINER_POLL_INTERVAL_MS (if set)
+      placeholder: "default = 300000 (5 min)"
+
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Which skill is involved?
+      multiple: true
+      options:
+        - maintainer-patrol
+        - maintainer-triage
+        - maintainer-fix
+        - maintainer-guardian
+        - maintainer-approval-gate
+        - maintainer-sandbox
+        - workflow-bootstrap
+        - workflow-scan
+        - workflow-fix-safe
+        - workflow-pin-actions
+        - workflow-protect-branch
+        - main agent (not skill-specific)
+        - scripts/sentinel/* (CLI)
+        - scripts/sandbox/* (CLI)
+        - publish.py
+        - hooks
+        - Don't know
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Exact steps to reproduce. Include the commands you ran and what you expected.
+      placeholder: |
+        1. `claude --agent ai-maestro-maintainer-agent-main-agent`
+        2. Issue #N was filed (or: ran skill X)
+        3. Observed Y instead of Z
+      render: bash
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs / output
+      description: |
+        Paste relevant logs. Replace any `/Users/<name>` / `/home/<name>`
+        segments with `$HOME`, and remove any tokens that may have leaked
+        into the output.
+      render: text
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Your severity assessment
+      description: Your reasoning, not your verdict. We will reach our own conclusion.
+      options:
+        - CRITICAL (sandbox escape / secret leak / silent corruption)
+        - MAJOR (skill behaviour wrong; agent makes wrong decision)
+        - MINOR (ergonomics; surprising-but-recoverable behaviour)
+        - NIT (typo; cosmetic)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: security
+    attributes:
+      label: Confirm this is NOT a security vulnerability
+      description: If this is a security vulnerability, please use the private disclosure channel in SECURITY.md instead of filing a public bug.
+      options:
+        - label: I confirm this issue does not describe an exploitable security vulnerability.
+          required: true

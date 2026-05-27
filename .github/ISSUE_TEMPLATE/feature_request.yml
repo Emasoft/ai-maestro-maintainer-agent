@@ -1,0 +1,81 @@
+name: Feature request
+description: Propose a new feature or change. Per R19.6, feature requests are only ACCEPTED from @Emasoft — but anyone may FILE one for visibility.
+title: "[feat] <one-line description>"
+labels:
+  - enhancement
+  - awaiting-authorized-review
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Heads-up — R19.6
+
+        The maintainer agent enforces **R19.6**: feature requests are
+        accepted only from the repository's authorized GitHub user
+        (`@Emasoft`). Bug reports are accepted from everyone.
+
+        You may still file a feature request as a non-authorized user
+        — `@Emasoft` will review and either:
+
+        1. Adopt the request and proceed with implementation (the agent
+           will then track and label the issue).
+        2. Mark it as `wontfix` with a brief rationale and close.
+
+        This rule keeps the supply-chain attack surface (malicious
+        feature requests that trick a maintainer into shipping CI
+        changes) closed.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem are you trying to solve? Why does the current behaviour not work for your use case?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed solution
+      description: Describe what you want the agent / plugin to do instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What workarounds have you tried? Why are they not adequate?
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Affected surfaces
+      description: Which skill(s) / script(s) / workflow(s) would change?
+      placeholder: |
+        - skills/<name>/SKILL.md
+        - scripts/<name>.py
+        - .github/workflows/<name>.yml
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Your priority assessment
+      options:
+        - high (blocking my use case)
+        - medium (significant improvement)
+        - low (nice-to-have)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: alignment
+    attributes:
+      label: Alignment checks
+      options:
+        - label: I have read CONTRIBUTING.md and understand R19.6.
+          required: true
+        - label: This change would benefit users beyond me (not just my personal workflow).
+        - label: I have searched existing issues for duplicates.
+          required: true
+        - label: I am willing to author the TRDD + implementation if @Emasoft adopts the request.
