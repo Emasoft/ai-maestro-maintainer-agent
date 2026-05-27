@@ -24,23 +24,20 @@ echo "$BODY" | /maintainer-redact-text | gh issue comment N --body-file -
 Idempotent: running redaction twice produces the same output as
 running it once. Safe to chain.
 
-Patterns covered (the path strings are regex *targets* the redactor
-matches — they are NOT hardcoded values used by this plugin; the
-placeholder uses the validator-recognised `username` token so CPV
-does not flag this documentation as a host-path leak):
+Patterns covered (canonical list — the literal regex sources live
+in `scripts/redact.py`; consult that file for the byte-exact
+patterns and replacement strings):
 
-```text
-/Users/username/<rest>          -> $HOME/<rest>
-/home/username/<rest>           -> $HOME/<rest>
-C:\Users\username\<rest>        -> %USERPROFILE%\<rest>
-<absolute path to maintained repo>   -> $PROJECT_DIR/<rest>
-<absolute path to plugin repo>       -> $AGENT_DIR/<rest>
-ghp_<36 chars>                  -> ghp_<REDACTED>
-sk-ant-api03-..., sk-proj-...   -> <REDACTED>
-AKIA<16 chars>                  -> AKIA<REDACTED>
-xoxb-..., xoxp-...              -> <REDACTED>
------BEGIN PRIVATE KEY-----...  -> <REDACTED>
-```
+- macOS user-home paths    -> `$HOME/<rest>`
+- Linux user-home paths    -> `$HOME/<rest>`
+- Windows user-home paths  -> `%USERPROFILE%\<rest>`
+- absolute path to the maintained repo  -> `$PROJECT_DIR/<rest>`
+- absolute path to the plugin repo      -> `$AGENT_DIR/<rest>`
+- GitHub PAT prefixes (`ghp_...`)       -> `ghp_<REDACTED>`
+- Anthropic API keys (`sk-ant-...`, `sk-proj-...`)  -> `<REDACTED>`
+- AWS access key IDs (`AKIA...`)        -> `AKIA<REDACTED>`
+- Slack tokens (`xoxb-...`, `xoxp-...`) -> `<REDACTED>`
+- PEM private-key blocks                -> `<REDACTED>`
 
 This is defense in depth — the canonical guard against secret
 leakage is to NOT have secrets in the agent's context in the
