@@ -1,10 +1,62 @@
 [project]
 name = "ai-maestro-maintainer-agent"
 version = "1.2.0"
-description = "MAINTAINER role-plugin for AI Maestro"
+description = "Autonomous MAINTAINER agent for Claude Code that polls a GitHub repository, triages issues, enforces the canonical approval-gate, and guards against supply-chain drift via a six-class Guardian (zizmor / actionlint / Sentinel-port / SHA-pin freshness / branch-rule drift / secret-leak / package-manager safety-knob drift)."
+readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
+authors = [
+  { name = "Emasoft", email = "713559+Emasoft@users.noreply.github.com" },
+]
+maintainers = [
+  { name = "Emasoft", email = "713559+Emasoft@users.noreply.github.com" },
+]
+keywords = [
+  "ai-maestro",
+  "claude-code",
+  "github-actions",
+  "supply-chain-security",
+  "maintainer-agent",
+  "sentinel",
+  "zizmor",
+  "actionlint",
+  "dependabot",
+  "branch-protection",
+  "trdd",
+  "adr",
+  "sandbox",
+  "docker",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Security",
+  "Topic :: Software Development :: Build Tools",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Software Development :: Testing",
+  "Topic :: System :: Systems Administration",
+  "Typing :: Typed",
+]
 dependencies = ["pyyaml"]
+
+[project.urls]
+Homepage = "https://github.com/Emasoft/ai-maestro-maintainer-agent"
+Repository = "https://github.com/Emasoft/ai-maestro-maintainer-agent"
+Issues = "https://github.com/Emasoft/ai-maestro-maintainer-agent/issues"
+Changelog = "https://github.com/Emasoft/ai-maestro-maintainer-agent/blob/main/CHANGELOG.md"
+"Security policy" = "https://github.com/Emasoft/ai-maestro-maintainer-agent/blob/main/SECURITY.md"
+"Contributing guide" = "https://github.com/Emasoft/ai-maestro-maintainer-agent/blob/main/CONTRIBUTING.md"
+"Code of Conduct" = "https://github.com/Emasoft/ai-maestro-maintainer-agent/blob/main/CODE_OF_CONDUCT.md"
+"Acknowledgments" = "https://github.com/Emasoft/ai-maestro-maintainer-agent/blob/main/ACKNOWLEDGMENTS.md"
 
 [tool.ruff]
 line-length = 320
