@@ -2,6 +2,8 @@
 
 <!--BADGES-START-->
 [![CI](https://github.com/Emasoft/ai-maestro-maintainer-agent/actions/workflows/validate.yml/badge.svg)](https://github.com/Emasoft/ai-maestro-maintainer-agent/actions/workflows/validate.yml)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue)](https://github.com/Emasoft/ai-maestro-maintainer-agent/releases)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 <!--BADGES-END-->
 
 An AI Maestro role-plugin for the **MAINTAINER** governance title. Polls a

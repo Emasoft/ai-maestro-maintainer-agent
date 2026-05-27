@@ -47,8 +47,10 @@ refresh / what rules"):
 set up"):
 
 1. Run SHOW first to capture the pre-state.
-2. Auto-detect status check names by greping every
-   `.github/workflows/*.yml` for two-space-indented job keys.
+2. Auto-detect status check names by YAML-parsing every
+   `.github/workflows/*.yml` and reading the `jobs:` keys. Never
+   grep+awk — shell heuristics over-match and the resulting POST
+   422s with "Expected context to be present".
 3. Build the canonical ruleset JSON in a tmpfile (no inline
    `${{ }}` interpolation).
 4. POST or PUT to `/repos/$REPO/rulesets` depending on whether

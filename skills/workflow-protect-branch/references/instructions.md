@@ -42,23 +42,40 @@ fi
 
 ## Step 2: Auto-detect required checks (APPLY only)
 
+Use a real YAML parser. A shell `grep` over 2-space-indented keys
+over-matches: it pulls in `concurrency.group` values, boolean leafs
+(`read`, `true`), `runs-on:` targets, etc., and the resulting
+`required_status_checks` POST fails with HTTP 422 *"Expected context
+to be present"*. Verified empirically on 2026-05-27 when an earlier
+shell-grep recipe produced the wrong context list.
+
 ```bash
-CHECKS_JSON="$(grep -REn '^[[:space:]]{2}[a-z0-9_-]+:' \
-  .github/workflows/*.yml \
-  | awk -F: '{print $NF}' \
-  | tr -d ' ' \
-  | sort -u \
-  | jq -R . | jq -s 'map({context: .})')"
+CHECKS_JSON="$(python3 -c "
+import yaml, json, glob
+checks=[]
+for f in sorted(glob.glob('.github/workflows/*.yml')):
+    with open(f) as fh: wf = yaml.safe_load(fh) or {}
+    for job_id in (wf.get('jobs') or {}):
+        checks.append({'context': job_id})
+print(json.dumps(checks))
+")"
 ```
 
-For this plugin that yields:
+For this plugin that yields the four actual job ids:
 
 ```json
 [
+  { "context": "notify" },
+  { "context": "validate-tag" },
   { "context": "validate" },
   { "context": "workflow-security" }
 ]
 ```
+
+If a workflow declares jobs that are NOT meant to be required checks
+(e.g. an opt-in deployment job, a chronologically-later release job),
+filter `CHECKS_JSON` post-hoc — never silently drop them by hand-
+maintaining a separate list.
 
 ## Step 3: Build the ruleset JSON (APPLY only)
 
