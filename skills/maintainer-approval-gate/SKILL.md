@@ -99,7 +99,9 @@ mode) looks for a maintainer approval comment. Does NOT:
 
 - Decide WHAT the protected paths are at runtime — the canonical
   list is checked into the skill's references; per-repo overrides
-  live in `.aimaestro/protected-paths.txt`.
+  live in an optional `protected-paths.txt` file under the entrusted
+  repo's `.aimaestro/` directory (created on demand, not in this
+  plugin repo).
 - Mutate the planned diff — only halts or releases the caller.
 - Accept approvals from any user other than `$AUTHORIZED_USER` —
   impostor approvals are silently rejected (returned as `pending`).

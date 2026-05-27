@@ -77,9 +77,10 @@ author equals `$AUTHORIZED_USER` (PATs can be compromised).
    `reject-adversarial`. Do NOT proceed past this step.
 6. **Protected-paths cross-reference** — read the canonical list
    from `maintainer-approval-gate/references/protected-paths.md`
-   (plus the optional per-repo override at
-   `.aimaestro/protected-paths.txt`). If any file in `.files[].path`
-   matches any glob, set `protected_hit=1`.
+   (plus the optional per-repo override file
+   `protected-paths.txt` under the entrusted repo's `.aimaestro/`
+   directory). If any file in `.files[].path` matches any glob, set
+   `protected_hit=1`.
 7. **Per-case action**:
    - Case A: `protected_hit` → `needs-approval` (caller invokes
      `maintainer-approval-gate` CHECK). Otherwise → `auto-merge-ok`

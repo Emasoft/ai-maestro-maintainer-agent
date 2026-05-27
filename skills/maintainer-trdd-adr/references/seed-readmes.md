@@ -11,7 +11,7 @@ explanations of how to use TRDDs and ADRs in THAT repo — the
 contributor doesn't need access to the canonical rule file
 (`~/.claude/rules/trdd-design-tasks.md`) to author a valid TRDD.
 
-The bootstrap mode also drops `ADR-0001-introduce-trdd-adr-split.md`
+The bootstrap mode also drops `ADR-0001-trdd-vs-adr-split.md`
 which documents *why* this repo uses both artifact classes. The
 content of that ADR comes from `adr-template.md` substituted with
 boilerplate values; the maintainer reviews and tweaks before
@@ -150,7 +150,7 @@ Authors: <names>
 (Append a row for every new ADR.)
 ```
 
-## ADR-0001-introduce-trdd-adr-split.md (boilerplate for bootstrap mode)
+## ADR-0001-trdd-vs-adr-split.md (boilerplate for bootstrap mode)
 
 The bootstrap mode authors the first ADR with this content,
 substituting `$AUTHOR` and `$ISO`:

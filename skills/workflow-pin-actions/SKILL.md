@@ -85,7 +85,7 @@ User: "SHA-pin every action in the workflows"
 ## Scope
 
 ONLY resolves unpinned `uses: name@ref` references to 40-char SHAs
-+ trailing semver comment. Does NOT:
+with a trailing semver comment. Does NOT:
 
 - Bump major versions — preserves the existing `vN` constraint.
 - Pin first-party `actions/*` / `github/*` references — those are

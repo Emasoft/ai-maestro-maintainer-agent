@@ -61,7 +61,7 @@ If the file has a known schema, validate with `jsonschema` via
 | `tsconfig.json` | <https://json.schemastore.org/tsconfig> |
 | `composer.json` | <https://getcomposer.org/schema.json> |
 | `.eslintrc.json` | <https://json.schemastore.org/eslintrc> |
-| `pyrightconfig.json` | <https://json.schemastore.org/pyrightconfig> |
+| `pyrightconfig.json` | <https://raw.githubusercontent.com/microsoft/pyright/main/packages/vscode-pyright/schemas/pyrightconfig.schema.json> |
 | `.prettierrc.json` | <https://json.schemastore.org/prettierrc> |
 | `renovate.json` | <https://docs.renovatebot.com/renovate-schema.json> |
 

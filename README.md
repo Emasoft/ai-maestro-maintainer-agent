@@ -180,7 +180,7 @@ Once the agent session is running:
 
   **Guardian flow at a glance.**
 
-  ```
+  ```text
   Session start (SessionStart hook)
         │
         v

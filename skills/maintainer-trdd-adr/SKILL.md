@@ -68,7 +68,7 @@ cp "$SKILL_REFS/seed-readmes/adrs-README.md" design/adrs/README.md
 TS=$(date +%Y-%m-%dT%H:%M:%S%z)
 AUTHOR=$(git config user.name || echo "Unknown")
 # (envsubst over the template, see references/adr-template.md)
-envsubst < "$SKILL_REFS/adr-template.md" > design/adrs/ADR-0001-introduce-trdd-adr-split.md
+envsubst < "$SKILL_REFS/adr-template.md" > design/adrs/ADR-0001-trdd-vs-adr-split.md
 
 # 5. Commit on a new branch chore/bootstrap-design-docs
 git checkout -b chore/bootstrap-design-docs
@@ -174,7 +174,7 @@ PY
 
 | Mode | Stdout | Filesystem |
 |---|---|---|
-| bootstrap | "Bootstrapped design/" + commit hash | `design/tasks/README.md`, `design/adrs/README.md`, `design/adrs/ADR-0001-introduce-trdd-adr-split.md` |
+| bootstrap | "Bootstrapped design/" + commit hash | seeds 3 files in the entrusted repo: `design/tasks/README.md`, `design/adrs/README.md`, and `design/adrs/ADR-0001-trdd-vs-adr-split.md` |
 | new-trdd | Path of the new TRDD file | new TRDD under `design/tasks/` |
 | new-adr | Path of the new ADR file + reminder to update index | new ADR under `design/adrs/` |
 | new-trdd-from-issue | Path of the new TRDD file | new TRDD with issue body as Context |
