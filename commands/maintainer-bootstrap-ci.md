@@ -1,6 +1,6 @@
 ---
 description: First-time CI scaffold for a freshly-entrusted repo with no .github/workflows/. Detects the primary language, writes a hardened CI + workflow-security workflow, seeds dependabot.yml + .npmrc, chains pin-actions + scan, commits on chore/bootstrap-ci.
-argument-hint: ""
+argument-hint: "[--language python|node|rust|go|generic] [--dry-run]"
 ---
 
 Scaffold a secure GitHub Actions baseline on a freshly-entrusted

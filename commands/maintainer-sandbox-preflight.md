@@ -1,6 +1,6 @@
 ---
 description: Verify Docker is reachable and the aimm-sandbox images are built. Exit 0 = ready, 2 = images missing, 1 = docker unreachable.
-argument-hint: ""
+argument-hint: "[--image <name>] [--verbose]"
 ---
 
 Confirm the host has a reachable Docker daemon and the

@@ -1,6 +1,6 @@
 ---
 description: Scan the maintained repo for T1-T6 threat deltas since the last Guardian baseline. Routes critical deltas to auto-fix / file-issue / alert.
-argument-hint: ""
+argument-hint: "[--since <baseline>] [--threats T1,T2,...] [--dry-run]"
 ---
 
 Diff the maintained repo's current threat state against the last

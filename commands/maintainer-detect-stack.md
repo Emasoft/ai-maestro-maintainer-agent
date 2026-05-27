@@ -1,6 +1,6 @@
 ---
 description: Detect the maintained repo's language, package manager, CI presence, branch-rule state, test framework, lint setup, missing docs. Writes a fingerprint JSON for downstream skills to self-configure.
-argument-hint: ""
+argument-hint: "[--refresh] [--json]"
 ---
 
 Fingerprint the maintained repo across 10 dimensions and write

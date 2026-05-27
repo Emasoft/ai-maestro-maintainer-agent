@@ -1,6 +1,6 @@
 ---
 description: Capture a clean T1-T6 threat snapshot of the maintained repo. Idempotent — re-running refreshes the baseline.
-argument-hint: ""
+argument-hint: "[--threats T1,T2,...] [--force]"
 ---
 
 Capture a clean snapshot of the maintained repo's threat surface
