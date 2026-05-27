@@ -52,8 +52,7 @@ detect_tool() {
 ```
 
 `$AGENT_DIR` resolves to the maintainer plugin's working dir —
-see `maintainer-guardian/references/threat-classes.md`
-[Atomic write pattern](../../../maintainer-guardian/references/threat-classes.md#atomic-write-pattern)
+see [Atomic write pattern](../../maintainer-guardian/references/threat-classes.md#atomic-write-pattern)
 for the resolution recipe (`$AIMAESTRO_AGENT_DIR` →
 `$CLAUDE_PROJECT_DIR` → `$PWD`).
 
