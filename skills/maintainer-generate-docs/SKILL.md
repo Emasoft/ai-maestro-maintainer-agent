@@ -1,17 +1,11 @@
 ---
 description: |
-  Use when entrusted with a NEW repo that is missing one or more
-  community files (CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md,
-  ACKNOWLEDGMENTS.md, AUTHORS, .github/PULL_REQUEST_TEMPLATE.md,
-  .github/ISSUE_TEMPLATE/{bug_report,feature_request,config}). Detects
-  which files exist, which are stale (>365d), and generates the
-  missing ones from templates substituting per-repo placeholders
-  ($PROJECT_NAME, $AUTHOR, $EMAIL, $REPO_URL, $CONTACT_EMAIL).
-  Refuses to overwrite. Five modes: audit / generate / diff /
-  update-stale / validate.
-  Trigger with phrases like "generate community files",
-  "scaffold CONTRIBUTING", "audit missing docs", or "set up the
-  repo's governance files".
+  Scaffold missing community files for a NEW entrusted repo
+  (CONTRIBUTING / SECURITY / CODE_OF_CONDUCT / ACKNOWLEDGMENTS /
+  AUTHORS / PR & issue templates) from placeholder-substituting
+  templates. Refuses to overwrite. Five modes: audit, generate,
+  diff, update-stale, validate. Trigger with "generate community
+  files", "scaffold CONTRIBUTING", "audit missing docs".
 ---
 
 # maintainer-generate-docs — community-file scaffolding for entrusted repos

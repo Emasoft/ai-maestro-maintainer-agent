@@ -1,17 +1,10 @@
 ---
 description: |
-  Use when the entrusted repo's config files (JSON, YAML, TOML,
-  Plist, .cfg, .ini, .env, Dockerfile) need a syntax + style check
-  before a release / before a merge / as part of patrol. Walks the
-  tree, honours .gitignore, runs the per-format linter, and writes
-  a SARIF-style report under
-  $MAIN_ROOT/reports/maintainer-config-lint/. Never echoes .env
-  values to stdout (no secret leakage). Three modes — `scan`,
-  `fix-style` (safe nits only), `audit-installed` (what linters
-  are on PATH).
-  Trigger with phrases like "lint configs", "check json/yaml/toml",
-  "validate config files", "config syntax check", or "scan
-  configs".
+  Lint the entrusted repo's config files (JSON, YAML, TOML, Plist,
+  .cfg, .ini, .env, Dockerfile) for syntax + style before a release
+  or merge. Three modes: scan, fix-style, audit-installed.
+  Trigger with "lint configs", "check json/yaml/toml", "validate
+  config files".
 ---
 
 # maintainer-config-lint — multi-format config-file linter

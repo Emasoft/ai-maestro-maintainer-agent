@@ -1,15 +1,10 @@
 ---
 description: |
-  Use when entrusted with a repo that lacks TRDD / ADR support
-  (`design/tasks/` + `design/adrs/`), or when authoring a new TRDD
-  / ADR on a repo that already has them. Four modes: bootstrap
-  (seed both directories + READMEs + ADR-0001), new-trdd (scaffold
-  a TRDD with the canonical frontmatter), new-adr (scaffold an ADR
-  with auto-incremented NNNN), validate (parse every TRDD + ADR,
-  verify frontmatter compliance). Templates ship under references/.
-  Trigger with phrases like "bootstrap TRDDs", "set up ADRs",
-  "scaffold a TRDD", "author an ADR", "scaffold a TRDD from
-  issue #N", or "validate design docs".
+  Scaffold TRDD + ADR support on an entrusted repo (`design/tasks/`
+  + `design/adrs/`) or author new ones. Four modes: bootstrap,
+  new-trdd, new-adr, validate. Trigger with "bootstrap TRDDs",
+  "set up ADRs", "scaffold a TRDD", "author an ADR",
+  "validate design docs".
 ---
 
 # maintainer-trdd-adr — TRDD + ADR scaffolding for entrusted repos

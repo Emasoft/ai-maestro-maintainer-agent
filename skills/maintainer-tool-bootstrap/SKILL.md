@@ -1,16 +1,10 @@
 ---
 description: |
-  Use when a maintainer skill or command refuses to run because a
-  required CLI tool is missing or out-of-date, or when first
-  on-boarding a host (macOS, Linux x86_64, Linux aarch64, WSL2).
-  Detects the platform, lists mandatory + per-skill optional
-  tools with current versions, and either prints a copy-paste
-  install recipe (`recipe` mode) or installs them via the host
-  package manager (`install` mode). Refuses to run as root unless
-  `--allow-root` is passed; refuses on Windows native (no WSL2).
-  Trigger with phrases like "bootstrap maintainer tools",
-  "what's missing on this host", "install gh / uv / actionlint",
-  "check my install", or "tool audit".
+  Audit and install the maintainer CLI tools (gh, uv, actionlint,
+  etc.) on a new host (macOS, Linux x86_64, Linux aarch64, WSL2).
+  Refuses root unless --allow-root; refuses Windows native.
+  Trigger with "bootstrap maintainer tools", "what's missing on
+  this host", "install gh / uv / actionlint", "tool audit".
 ---
 
 # maintainer-tool-bootstrap — cross-platform tool installer + auditor
