@@ -25,7 +25,7 @@ skills:
   - maintainer-pr-review
   - maintainer-commit-msg-why
   - maintainer-detect-stack
-  - maintainer-tool-bootstrap
+  - maintainer-tooling-bootstrap
   - maintainer-config-lint
   - maintainer-generate-docs
   - maintainer-trdd-adr

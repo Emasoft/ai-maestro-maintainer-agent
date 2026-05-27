@@ -7,7 +7,7 @@ description: |
   this host", "install gh / uv / actionlint", "tool audit".
 ---
 
-# maintainer-tool-bootstrap — cross-platform tool installer + auditor
+# maintainer-tooling-bootstrap — cross-platform tool installer + auditor
 
 ## Overview
 
@@ -21,7 +21,7 @@ guided installation across the four supported host shapes — macOS
 path). Windows-native hosts are explicitly unsupported.
 
 The skill ships three modes — `audit`, `recipe`, `install` — and
-writes a JSON report under `$MAIN_ROOT/reports/maintainer-tool-bootstrap/`
+writes a JSON report under `$MAIN_ROOT/reports/maintainer-tooling-bootstrap/`
 so callers downstream (CI, the patrol loop) can read the result
 without re-running detection.
 
@@ -44,7 +44,7 @@ reference (see Resources below for the file path and complete TOC).
 
 ## Instructions
 
-1. **Resolve report path** under `$MAIN_ROOT/reports/maintainer-tool-bootstrap/`
+1. **Resolve report path** under `$MAIN_ROOT/reports/maintainer-tooling-bootstrap/`
    with a `YYYYMMDD_HHMMSS±HHMM` local-time-plus-offset stamp.
 
 2. **Detect platform**:
@@ -91,7 +91,7 @@ and complete TOCs.
 
 ## Output
 
-- A JSON file at `$MAIN_ROOT/reports/maintainer-tool-bootstrap/<ts>-bootstrap.json`
+- A JSON file at `$MAIN_ROOT/reports/maintainer-tooling-bootstrap/<ts>-bootstrap.json`
   with `platform`, `mode`, `tools[]` (each with `name`, `required`,
   `found`, `version`, `min_version`, `status`, `install_recipe`),
   and `disposition` (`ok | needs_install | unsupported_platform |
@@ -119,7 +119,7 @@ User: "what's missing on this host?"
 → Detect: macos → brew
 → Probe: gh 2.62.0 OK, git 2.45.0 OK, uv 0.5.1 OK, bash /opt/homebrew/bin/bash 5.2.32 OK,
    actionlint MISSING, docker MISSING
-→ Report: reports/maintainer-tool-bootstrap/<ts>-bootstrap.json
+→ Report: reports/maintainer-tooling-bootstrap/<ts>-bootstrap.json
    { "disposition": "needs_install", "missing": ["actionlint", "docker"] }
 → Exit 0 (mandatory all present; optionals missing)
 ```

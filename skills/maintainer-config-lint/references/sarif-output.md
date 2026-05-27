@@ -229,7 +229,7 @@ Sits alongside the SARIF file at
 ## Linters missing
 
 - `hadolint` not on PATH → install: `brew install hadolint` or
-  see `references/install-recipes.md` in maintainer-tool-bootstrap
+  see `references/install-recipes.md` in maintainer-tooling-bootstrap
 ```
 
 The summary NEVER includes the contents of `.env` files. Even for

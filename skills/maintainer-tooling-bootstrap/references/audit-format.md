@@ -1,7 +1,7 @@
-# Audit output format — `maintainer-tool-bootstrap`
+# Audit output format — `maintainer-tooling-bootstrap`
 
 The skill emits a JSON file under
-`$MAIN_ROOT/reports/maintainer-tool-bootstrap/<ts>-bootstrap.json`.
+`$MAIN_ROOT/reports/maintainer-tooling-bootstrap/<ts>-bootstrap.json`.
 This is the contract any downstream skill / CI step / hook reads.
 
 ## Table of Contents

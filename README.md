@@ -83,7 +83,7 @@ Once the agent session is running:
 | `maintainer-pr-review` | "review PR #N", "check this diff", "audit PR for protected paths" |
 | `maintainer-commit-msg-why` | "install commit-msg WHY hook", "audit commit messages", "enforce WHY paragraphs" |
 | `maintainer-detect-stack` | "detect repo stack", "fingerprint this project", "what language is this", "refresh stack snapshot" |
-| `maintainer-tool-bootstrap` | "install required tools", "bootstrap toolchain", "audit installed tools" |
+| `maintainer-tooling-bootstrap` | "install required tools", "bootstrap toolchain", "audit installed tools" |
 | `maintainer-config-lint` | "lint config files", "validate JSON/YAML/TOML", "audit repo config files" |
 | `maintainer-generate-docs` | "generate community files", "scaffold CONTRIBUTING", "audit missing docs" |
 | `maintainer-trdd-adr` | "bootstrap TRDDs", "set up ADRs", "scaffold a TRDD", "author an ADR", "validate design docs" |

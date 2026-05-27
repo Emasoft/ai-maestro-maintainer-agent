@@ -19,7 +19,7 @@ Three modes:
   auto-fixes syntax errors or schema violations.
 - `audit-installed` — confirm which linters are installed
   (yamllint, hadolint, plutil, jsonschema). Suggest installs for
-  missing tools (via `/maintainer-tool-bootstrap recipe`).
+  missing tools (via `/maintainer-tooling-bootstrap recipe`).
 
 Per-format linter chain:
 - **JSON** — `python3 -m json.tool` (built-in syntax check) +

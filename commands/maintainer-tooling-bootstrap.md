@@ -15,7 +15,7 @@ skills need. Three modes:
 - `recipe` — print install recipes for the current platform
   WITHOUT doing anything; the user copy-pastes the commands.
 
-Loads skill: **maintainer-tool-bootstrap**
+Loads skill: **maintainer-tooling-bootstrap**
 
 Mandatory tools (agent will fail-fast without them):
 - `gh` (≥ 2.4) — authentication + REST/GraphQL
@@ -43,9 +43,9 @@ Platform detection:
   / WSL2 (per Audit E MINOR-3)
 
 Full per-platform install table:
-`skills/maintainer-tool-bootstrap/references/install-recipes.md`
+`skills/maintainer-tooling-bootstrap/references/install-recipes.md`
 
 Output schema:
-`skills/maintainer-tool-bootstrap/references/audit-format.md`
+`skills/maintainer-tooling-bootstrap/references/audit-format.md`
 (JSON with `tools[].name`, `tools[].present`, `tools[].version`,
 `tools[].install_command`).

@@ -34,7 +34,7 @@ the *line shape* (KEY=…, count of bad lines, etc.).
 - `hadolint` is OPTIONAL — Dockerfile lint is skipped if absent and
   a `notes` entry is added.
 
-Run `maintainer-tool-bootstrap audit` first if uncertain about
+Run `maintainer-tooling-bootstrap audit` first if uncertain about
 host readiness; this skill calls `command -v` on every linter before
 invoking it and degrades gracefully when one is missing.
 
@@ -176,14 +176,14 @@ User: "what config linters do I have?"
 - [references/sarif-output.md](references/sarif-output.md):
   - Why SARIF
   - Top-level structure
-  - `tool.driver` per linter
-  - `results[]` shape
+  - tool.driver per linter
+  - results[] shape
   - Severity mapping
   - Suppressions
   - Markdown summary layout
   - Reading the report
   - Privacy invariants
-- Companion skills: `maintainer-tool-bootstrap` (install the
+- Companion skills: `maintainer-tooling-bootstrap` (install the
   optional linters this skill calls), `workflow-scan` (the YAML
   linter for GitHub Actions YAML files is `actionlint` — runs
   there, not here).

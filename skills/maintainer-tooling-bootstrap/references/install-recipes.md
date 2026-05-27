@@ -1,4 +1,4 @@
-# Install recipes — `maintainer-tool-bootstrap`
+# Install recipes — `maintainer-tooling-bootstrap`
 
 Per-platform install commands for every tool the maintainer agent
 (and its sister skills) may need. The skill picks the column that
