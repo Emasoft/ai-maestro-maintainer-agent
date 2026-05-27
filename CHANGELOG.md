@@ -2,142 +2,50 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.3.0] — 2026-05-27
 
 ### Bug Fixes
 
 - Calibrate rules to zero false positives on 8 real repos
 - Wire maintainer-sandbox + sync T1-T6 + CI hardening
+- Polish skill consistency + extend adversarial regex
+- Mark commit-msg.sh executable (100644 -> 100755)
+- Quote description containing colon — CRITICAL YAML parse failure
+- Wrap redact pattern list in fenced block — silences false-positive RC-HARDCODED-PATH x3
+- Tighten 5 over-budget descriptions (>200 bpe tokens) to under-limit
+- Repair 3 cross-reference + 1 abs-path MAJOR findings
+- Use validator-recognised placeholder usernames in path examples
+- Remove host-path patterns from prose to clear RC-HARDCODED-PATH
+- Populate empty argument-hint frontmatter on 5 commands
+- Embed full reference-file TOCs in SKILL.md Resources sections
+- Rename 'results[]' heading to avoid TOC-parser bracket bug
+- Batch NIT clear-out — MD004 bullets, missing-TOC, skillaudit FPs
+- Markdownlint MD004 and MD056 — escape pipes, neutralise bullet prefixes
 
 ### Documentation
 
 - TRDD-e1c2677a — full plugin audit + remediation pass
+- Regenerate CHANGELOG + add community + ISSUE/PR templates
+- Seed design/adrs/ with the 5 foundational ADRs
 
 ### Features
 
 - Port the Sentinel GitHub Actions scanner to Python (32 rules + 6 fixers)
 - T6 — package-manager safety-config drift
 - Docker-isolated harness for the maintainer agent
-## [1.2.0] — 2026-05-23
-
-### Documentation
-
-- Backfill 7 TRDDs for v1.1.0 work + 2 future-work specs
-
-### Features
-
-- Google-re2 RegexSet fast security scanner + Guardian + README
+- Add 10 slash-command surfaces for user-invokable skills
+- 10 new entrusted-repo capability skills + slash commands
 
 ### Miscellaneous Tasks
 
-- Migrate to CPV canonical pipeline (drift→0)
-- Silence pyright on fallback shims + add .mega-linter.yml
-- Remove pytest-report.jsonl runtime artifact
-- Bump version to 1.2.0
-
-### Styling
-
-- Ruff format pass on publish.py + setup_marketplace_pat.py
-
-### Testing
-
-- Add 42-test pytest harness for v1.1.0 skills + helpers
-## [1.1.0] — 2026-05-23
-
-### Bug Fixes
-
-- Relocate per-agent state from \$HOME to AGENT_DIR (Phase D)
-- Drive plugin to CPV strict CRITICAL=0 MAJOR=0 MINOR=0 NIT=0
-
-### Documentation
-
-- Backfill v1.0.0–v1.0.9 history via git-cliff
-- Document rate-limit, less-permission-prompts, claude agents --json
-- Explain why we keep `git tag -a` over `claude plugin tag`
-- Document maintainer-workflow-audit + zizmor integration
-
-### Features
-
-- Adopt Claude Code 2.1.132/2.1.133 env vars
-- Scope tools and disallow web access (v2.1.119)
-- Handle gh rate-limit hint and xhigh effort tier
-- Add maintainer-workflow-audit (zizmor-powered)
-- Register maintainer-workflow-audit + chain from fix flow
-- Add workflow-scan (read-only zizmor + actionlint audit)
-- Add workflow-fix-safe (zizmor --fix=safe + hardening)
-- Add workflow-pin-actions (SHA-pin unpinned actions)
-- Add workflow-protect-branch (idempotent ruleset apply)
-- Add workflow-bootstrap + setup_marketplace_pat.py
-- Close article-vector gaps GAP-1/2/4 (Phase A)
-- Guardian core — proactive supply-chain sentinel (Phase B)
-- Wire Guardian into patrol/triage/fix (Phase C)
-
-### Miscellaneous Tasks
-
-- Pin actions to SHAs and harden permissions (zizmor clean)
-- Add zizmor job (SARIF upload + fail-on-findings)
-- Dynamic tool surface + CPV Nixtla-strict cleanup
-- Embed reference TOCs + checklist phrasing nits
-- Integration audit — close 2 real gaps
+- Expand pyproject.toml metadata + urls + classifiers
 
 ### Refactor
 
-- Drop monolithic workflow-audit, fix CPV regressions
-- Progressive disclosure for 3 oversize maintainer-* skills
-## [1.0.8] — 2026-04-22
+- Rename maintainer-tool-bootstrap -> maintainer-tooling-bootstrap
 
-### Bug Fixes
+### Testing
 
-- Include uv.lock in release commit staging
-## [1.0.7] — 2026-04-22
-
-### Miscellaneous Tasks
-
-- Gitignore .rechecker/ + sync uv.lock to 1.0.6
-## [1.0.6] — 2026-04-22
-
-### Miscellaneous Tasks
-
-- Update uv.lock
-## [1.0.5] — 2026-04-22
-
-### Documentation
-
-- Sync MAINTAINER messaging rules to R6 v2 graph ([#1](https://github.com/Emasoft/ai-maestro-maintainer-agent/issues/1))
-
-### Miscellaneous Tasks
-
-- Add .janitor/, .tldrignore, and /reports/ to ignores
-- Update uv.lock
-## [1.0.4] — 2026-04-15
-
-### Features
-
-- Add MAINTAINER_POLL_INTERVAL_MS env var
-## [1.0.3] — 2026-04-15
-
-### Miscellaneous Tasks
-
-- Resolve 6 hygiene warnings + align pyproject to sibling plugins
-- Update uv.lock
-## [1.0.2] — 2026-04-13
-
-### Features
-
-- Add notify-marketplace and validate workflows
-## [1.0.1] — 2026-04-12
-
-### Bug Fixes
-
-- CPV strict compliance — add required sections, scoped tools, agent.toml quad-match
-- Extract triage classification paths to reference file (CPV 5000-char limit)
-- Triage Instructions uses numbered steps (CPV strict requirement)
-- Add TOC to classification-paths reference (CPV MINOR)
-- Agent.toml compatible-clients = claude (not claude-code)
-
-### Features
-
-- Initial scaffolding for ai-maestro-maintainer-agent role-plugin
-- Main agent persona + 3 skills (patrol, triage, fix)
+- 32 new tests — redact (17) + commit-msg hook (11) + real-repo (4)
 ---
 *Generated by [git-cliff](https://git-cliff.org)*
