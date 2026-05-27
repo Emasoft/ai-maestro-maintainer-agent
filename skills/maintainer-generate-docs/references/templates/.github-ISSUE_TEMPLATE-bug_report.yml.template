@@ -1,0 +1,69 @@
+name: Bug report
+description: Report a defect in ${PROJECT_NAME}. Bug reports are welcome from any GitHub user.
+title: "[bug] <one-line description>"
+labels:
+  - bug
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug. Please redact any host-specific
+        paths (`/Users/<name>/...` -> `$HOME/...`) before submitting.
+
+  - type: input
+    id: project_version
+    attributes:
+      label: ${PROJECT_NAME} version
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux (x86_64)
+        - Linux (aarch64)
+        - Windows (WSL2)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs / output
+      render: text
+
+  - type: checkboxes
+    id: security
+    attributes:
+      label: Confirm this is NOT a security vulnerability
+      description: If this is a security vulnerability, please use the private disclosure channel in SECURITY.md instead.
+      options:
+        - label: I confirm this issue does not describe an exploitable security vulnerability.
+          required: true

@@ -1,0 +1,109 @@
+# Security Policy — $PROJECT_NAME
+
+## Reporting a vulnerability
+
+**Do NOT file a public GitHub issue for a vulnerability.**
+
+Use one of these private channels instead:
+
+1. **Preferred — GitHub Security Advisories.** Visit
+   <$REPO_URL/security/advisories/new> and submit a private
+   advisory. Anyone with a GitHub account can do this; the report
+   is visible only to repository maintainers.
+2. **Alternative — email.** Send to `$CONTACT_EMAIL` with subject
+   `[security] <short description>`.
+
+Please include:
+
+- The project version.
+- Your platform (`uname -a` on Unix; PowerShell `$PSVersionTable`
+  on Windows).
+- A redacted reproduction case (drop any `/Users/<name>` segments
+  before submitting per the redaction convention in
+  `CONTRIBUTING.md`).
+- The expected vs observed behaviour.
+- Your assessment of severity (CRITICAL / MAJOR / MINOR / NIT) —
+  your reasoning, not your verdict; we will reach our own
+  conclusion but your reasoning saves us time.
+
+## What we will do
+
+| Step | Target turnaround |
+|---|---|
+| Acknowledge receipt | within 72 hours |
+| Reproduce and triage | within 7 days |
+| Develop a fix | within 30 days for CRITICAL/MAJOR; best-effort for MINOR/NIT |
+| Coordinated disclosure | within 90 days of initial report (CRITICAL/MAJOR); we will work with you on the schedule |
+| Credit you in the release notes | always, unless you ask not to be named |
+
+We do not offer a bug bounty. We do offer credit, a public
+acknowledgment in the release notes, and a GitHub Security
+Advisory CVE if the issue warrants one.
+
+## Scope
+
+**In scope** (please report):
+
+- Any vulnerability that lets an attacker bypass authentication,
+  escalate privileges, or perform an action a benign user cannot.
+- Any vulnerability that lets an attacker read, modify, or delete
+  data they should not be able to access.
+- Hardcoded secrets in the repo.
+- Any path that lets the project's executables write outside their
+  declared boundary onto the host filesystem.
+- Supply-chain attacks (compromised dependencies, malicious
+  install scripts, build-time code injection).
+
+**Out of scope** (we welcome you to file as a feature request
+instead):
+
+- Issues in third-party dependencies — please report those
+  upstream. We will fast-track a pin bump once a fix lands.
+- Theoretical issues without a working exploit path. We are happy
+  to discuss those, but they go through the regular issue /
+  discussion channels, not the security one.
+- Self-XSS or other vulnerabilities requiring the victim to
+  perform unusual actions against their own setup.
+
+## What counts as a vulnerability vs. a bug
+
+A vulnerability has two properties:
+
+1. **Adversarial impact** — an attacker can cause an effect a
+   benign user cannot achieve, OR a non-privileged user can cause
+   an effect reserved for a privileged user.
+2. **Reachable** — there is a concrete code path from an
+   externally-controllable input to the impact.
+
+If both hold, file via the security channel. If only one holds
+(e.g. "this could fail safely in a way I don't like" — no
+adversarial impact), file as a regular bug.
+
+## Disclosure policy
+
+- We follow a **90-day coordinated-disclosure window** for
+  CRITICAL/MAJOR.
+- If we cannot ship a fix within 90 days, we will publish the
+  advisory anyway with mitigations.
+- If you find a fix before us, please send the patch via the
+  security channel — we will integrate, credit, and release.
+- If the vulnerability is being actively exploited in the wild,
+  the 90-day window collapses to 7 days and we will release a
+  mitigation immediately even if the full fix is not ready.
+
+## Supported versions
+
+| Version | Supported |
+|---|---|
+| latest minor | active development |
+| previous minor | security fixes only |
+| older | unsupported |
+
+## Credits
+
+We thank every researcher who has reported responsibly. Names are
+listed in `ACKNOWLEDGMENTS.md` and in the relevant release notes.
+
+## Last reviewed
+
+$YEAR

@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://emasoft.github.io/ai-maestro-maintainer-agent/stack-fingerprint.schema.json",
+  "title": "Stack Fingerprint",
+  "description": "Output of the maintainer-detect-stack skill. Downstream skills (workflow-bootstrap, maintainer-fix, maintainer-commit-msg-why, maintainer-guardian, workflow-protect-branch) read this file to self-configure for the entrusted repo. Schema is intentionally permissive (no closed enums on extended fields) so new ecosystems can be added without breaking existing consumers.",
+  "type": "object",
+  "required": [
+    "primary_language",
+    "package_manager",
+    "tool_versions_manager",
+    "ci_present",
+    "dependabot_present",
+    "branch_rules",
+    "hooks_present",
+    "test_framework",
+    "lint_setup",
+    "docs_present",
+    "docs_missing",
+    "trdd_support",
+    "suggestions"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "primary_language": {
+      "type": "string",
+      "enum": [
+        "python",
+        "node",
+        "rust",
+        "go",
+        "ruby",
+        "php",
+        "elixir",
+        "dart",
+        "generic"
+      ],
+      "description": "First match in the detection-matrix priority order."
+    },
+    "package_manager": {
+      "type": "string",
+      "description": "Sub-detected package manager. Per-language enum lives in detection-matrix.md §2. Allowed values include: uv, poetry, setuptools, pnpm, yarn, npm, cargo, gomod, bundler, composer, mix, pub, none."
+    },
+    "tool_versions_manager": {
+      "type": "string",
+      "enum": ["asdf", "mise", "none"],
+      "description": "How (or whether) the repo pins language versions."
+    },
+    "ci_present": {
+      "type": "boolean",
+      "description": "True iff .github/workflows/ contains ≥ 1 yml/yaml file."
+    },
+    "ci_files": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "List of CI workflow paths, populated only when ci_present is true."
+    },
+    "dependabot_present": {
+      "type": "boolean"
+    },
+    "dependabot_ecosystems": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "package-ecosystem values listed in dependabot.yml. Empty when dependabot_present is false."
+    },
+    "branch_rules": {
+      "type": "string",
+      "enum": ["active", "absent", "unknown"],
+      "description": "active=ruleset enforced; absent=no ruleset; unknown=auth/admin missing or workflow-protect-branch SHOW chain failed."
+    },
+    "hooks_present": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "pre-commit",
+          "pre-push",
+          "commit-msg",
+          "githooks-dir",
+          "pre-commit-fwk",
+          "husky"
+        ]
+      },
+      "uniqueItems": true,
+      "description": "Which git-hook artefacts are present. .git/hooks/<name> executable adds the bare name; .pre-commit-config.yaml adds pre-commit-fwk; package.json with husky adds husky."
+    },
+    "test_framework": {
+      "type": "string",
+      "description": "First match in detection-matrix.md §8. Allowed values include: pytest, jest, vitest, mocha, cargotest, gotest, rspec, none."
+    },
+    "lint_setup": {
+      "type": "array",
+      "items": {"type": "string"},
+      "uniqueItems": true,
+      "description": "Every lint signal present. ruff, mypy, eslint, prettier, clippy, golangci-lint, rubocop, etc."
+    },
+    "docs_present": {
+      "type": "array",
+      "items": {"type": "string"},
+      "uniqueItems": true,
+      "description": "Canonical-name docs that exist. README.md / CHANGELOG.md / CONTRIBUTING.md / SECURITY.md / CODE_OF_CONDUCT.md / LICENSE."
+    },
+    "docs_missing": {
+      "type": "array",
+      "items": {"type": "string"},
+      "uniqueItems": true,
+      "description": "Canonical-name docs that do NOT exist. Same vocabulary as docs_present — the two arrays partition the canonical docs list."
+    },
+    "trdd_support": {
+      "type": "object",
+      "required": ["design_tasks", "design_adrs"],
+      "additionalProperties": false,
+      "properties": {
+        "design_tasks": {
+          "type": "boolean",
+          "description": "True iff design/tasks/ directory exists."
+        },
+        "design_adrs": {
+          "type": "boolean",
+          "description": "True iff design/adrs/ directory exists."
+        }
+      }
+    },
+    "suggestions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["skill", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "skill": {
+            "type": "string",
+            "description": "Downstream skill name (no .md extension, no skills/ prefix)."
+          },
+          "mode": {
+            "type": "string",
+            "description": "Optional mode argument for the suggested skill (e.g. install, APPLY, SHOW)."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Human-readable one-liner explaining why this suggestion was generated."
+          },
+          "file": {
+            "type": "string",
+            "description": "Optional file path the suggestion targets (e.g. README.md for maintainer-generate-docs)."
+          }
+        }
+      },
+      "description": "Actionable next-step list, built per the suggestion-build rules in detection-matrix.md."
+    },
+    "notes": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Diagnostic notes from the detection pass — conflicts (e.g. both pyproject.toml and package.json), missing tools (e.g. jq), or skipped dimensions (e.g. branch_rules=unknown because gh unauth)."
+    },
+    "generated_at": {
+      "type": "string",
+      "description": "ISO 8601 datetime + local TZ offset the fingerprint was generated. Compact form (no colons in the TZ offset) for filesystem-safe filenames downstream."
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "1",
+      "description": "Bumped only on breaking schema changes. Downstream consumers MUST tolerate missing optional fields but MUST refuse to consume a higher major version they were not built for."
+    }
+  }
+}

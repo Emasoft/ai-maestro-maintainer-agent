@@ -1,0 +1,36 @@
+name: Feature request
+description: Propose a new feature or change to ${PROJECT_NAME}.
+title: "[feat] <one-line description>"
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem are you trying to solve? Why does the current behaviour not work for your use case?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Your priority assessment
+      options:
+        - high (blocking my use case)
+        - medium (significant improvement)
+        - low (nice-to-have)
+    validations:
+      required: true

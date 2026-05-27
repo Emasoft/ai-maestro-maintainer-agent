@@ -1,0 +1,11 @@
+${AUTHOR} <${EMAIL}>
+
+<!--
+The AUTHORS file is the canonical list of code contributors to
+${PROJECT_NAME}. Format: "<name> <email>" — one per line.
+
+git shortlog -sne | awk '{$1=""; print $0}' | sort -u
+
+…produces the contributor list automatically. Re-run periodically
+to refresh.
+-->

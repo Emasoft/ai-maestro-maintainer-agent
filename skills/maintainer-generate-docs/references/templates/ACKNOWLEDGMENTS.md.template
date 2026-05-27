@@ -1,0 +1,45 @@
+# Acknowledgments
+
+${PROJECT_NAME} builds on the work of many open source projects and
+contributors. This file collects them with gratitude.
+
+## Authors
+
+- **${AUTHOR}** (<${REPO_URL}>) — author and current maintainer.
+
+## Direct dependencies
+
+<!--
+List your project's runtime + dev dependencies here. The
+maintainer-generate-docs skill cannot infer the full list — it
+generates this section with a TODO comment so the maintainer fills
+it in once. To update later, edit this file directly.
+-->
+
+- TODO: list runtime deps from pyproject.toml / package.json /
+  Cargo.toml / go.mod
+- TODO: list dev / build dependencies
+- TODO: list any vendored upstreams
+
+## Inspirations and references
+
+<!--
+Anything that inspired the design or that you'd like to credit but
+that isn't a code dependency. Articles, talks, blog posts, papers,
+prior art.
+-->
+
+- TODO
+
+## Community
+
+If you would like to be acknowledged here for a non-code contribution
+(documentation review, bug repro, design feedback), please open a PR
+adding your name. We will verify the contribution and merge.
+
+## License
+
+All contributions are accepted under the project's main license (see
+`LICENSE`). The upstreams listed above retain their own licenses;
+this acknowledgment file does not redistribute their code, only
+documents the dependency relationship.

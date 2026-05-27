@@ -1,0 +1,12 @@
+# Force template use - no blank issues. Pushes contributors toward the
+# bug / feature template, which the triage automation keys on.
+blank_issues_enabled: false
+
+contact_links:
+  - name: Security vulnerability (PRIVATE disclosure)
+    url: ${REPO_URL}/security/advisories/new
+    about: Do NOT file security vulnerabilities as public issues. Use the private GitHub Security Advisory form.
+
+  - name: General discussion / question
+    url: ${REPO_URL}/discussions
+    about: For questions, design discussions, or "is this a bug?" uncertainty, use Discussions instead of filing an issue.

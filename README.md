@@ -73,6 +73,21 @@ Once the agent session is running:
 | `workflow-protect-branch` | SHOW: "show branch rules", "what branch rules are active", "refresh branch-rule cache" · APPLY: "protect main branch", "apply branch rules" |
 | `maintainer-sandbox` | "sandbox this", "run in a sandbox", "test this package without installing", "shootout these two tools", "reproduce in a clean container", "verify before recommending" |
 
+### Entrusted-repo capability skills (applied on every downstream repo the agent guards)
+
+| Skill | Trigger |
+|-------|---------|
+| `maintainer-redact` | "redact host paths", "sanitize agent output", "strip secrets from this text" |
+| `maintainer-secrets-scan` | "scan for secrets", "trufflehog this repo", "gitleaks audit", "pre-publish secret gate" |
+| `maintainer-pr-triage` | "triage PR #N", "classify pull request", "review fork PR" |
+| `maintainer-pr-review` | "review PR #N", "check this diff", "audit PR for protected paths" |
+| `maintainer-commit-msg-why` | "install commit-msg WHY hook", "audit commit messages", "enforce WHY paragraphs" |
+| `maintainer-detect-stack` | "detect repo stack", "fingerprint this project", "what language is this", "refresh stack snapshot" |
+| `maintainer-tool-bootstrap` | "install required tools", "bootstrap toolchain", "audit installed tools" |
+| `maintainer-config-lint` | "lint config files", "validate JSON/YAML/TOML", "audit repo config files" |
+| `maintainer-generate-docs` | "generate community files", "scaffold CONTRIBUTING", "audit missing docs" |
+| `maintainer-trdd-adr` | "bootstrap TRDDs", "set up ADRs", "scaffold a TRDD", "author an ADR", "validate design docs" |
+
 ## Governance Rules
 
 - **R19.6**: Feature requests and change proposals are only accepted from

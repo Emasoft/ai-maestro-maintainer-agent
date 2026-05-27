@@ -15,7 +15,20 @@ tech_stack = ["python", "typescript", "rust", "go"]
 [skills]
 primary = ["maintainer-patrol", "maintainer-triage", "maintainer-fix", "maintainer-guardian", "maintainer-approval-gate"]
 secondary = ["workflow-bootstrap", "workflow-scan", "workflow-fix-safe", "workflow-pin-actions", "workflow-protect-branch", "maintainer-sandbox"]
-specialized = []
+# Specialized = capabilities the agent applies on every entrusted downstream repo.
+# Loaded on demand (not on every patrol cycle) — invoked by main agent flow or via slash command.
+specialized = [
+  "maintainer-redact",
+  "maintainer-secrets-scan",
+  "maintainer-pr-triage",
+  "maintainer-pr-review",
+  "maintainer-commit-msg-why",
+  "maintainer-detect-stack",
+  "maintainer-tool-bootstrap",
+  "maintainer-config-lint",
+  "maintainer-generate-docs",
+  "maintainer-trdd-adr",
+]
 
 [agents]
 recommended = []

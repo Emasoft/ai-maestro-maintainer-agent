@@ -1,0 +1,44 @@
+<!--
+Thank you for your contribution to ${PROJECT_NAME}.
+
+Before submitting, please confirm the items below.
+-->
+
+## Summary
+
+<!-- 1-2 sentences. What does this PR change and why? -->
+
+## Type of change
+
+- [ ] Bug fix (closes #<issue-number>)
+- [ ] New feature
+- [ ] Documentation only
+- [ ] Refactor / cleanup / chore
+- [ ] Test addition / fix
+- [ ] CI / tooling change
+
+## What changed
+
+<!--
+List the files / surfaces touched. Include the WHY behind any
+non-obvious choice. A reviewer needs to be able to reconstruct the
+rationale six months from now.
+-->
+
+## How to verify
+
+<!-- Concrete steps a reviewer can run locally to verify the change works. -->
+
+## Checklist
+
+- [ ] Tests pass locally
+- [ ] Lint / type-check passes locally
+- [ ] Commit subject follows the project's convention (see CONTRIBUTING.md)
+- [ ] Commit body explains the **WHY** in 2-4 paragraphs (not just WHAT)
+- [ ] No secrets committed (no tokens, PATs, .env files)
+- [ ] Path-redaction applied to any logs / paths quoted in the description
+- [ ] Changes are bisectable (one logical change per commit)
+
+## For reviewer
+
+<!-- Anything specific you want the reviewer to look at first. -->

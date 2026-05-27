@@ -1,0 +1,150 @@
+# Contributing to $PROJECT_NAME
+
+Thank you for your interest in $PROJECT_NAME. This document
+explains how to set up a local development environment, file bug
+reports, propose changes, and submit pull requests.
+
+## Bug reports
+
+Bug reports are welcome from anyone. File an issue using the bug
+template. Include enough environment detail for the maintainer to
+reproduce the problem:
+
+- OS and architecture
+- Tool versions (`$PROJECT_NAME --version` or equivalent;
+  `git --version`; runtime version)
+- A minimal reproduction (the smallest input that triggers the
+  bug)
+- Expected vs observed behaviour
+
+Redact host-specific paths from any logs you paste — see
+[Path redaction](#path-redaction-in-pr--commit--issue-text) below.
+
+## Feature requests
+
+Feature requests are accepted via the feature-request issue
+template. Please describe the problem you are trying to solve
+first; the solution second. The maintainer may adopt the request,
+propose an alternative, or close as `wontfix` with a brief
+rationale.
+
+## Local setup
+
+```bash
+# 1. Clone
+git clone $REPO_URL
+cd $REPO_NAME
+
+# 2. Install dependencies (adjust to your project's stack)
+# Python:    uv venv --python 3.12 && source .venv/bin/activate && uv sync
+# Node:      npm install
+# Rust:      cargo build
+# Go:        go mod download
+
+# 3. Run the test suite
+$TEST_COMMAND
+
+# 4. Run the linters before committing
+# (Add your project's linter commands here.)
+```
+
+CI runs the same test + lint gates. If your change passes locally,
+it will pass in CI.
+
+## Branch convention
+
+| Branch prefix | Meaning |
+|---|---|
+| `fix/<issue-number>-<slug>` | Bug fix tied to a specific issue |
+| `feat/<short-slug>` | New feature |
+| `docs/<slug>` | Documentation-only change |
+| `chore/<slug>` | Tooling / CI / hygiene |
+| `refactor/<slug>` | Behaviour-preserving restructure |
+| `test/<slug>` | New tests / test fixes |
+
+Never push to `$DEFAULT_BRANCH` directly. Open a PR; the
+maintainer will review.
+
+## Commit messages
+
+Conventional Commits format is preferred:
+
+```
+type(scope): subject line (≤ 70 chars)
+
+A blank line, then the WHY in 2-4 paragraphs.
+
+Optional: which issue, which ADR, which TRDD.
+```
+
+`type` is one of `feat`, `fix`, `docs`, `chore`, `refactor`,
+`test`, `perf`, `style`, `ci`, `build`, `revert`. `scope` is the
+area touched.
+
+The body MUST include the *why* of the change — what problem it
+solves and what alternative was considered. Reviewers need this to
+understand the change six months later. A subject line alone is
+not enough.
+
+## TRDDs for non-trivial work
+
+If your PR introduces a new feature, refactors a core path, or
+makes a non-obvious technical choice, author a TRDD first:
+
+```
+design/tasks/TRDD-<YYYYMMDD_HHMMSS+ZHHMM>-<uid-first-8>-<short-slug>.md
+```
+
+See `design/tasks/README.md` for the frontmatter shape and the
+rationale.
+
+## ADRs for design decisions
+
+If your PR commits to a non-obvious technical choice (e.g. "use
+sqlite3, not LMDB"; "switch to Polars from pandas"), author an
+ADR:
+
+```
+design/adrs/ADR-NNNN-<short-slug>.md
+```
+
+ADRs follow the Michael Nygard format: Context / Decision /
+Status / Consequences. See `design/adrs/README.md`.
+
+## Path redaction in PR / commit / issue text
+
+When you copy logs or paths into a PR description, issue comment,
+or commit message, redact host-specific paths:
+
+```
+/Users/<anyone>/<rest>        →  $HOME/<rest>
+/home/<anyone>/<rest>         →  $HOME/<rest>
+/Volumes/<anyone>/<rest>      →  $HOME/<rest>   (macOS)
+C:\\Users\\<anyone>\\<rest>   →  %USERPROFILE%\\<rest>
+<absolute path to this repo>  →  $PROJECT_DIR/<rest>
+```
+
+## Pre-push checks
+
+Don't bypass git hooks with `--no-verify`. If a hook fails, read
+the message and fix the underlying issue.
+
+## License
+
+By contributing, you agree your work is licensed under
+$LICENSE_SPDX (same as the rest of the repo).
+
+## Code of Conduct
+
+This project follows the [Contributor Covenant
+v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+See `CODE_OF_CONDUCT.md` for the full text.
+
+## Reporting security issues
+
+Do NOT open public issues for security vulnerabilities. See
+`SECURITY.md` for the private disclosure channel.
+
+## Questions?
+
+Open a GitHub Discussion or comment on an existing issue.

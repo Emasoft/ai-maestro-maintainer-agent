@@ -17,6 +17,18 @@ skills:
   - workflow-fix-safe
   - workflow-pin-actions
   - workflow-protect-branch
+  # Entrusted-repo capability skills (Phase 2 of TRDD-e1c2677a) — applied on every
+  # repo the agent guards, not just this plugin's own repo.
+  - maintainer-redact
+  - maintainer-secrets-scan
+  - maintainer-pr-triage
+  - maintainer-pr-review
+  - maintainer-commit-msg-why
+  - maintainer-detect-stack
+  - maintainer-tool-bootstrap
+  - maintainer-config-lint
+  - maintainer-generate-docs
+  - maintainer-trdd-adr
 ---
 
 # AI Maestro Maintainer Agent
