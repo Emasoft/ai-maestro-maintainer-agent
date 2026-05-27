@@ -130,7 +130,7 @@ fi
 ```
 
 Note `gh pr view`'s `--json files` returns only the changed paths
-+ additions/deletions per file — not the actual patch text. For
+plus additions/deletions per file — not the actual patch text. For
 the patch hunks see [Diff fetch](#diff-fetch).
 
 ## Diff fetch

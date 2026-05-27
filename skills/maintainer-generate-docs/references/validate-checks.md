@@ -30,7 +30,7 @@ than the templates still passes.
 | Check | Pass criterion (case-insensitive) |
 |---|---|
 | Mentions how to clone | regex `git\s+clone` OR `gh\s+repo\s+clone` |
-| Mentions how to run tests | regex `test|pytest|jest|vitest|cargo\s+test|go\s+test|npm\s+test` |
+| Mentions how to run tests | regex `test\|pytest\|jest\|vitest\|cargo\s+test\|go\s+test\|npm\s+test` |
 | Mentions the branch convention | substring `branch` |
 | Mentions the commit-message convention | substring `commit` |
 | Mentions where to file bug reports | substring `issue` OR `bug` |
@@ -41,17 +41,17 @@ than the templates still passes.
 
 | Check | Pass criterion |
 |---|---|
-| Has a private disclosure channel | regex `security[/-]advisor|advisory|security@|private` |
+| Has a private disclosure channel | regex `security[/-]advisor\|advisory\|security@\|private` |
 | Has a disclosure email OR a GitHub Security Advisory URL | regex `@` (any email) OR `security/advisories` |
-| Says "do NOT file a public issue" (or equivalent warning) | regex `do\s+not\s+file|private\s+disclosure|public\s+issue` (case-insensitive) |
-| Has a turnaround table OR explicit response timelines | regex `\bday[s]?\b|\bweek[s]?\b|turnaround|respond` |
+| Says "do NOT file a public issue" (or equivalent warning) | regex `do\s+not\s+file\|private\s+disclosure\|public\s+issue` (case-insensitive) |
+| Has a turnaround table OR explicit response timelines | regex `\bday[s]?\b\|\bweek[s]?\b\|turnaround\|respond` |
 | Body length | ≥ 25 non-blank lines |
 
 ### `CODE_OF_CONDUCT.md`
 
 | Check | Pass criterion |
 |---|---|
-| Adopts a recognised CoC standard | regex `contributor\s+covenant|code\s+of\s+conduct|covenant` |
+| Adopts a recognised CoC standard | regex `contributor\s+covenant\|code\s+of\s+conduct\|covenant` |
 | Has a contact address for enforcement | regex `@` (any email) OR substring `contact` |
 | Body length | ≥ 50 non-blank lines (Contributor Covenant is ~130 lines; aggressive stubs are caught here) |
 
@@ -59,8 +59,8 @@ than the templates still passes.
 
 | Check | Pass criterion |
 |---|---|
-| Names at least one author | regex `author|maintainer|^\s*-\s+` |
-| Has at least one credit / dependency mention | regex `\bdepend|\bcredit|\bbuilt\s+on|\bthanks` |
+| Names at least one author | regex `author\|maintainer\|^\s*-\s+` |
+| Has at least one credit / dependency mention | regex `\bdepend\|\bcredit\|\bbuilt\s+on\|\bthanks` |
 | Body length | ≥ 10 non-blank lines |
 
 ### `AUTHORS`
@@ -75,7 +75,7 @@ than the templates still passes.
 | Check | Pass criterion |
 |---|---|
 | Has a Summary section | substring `Summary` OR `What changed` |
-| Has a verification / testing section | regex `verify|test|how\s+to` (case-insensitive) |
+| Has a verification / testing section | regex `verify\|test\|how\s+to` (case-insensitive) |
 | Has a checklist | substring `- [ ]` |
 | Body length | ≥ 15 non-blank lines |
 
@@ -86,8 +86,8 @@ than the templates still passes.
 | Valid YAML (parses with `yaml.safe_load`) | parses without exception |
 | Has a `name:` field | YAML top-level `name` present |
 | Has a `body:` list | YAML top-level `body` is a list |
-| Asks for reproduction steps | any input/textarea has label matching regex `reproduce|reproduction|steps` (case-insensitive) |
-| Asks for expected vs actual | regex `expected.*actual|actual.*expected` (case-insensitive) somewhere in labels |
+| Asks for reproduction steps | any input/textarea has label matching regex `reproduce\|reproduction\|steps` (case-insensitive) |
+| Asks for expected vs actual | regex `expected.*actual\|actual.*expected` (case-insensitive) somewhere in labels |
 
 ### `.github/ISSUE_TEMPLATE/feature_request.yml`
 

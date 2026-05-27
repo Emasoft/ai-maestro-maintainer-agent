@@ -262,7 +262,7 @@ These are hard rules the skill MUST uphold:
    stderr.
 2. **No raw file content beyond what's needed.** SARIF
    `region.snippet` is intentionally NOT populated — the file path
-   + line/column is enough. The skill emits a `note` in the
+   plus line/column is enough. The skill emits a `note` in the
    markdown clarifying this is by design.
 3. **No file contents in error messages from spawned linters.**
    The skill captures stderr from `yamllint`, `hadolint`, etc.;

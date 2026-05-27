@@ -123,7 +123,7 @@ output.
 - JSON disposition: `mode`, `present`, `missing`, `stale`,
   `written`, `refused`, `placeholder_warnings`.
 - For `audit` and `validate` modes: human-readable summary table
-  + non-zero exit when anything is missing / invalid.
+  plus non-zero exit when anything is missing / invalid.
 
 ## Error Handling
 

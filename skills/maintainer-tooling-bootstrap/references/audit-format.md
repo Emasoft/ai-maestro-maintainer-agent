@@ -45,10 +45,10 @@ Field meanings:
 |-------|------|---------|
 | `schema_version` | int | Bump if the schema changes; downstream readers gate on this. Current: `1`. |
 | `generated_at` | string | ISO 8601 with local-time + GMT offset (`%Y-%m-%dT%H:%M:%S%z`). |
-| `platform.id` | string | One of `macos | apt | dnf | pacman | apk | wsl2` (the inner Linux distro of WSL2 sets `is_wsl2: true` and `id` to the inner row). |
+| `platform.id` | string | One of `macos`, `apt`, `dnf`, `pacman`, `apk`, `wsl2` (the inner Linux distro of WSL2 sets `is_wsl2: true` and `id` to the inner row). |
 | `platform.distro` | string?| For Linux: the `ID` from `/etc/os-release` (`ubuntu`, `fedora`, …). `null` on macOS. |
 | `platform.is_wsl2` | bool | True if running under WSL2 (detected via `uname -r` substring). |
-| `mode` | string | `audit | recipe | install`. |
+| `mode` | string | One of `audit`, `recipe`, `install`. |
 | `mandatory_ok` | bool | True iff every tool with `required: true` has `status: ok`. |
 | `tools` | array | One entry per tool probed (see [Tool entry](#tool-entry)). |
 | `disposition` | string | See [Disposition enum](#disposition-enum). |
