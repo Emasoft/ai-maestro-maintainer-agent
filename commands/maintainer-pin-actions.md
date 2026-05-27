@@ -1,5 +1,5 @@
 ---
-description: Resolve every `uses: owner/action@vTAG` to its 40-char commit SHA via gh api, with the original tag preserved as a trailing comment.
+description: "Resolve every `uses: owner/action@vTAG` to its 40-char commit SHA via gh api, with the original tag preserved as a trailing comment."
 argument-hint: "[--dry-run]"
 ---
 
