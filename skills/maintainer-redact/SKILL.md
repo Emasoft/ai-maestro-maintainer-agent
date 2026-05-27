@@ -82,7 +82,7 @@ double-redaction is a no-op.
    ```bash
    cat <<'FIXTURE' | uv run scripts/redact.py | grep -q '\$HOME/code/foo' \
      && echo "redact.py OK"
-   /Users/example-user/code/foo
+   /Users/example/code/foo
    FIXTURE
    ```
 

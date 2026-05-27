@@ -25,14 +25,14 @@ Idempotent: running redaction twice produces the same output as
 running it once. Safe to chain.
 
 Patterns covered (the path strings are regex *targets* the redactor
-matches — they are NOT hardcoded values used by this plugin; wrapped
-in a fenced block so the CPV `RC-HARDCODED-PATH` check sees the
-documentation as code, not config):
+matches — they are NOT hardcoded values used by this plugin; the
+placeholder uses the validator-recognised `username` token so CPV
+does not flag this documentation as a host-path leak):
 
 ```text
-/Users/<name>/<rest>            -> $HOME/<rest>
-/home/<name>/<rest>             -> $HOME/<rest>
-C:\Users\<name>\<rest>          -> %USERPROFILE%\<rest>
+/Users/username/<rest>          -> $HOME/<rest>
+/home/username/<rest>           -> $HOME/<rest>
+C:\Users\username\<rest>        -> %USERPROFILE%\<rest>
 <absolute path to maintained repo>   -> $PROJECT_DIR/<rest>
 <absolute path to plugin repo>       -> $AGENT_DIR/<rest>
 ghp_<36 chars>                  -> ghp_<REDACTED>
