@@ -32,9 +32,18 @@ Pre-2.1.133 sessions (env var unset) get the `medium` branch —
 the same conservative default the skill used before
 `$CLAUDE_EFFORT` existed.
 
+On **Opus 4.8** (Claude Code 2.1.154+) the session effort defaults
+to **HIGH**, so an un-overridden triage routes to the `high` branch
+and greps referenced symbols/files before deciding. The `medium`
+floor still applies only when a caller explicitly sets `LOW`/`MEDIUM`
+(both promoted to `medium`). No code change is needed — the `case`
+above already maps `HIGH` correctly; this is just the new default
+landing one tier deeper than on Opus 4.7 and earlier.
+
 `xhigh` (Claude Code 2.1.111+) routes to the same MAX budget as
 `max` — both express "give me the deepest available analysis".
-Triage has no reason to distinguish them.
+Triage has no reason to distinguish them. `/effort xhigh` is the
+top tier on Opus 4.8 for the hardest issues.
 
 ## Rate-limit handling
 

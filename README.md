@@ -110,7 +110,10 @@ Once the agent session is running:
   that need cross-file analysis. Earlier Claude Code versions still work —
   both env vars degrade gracefully to the historical single-workspace,
   ambiguity-only-grep defaults — but you lose concurrency safety and
-  effort-aware triage.
+  effort-aware triage. On **Opus 4.8** (Claude Code ≥ 2.1.154) the session
+  effort defaults to **HIGH**, so triage runs at `high` depth out of the box;
+  the agent's `model: inherit` frontmatter means it picks up Opus 4.8 (or
+  whatever AI Maestro provisions) with no per-skill change.
 - `gh` CLI authenticated (`gh auth login`)
 - `git` configured with user identity
 - `uv` (for Python repos with `scripts/publish.py`, and for the
@@ -136,15 +139,16 @@ Once the agent session is running:
   only deepen GitHub's back-off — the skills will never retry the same
   `gh` call inside one invocation.
 - **Tool surface is dynamic.** Skills and the agent in this plugin
-  intentionally do NOT declare `allowed-tools` / `tools:` /
-  `disallowedTools:` in their frontmatter. AI Maestro provisions the
-  tool surface (built-in Claude Code tools + MCP servers + any
-  ecosystem extensions) dynamically at agent-spawn time, so the
-  available toolset can grow without per-skill edits. If you want
-  to reduce permission prompts when running unattended, invoke the
-  `/less-permission-prompts` skill (Claude Code ≥ 2.1.111) once at
-  the start of the session — it scans your transcripts and adds the
-  observed safe tool patterns to `.claude/settings.json` at the
+  intentionally do NOT declare `allowed-tools`, `disallowed-tools`
+  (a skill/slash-command frontmatter field added in Claude Code
+  2.1.152), or an agent `tools:` list in their frontmatter. AI Maestro
+  provisions the tool surface (built-in Claude Code tools, MCP servers,
+  and any ecosystem extensions) dynamically at agent-spawn time, so the
+  available toolset can grow without per-skill edits (see
+  `design/adrs/ADR-0002`). If you want to reduce permission prompts when
+  running unattended, invoke the bundled `/fewer-permission-prompts`
+  skill once at the start of the session — it scans your transcripts and
+  adds the observed safe tool patterns to `.claude/settings.json` at the
   user or project scope.
 - **Observability** (Claude Code ≥ 2.1.145). `claude agents --json` emits a
   machine-readable view of every running agent (including this one), and
