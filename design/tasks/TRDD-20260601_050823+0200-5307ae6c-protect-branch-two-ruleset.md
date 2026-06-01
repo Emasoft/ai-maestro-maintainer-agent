@@ -1,9 +1,9 @@
 ---
 trdd-id: 5307ae6c-9ef1-4d0e-aeb8-13dbef04cd5e
 title: workflow-protect-branch must emit the two-ruleset split, not one bypass-less required-checks ruleset
-status: in-progress
+status: completed
 created: 2026-06-01T05:08:23+0200
-updated: 2026-06-01T05:08:23+0200
+updated: 2026-06-01T05:42:00+0200
 ---
 
 <!-- markdownlint-disable MD025 -->
@@ -84,7 +84,7 @@ actor, so RepositoryRole(Admin) is the correct actor.
   ruleset ids. Add a "Why two rulesets" rationale box citing the
   whole-ruleset bypass_actors gotcha.
 
-### Phase 2 (DERIVED) — bootstrap template + its instructions
+### Phase 2 (DERIVED) — bootstrap template + its instructions — DONE (commit pending)
 - `skills/workflow-bootstrap/references/templates/ruleset.json` → split
   into `ruleset-no-force-no-delete.json` + `ruleset-required-checks.json`
   (or one file holding an array of two). Whichever shape, bootstrap's
@@ -93,7 +93,7 @@ actor, so RepositoryRole(Admin) is the correct actor.
   inventory row, Step 5 stash, post-merge apply prose.
 - `skills/workflow-bootstrap/SKILL.md` — template-inventory mention.
 
-### Phase 3 (DERIVED) — prose that names the single ruleset
+### Phase 3 (DERIVED) — prose that names the single ruleset — DONE (commit pending)
 - `commands/maintainer-protect-branch.md` — "default-branch-ruleset
   exists yet" → two-ruleset language.
 - `commands/maintainer-detect-stack.md`, `commands/maintainer-guardian-baseline.md`

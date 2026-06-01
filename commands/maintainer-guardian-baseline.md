@@ -10,7 +10,7 @@ across all six Guardian threat classes:
   findings on `.github/workflows/`)
 - **T2** — stale SHA pins (actions referenced by tag or by
   outdated SHA)
-- **T3** — branch-rule state (current `default-branch-ruleset`
+- **T3** — branch-rule state (current default-branch ruleset(s)
   config)
 - **T4** — protected-path activity (recent commits touching the
   canonical protected paths)

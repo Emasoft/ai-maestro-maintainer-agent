@@ -1,5 +1,5 @@
 {
-  "name": "default-branch-ruleset",
+  "name": "default-branch-required-checks",
   "target": "branch",
   "enforcement": "active",
   "conditions": {
@@ -18,8 +18,9 @@
           { "context": "workflow-security" }
         ]
       }
-    },
-    { "type": "non_fast_forward" },
-    { "type": "deletion" }
+    }
+  ],
+  "bypass_actors": [
+    { "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always" }
   ]
 }

@@ -1,30 +1,33 @@
 ---
-description: Apply the canonical branch protection ruleset to a repo's default branch — PR-required, force-push blocked, deletion blocked, linear history, signed commits, status checks required.
+description: Apply the canonical two-ruleset branch protection to a repo's default branch — force-push blocked, deletion blocked, status checks required (admin RepositoryRole bypasses the checks so the canonical direct-push publish still works).
 argument-hint: "<owner/repo>"
 ---
 
-Apply (or refresh) the canonical branch-protection ruleset on the
-default branch of `<owner/repo>`.
+Apply (or refresh) the canonical two-ruleset branch protection on
+the default branch of `<owner/repo>`.
 
-The applied ruleset requires:
+Two rulesets are applied (see **workflow-protect-branch** for why a
+single combined ruleset cannot work on a direct-push repo):
 
-- Pull requests (no direct push to default branch)
-- Linear history (no merge commits unless squashed)
-- Status checks: every job name visible in the most recent push of
-  the validate / release workflows must pass
-- Signed commits
-- Force-push: BLOCKED
-- Deletion: BLOCKED
+- `default-branch-no-force-no-delete` — `non_fast_forward` +
+  `deletion`, no bypass → force-push and deletion blocked for
+  EVERYONE, including admin.
+- `default-branch-required-checks` — `required_status_checks`
+  (strict; every job name in the validate / release workflows must
+  pass), with an admin RepositoryRole `always` bypass → the
+  canonical `publish.py` direct push to the default branch succeeds
+  (a fast-forward is not a force-push), while outside-contributor
+  PRs are still gated by the checks.
 
 Loads skill: **workflow-protect-branch** (mode=APPLY)
 
-The skill is idempotent — running it on an already-protected
-branch updates the status-checks list if any have changed, and
-exits 0 with no diff otherwise. It uses
-`gh api PUT repos/<owner>/<repo>/rulesets/<id>` (or POST if no
-default-branch-ruleset exists yet), then re-fetches and caches the
-result to `$AGENT_DIR/.aimaestro/state/branch-rules.json` so
-downstream skills see the live state on the next push.
+The skill is idempotent — running it on an already-protected branch
+updates each ruleset's status-checks list if any have changed, and
+exits 0 with no diff otherwise. For each ruleset it uses
+`gh api PUT repos/<owner>/<repo>/rulesets/<id>` (or POST if that
+ruleset does not exist yet), then re-fetches and caches the result
+to `$AGENT_DIR/.aimaestro/state/branch-rules.json` so downstream
+skills see the live state on the next push.
 
 To preview the current ruleset without modifying it, use
 `/maintainer-show-branch-rules`.

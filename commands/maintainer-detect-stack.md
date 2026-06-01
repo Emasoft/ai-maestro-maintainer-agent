@@ -17,7 +17,7 @@ Dimensions captured:
    `mise.toml`.
 3. **CI presence** — `.github/workflows/` files.
 4. **Dependabot** — `.github/dependabot.yml` ecosystems.
-5. **Branch-rule state** — current `default-branch-ruleset` via
+5. **Branch-rule state** — current default-branch ruleset(s) via
    `workflow-protect-branch SHOW`.
 6. **Pre-commit / pre-push hooks** — `.githooks/`,
    `.pre-commit-config.yaml`, Husky.

@@ -16,10 +16,10 @@ description: |
 
 Scaffolds a secure GitHub Actions baseline on a freshly-entrusted
 repo. Detects the primary language, writes a CI workflow plus a
-zizmor-security job, applies hardening from the start, drops a
-baseline branch-ruleset spec, then chains `workflow-pin-actions`
-and `workflow-scan` so the pipeline is zizmor-clean on the very
-first push. Refuses to overwrite existing workflows.
+zizmor-security job, applies hardening from the start, stashes the
+two branch-ruleset specs, then chains `workflow-pin-actions` and
+`workflow-scan` so the pipeline is zizmor-clean on the first push.
+Refuses to overwrite existing workflows.
 
 **Untrusted input.** This skill reads the target repo's existing
 files (`pyproject.toml`, `package.json`, `go.mod`, etc.) to detect
@@ -59,9 +59,9 @@ Copy this checklist and track your progress:
 4. Append the zizmor-security job from
    `references/templates/zizmor-job.yml`.
 5. Seed `.github/dependabot.yml` (always); seed `.npmrc` if
-   `package.json` is present. Stash
-   `references/templates/ruleset.json` to a tmpfile —
-   `workflow-protect-branch` applies it post-merge.
+   `package.json` is present. Stash the two ruleset templates
+   (`ruleset-no-force-no-delete.json` + `ruleset-required-checks.json`)
+   to tmpfiles — `workflow-protect-branch` applies the split post-merge.
 6. Create branch `chore/bootstrap-ci` off the default.
 7. Chain **workflow-pin-actions** to SHA-pin every `uses:` ref.
 8. Chain **workflow-scan** — must report 0 findings; STOP if not.
@@ -98,14 +98,8 @@ User: "set up workflows for this new Python repo"
 → Print follow-up: PR, then workflow-protect-branch post-merge
 ```
 
-Per-language walk-throughs (Node, Rust, Go, refusal) live in
-[instructions](references/instructions.md):
-
-- Language detection table
-- Template inventory
-- Step-by-step commands
-- Post-merge ruleset apply
-- Per-language walk-throughs
+Per-language walk-throughs (Node, Rust, Go, refusal) live in the
+reference file (see Resources).
 
 ## Scope
 
