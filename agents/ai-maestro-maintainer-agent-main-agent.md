@@ -24,6 +24,7 @@ skills:
   - maintainer-pr-triage
   - maintainer-pr-review
   - maintainer-commit-msg-why
+  - maintainer-prrd-trdd-kanban
   - maintainer-detect-stack
   - maintainer-tooling-bootstrap
   - maintainer-config-lint
