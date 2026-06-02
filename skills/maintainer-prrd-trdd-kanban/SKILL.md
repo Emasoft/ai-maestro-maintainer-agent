@@ -13,6 +13,18 @@ This is the MAINTAINER's role-specific layer of the PRRD / TRDD /
 Kanban model. For universal mechanics, see `prrd-trdd-kanban` in
 `ai-maestro-plugin`.
 
+## Approval discipline — MAINTAINER never directly mutates
+
+Check
+[references/exempt-operations.md](references/exempt-operations.md)
+in the universal skill. MAINTAINER owns NO kanban columns and
+mutates NO TRDDs. All MAINTAINER actions are either **exempt** (read
+audits, drift signal collection, status reports) or filed as
+**proposals** (which are themselves exempt — proposals are
+non-binding; MANAGER must approve to mutate). MAINTAINER never
+triggers an approval request — it can only propose. Reports go to
+MANAGER via AMP; if action is needed, MANAGER decides and acts.
+
 MAINTAINER is the **host-level oversight role**. It reads but does not
 write. Its purpose is to:
 
