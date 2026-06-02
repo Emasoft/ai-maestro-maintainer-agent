@@ -15,9 +15,8 @@ Kanban model. For universal mechanics, see `prrd-trdd-kanban` in
 
 ## Approval discipline — MAINTAINER never directly mutates
 
-Check
-[references/exempt-operations.md](references/exempt-operations.md)
-in the universal skill. MAINTAINER owns NO kanban columns and
+Check the **prrd-trdd-kanban** universal skill's `exempt-operations.md`
+reference (bundled in ai-maestro-plugin). MAINTAINER owns NO kanban columns and
 mutates NO TRDDs. All MAINTAINER actions are either **exempt** (read
 audits, drift signal collection, status reports) or filed as
 **proposals** (which are themselves exempt — proposals are
