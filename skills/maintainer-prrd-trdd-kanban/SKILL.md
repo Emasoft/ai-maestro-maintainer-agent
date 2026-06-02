@@ -9,129 +9,83 @@ metadata:
 
 ## Overview
 
-This is the MAINTAINER's role-specific layer of the PRRD / TRDD /
-Kanban model. For universal mechanics, see `prrd-trdd-kanban` in
-`ai-maestro-plugin`.
+MAINTAINER is the host-level, read-mostly oversight layer of the PRRD /
+TRDD / Kanban model. It owns NO kanban columns and mutates NO TRDDs. It
+audits projects for PRRD compliance, surfaces drift signals, and proposes
+PRRD changes — but every change is filed as a non-binding proposal that
+MANAGER must approve. MAINTAINER reaches MANAGER + HUMAN per R6; it never
+reaches team agents directly. For the universal mechanics, see the
+`prrd-trdd-kanban` skill in `ai-maestro-plugin`.
 
-## Approval discipline — MAINTAINER never directly mutates
+## Prerequisites
 
-Check the **prrd-trdd-kanban** universal skill's `exempt-operations.md`
-reference (bundled in ai-maestro-plugin). MAINTAINER owns NO kanban columns and
-mutates NO TRDDs. All MAINTAINER actions are either **exempt** (read
-audits, drift signal collection, status reports) or filed as
-**proposals** (which are themselves exempt — proposals are
-non-binding; MANAGER must approve to mutate). MAINTAINER never
-triggers an approval request — it can only propose. Reports go to
-MANAGER via AMP; if action is needed, MANAGER decides and acts.
+- The universal `prrd-trdd-kanban` skill (in `ai-maestro-plugin`) for the
+  shared workflow mechanics and the exempt-operations rules.
+- A PRRD plus a populated `design/tasks/` TRDD set in each audited project.
+- Read access to the projects under audit (the audit is read-only).
 
-MAINTAINER is the **host-level oversight role**. It reads but does not
-write. Its purpose is to:
+## Instructions
 
-- Audit projects for PRRD compliance (rules cited, drift signals,
-  abandoned TRDDs)
-- Propose PRRD rules that emerged from observing patterns across
-  multiple projects
-- Surface long-stalled blocked TRDDs that need MANAGER attention
-- Validate that role plugins are consistent with the PRRD/TRDD/Kanban
-  rule files
+1. Run `kanban.py --check-drift > /tmp/drift.txt` to capture every drift
+   signal across the project (block-down, block-up, eht-gate, etc.).
+2. Run `findtrdd.py --column blocked --sort updated --format table >
+   /tmp/blocked.txt` to list blocked TRDDs, oldest first (stale blockers
+   need MANAGER attention).
+3. Run `findprrd.py --unused > /tmp/unused-rules.txt` to find PRRD rules
+   nobody cites (candidates for revision or deletion).
+4. Read the three outputs and classify the findings: drift, blocked-stale,
+   and unused-rules.
+5. Write an audit report to
+   `$MAIN_ROOT/reports/maintainer-audit/<TS>-<project>.md` with TRDD counts
+   per column, the drift summary, unused rules, long-stalled TRDDs, and a
+   `proposes:` block per recommended PRRD change.
+6. For patterns that recur across projects, file a PRRD proposal:
+   `prrd-edit.py propose silver "<text>" --target <N or null> --proposed-by
+   maintainer --routed-via null` (governance routes straight to MANAGER, no
+   COS hop).
+7. If findings are serious, notify MANAGER over AMP:
+   `amp-send manager-<host> "Audit findings need attention — see <path>"`.
 
-MAINTAINER reaches MANAGER + HUMAN per R6. It does NOT reach team
-agents directly.
+## Output
 
-## Columns MAINTAINER owns
+- An audit report file at
+  `$MAIN_ROOT/reports/maintainer-audit/<TS>-<project>.md`.
+- Zero or more PRRD proposals filed via `prrd-edit.py propose`.
+- An AMP note to MANAGER (and HUMAN per R6) when action is needed, phrased
+  as `recommend:` not `do:` — MAINTAINER recommends, MANAGER decides.
 
-NONE. MAINTAINER's kanban interaction is **read-only**.
+## Error Handling
 
-## PRRD authority
+- Never edit a TRDD `column:` (or any TRDD field) directly — that is the
+  column owner's job; surface it to MANAGER instead.
+- Never mutate the PRRD directly — always file a proposal. Proposals are
+  exempt and non-binding; only MANAGER approval mutates the PRRD.
+- Never bulk-fail abandoned TRDDs — propose the archive to MANAGER first.
+- Never message team-internal agents (R6.2); route through MANAGER.
 
-MAINTAINER may **propose** PRRD changes; it cannot mutate directly:
+## Examples
+
+Drift audit run for one project:
 
 ```bash
-prrd-edit.py propose silver "<text>" \
-            --target <N or null> \
-            --proposed-by maintainer \
-            --routed-via null
+kanban.py --check-drift > /tmp/drift.txt
+findtrdd.py --column blocked --sort updated --format table > /tmp/blocked.txt
+findprrd.py --unused > /tmp/unused-rules.txt
+# classify, then write $MAIN_ROOT/reports/maintainer-audit/<TS>-<project>.md
+amp-send manager-host "Audit findings need attention — see <report-path>"
 ```
 
-Note `--routed-via null` — MAINTAINER is governance-layer; it routes
-directly to MANAGER without a COS hop.
-
-## Periodic audits
-
-MAINTAINER runs audits on a schedule (or on USER request):
-
-### Compliance audit
+A recurring drift signal seen across several projects becomes a proposal:
 
 ```bash
-# Per project:
-findtrdd.py --where "relevant-rules:[]" --format table
-# → list TRDDs with no PRRD citations (worth verifying)
-
-findtrdd.py --column blocked --sort updated
-# → list blocked TRDDs (oldest first; stale blockers need MANAGER)
-
-kanban.py --check-drift
-# → drift signals (block-down, block-up, eht-gate, etc.)
-
-findprrd.py --unused
-# → rules nobody cites (candidate for revision or deletion)
+prrd-edit.py propose silver "Require relevant-rules on every TRDD" \
+            --target null --proposed-by maintainer --routed-via null
 ```
-
-### Cross-project pattern audit
-
-For multiple projects, MAINTAINER collects:
-
-- Common rule numbers cited across N projects → candidate for a
-  host-level convention (not necessarily PRRD; could be a
-  `~/.claude/rules/` global rule)
-- Recurring drift signals → indicates a missing convention in PRRD
-- Long-stalled TRDDs (`updated:` >30 days, column != terminal) →
-  candidate for `failed` archive or re-escalation
-
-### Per-project report
-
-Output goes to `$MAIN_ROOT/reports/maintainer-audit/<TS>-<project>.md`
-with:
-
-- TRDD counts per column
-- Drift signal summary
-- Unused PRRD rules
-- Long-stalled TRDDs
-- Recommended PRRD changes (each as a `proposes: ...` block)
-
-## What MAINTAINER MUST NOT do
-
-- DO NOT edit TRDD `column:` or any other field directly. That's the
-  column owner's job.
-- DO NOT mutate the PRRD directly. Always file proposals.
-- DO NOT message team-internal agents (R6.2 — MAINTAINER cannot reach
-  the team layer; route via MANAGER if needed).
-- DO NOT bulk-fail abandoned TRDDs. Propose to MANAGER first.
-
-## When MAINTAINER is allowed to be proactive
-
-- Bumping the user's awareness of drift via a status report:
-  `amp-send <human-agent> "Drift audit report ready at <path>"`
-- Filing PRRD proposals based on patterns
-- Suggesting that MANAGER trigger a particular column transition (via
-  AMP, but with `recommend:` not `do:`)
-
-## Per-task checklist (audit run)
-
-- [ ] `kanban.py --check-drift > /tmp/drift.txt` — capture all drift
-      signals across the project
-- [ ] `findtrdd.py --column blocked --format table > /tmp/blocked.txt`
-- [ ] `findprrd.py --unused > /tmp/unused-rules.txt`
-- [ ] Read the outputs; classify findings (drift, blocked-stale,
-      unused-rules)
-- [ ] Write the report to `$MAIN_ROOT/reports/maintainer-audit/<TS>-<project>.md`
-- [ ] If serious findings: `amp-send manager-<host> "Audit findings
-      need attention — see <report-path>"`
-- [ ] If pattern-level findings: file PRRD proposals
 
 ## Resources
 
-- Universal skill: `prrd-trdd-kanban`
-- Existing MAINTAINER skills: `maintainer-patrol`, `maintainer-pr-triage`,
-  `maintainer-config-lint`, `maintainer-guardian`
-- MAINTAINER persona: `agents/ai-maestro-maintainer-agent-main-agent.md`
+See the universal `prrd-trdd-kanban` skill in `ai-maestro-plugin` for the
+shared mechanics and its `exempt-operations.md` reference, which defines
+why audits, status reports, and proposals are exempt. Companion MAINTAINER
+skills cover patrol, PR triage, and config linting; the MAINTAINER persona
+lives with the agent definition in this plugin.
