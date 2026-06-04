@@ -1,9 +1,9 @@
 ---
 trdd-id: f51d24c6-d541-4e45-97b4-ebea95904853
 title: Migrate maintainer branch-ruleset source to the ratified baseline-* pair
-column: dev
+column: testing
 created: 2026-06-04T20:01:34+0200
-updated: 2026-06-04T20:01:34+0200
+updated: 2026-06-04T20:24:03+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -17,15 +17,17 @@ relevant-rules: [1]
 release-via: publish
 delivery: pull-request
 target-branch: main
+feature-branch: feat/baseline-ruleset-standardization
 must-pass-tests-before-merge: true
 test-requirements: [lint, typecheck]
 audit-requirements: []
 review-requirements: [human-review]
 runtime-targets: [macos, linux]
 impacts: [ci-pipeline]
-attempts: 0
-last-test-result: not-run
-implementation-commits: []
+attempts: 1
+last-test-result: pass
+last-test-at: 2026-06-04T20:24:03+0200
+implementation-commits: [c8fe5ce, 089c979]
 external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/7", "github.com/Emasoft/ai-maestro-janitor/issues/14"]
 ---
 
@@ -33,15 +35,20 @@ external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/7", "gith
 
 ## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative) — 2026-06-04
 
-**Current state:** Migration IN PROGRESS. The maintainer plugin's source
-still emits the OLD two-ruleset pair (`default-branch-no-force-no-delete` +
-`default-branch-required-checks`). This TRDD migrates the SOURCE to the
-ratified cross-plugin baseline (`baseline-history-protect` +
-`baseline-pr-and-checks`).
+**Current state:** Migration IMPLEMENTED + locally verified on branch
+`feat/baseline-ruleset-standardization` (2 commits: `c8fe5ce` core
+baseline-* rename + `required_linear_history` + `pull_request` +
+orphan-delete; `089c979` `.yml`/`.yaml` glob sweep). 467 tests pass;
+CPV `--strict` reports ZERO findings in the touched files (the 18
+remaining are pre-existing upstream FPs, CPV #68). Source now emits the
+ratified `baseline-history-protect` + `baseline-pr-and-checks` pair.
+NOT yet pushed; live repo rulesets NOT yet re-applied.
 
-**NEXT ACTION:** Execute the phased edits below; run the plugin's
-lint → typecheck → test → CPV --strict pipeline; commit per-phase; post
-the commit SHAs on issue #7 for the manager to verify.
+**NEXT ACTION (awaiting repo-owner go):** push the branch + open the PR
+against `main`; post the two commit SHAs on issue #7 for the manager to
+verify. After merge, optionally re-apply the live rulesets on this repo
+via `workflow-protect-branch` APPLY (which now also orphan-deletes the
+old `default-branch-*` pair).
 
 **Load-bearing facts:**
 - Ratified baseline agreed BYTE-IDENTICAL by both plugins (manager #7,
