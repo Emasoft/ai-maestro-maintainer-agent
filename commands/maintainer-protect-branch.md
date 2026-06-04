@@ -1,5 +1,5 @@
 ---
-description: Apply the canonical two-ruleset branch protection to a repo's default branch — force-push blocked, deletion blocked, status checks required (admin RepositoryRole bypasses the checks so the canonical direct-push publish still works).
+description: Apply the canonical two-ruleset baseline branch protection to a repo's default branch — force-push, deletion, and non-linear history blocked, PR review + status checks required (admin RepositoryRole bypasses the PR + checks so the canonical direct-push publish still works).
 argument-hint: "<owner/repo>"
 ---
 
@@ -9,15 +9,17 @@ the default branch of `<owner/repo>`.
 Two rulesets are applied (see **workflow-protect-branch** for why a
 single combined ruleset cannot work on a direct-push repo):
 
-- `default-branch-no-force-no-delete` — `non_fast_forward` +
-  `deletion`, no bypass → force-push and deletion blocked for
-  EVERYONE, including admin.
-- `default-branch-required-checks` — `required_status_checks`
-  (strict; every job name in the validate / release workflows must
-  pass), with an admin RepositoryRole `always` bypass → the
-  canonical `publish.py` direct push to the default branch succeeds
-  (a fast-forward is not a force-push), while outside-contributor
-  PRs are still gated by the checks.
+- `baseline-history-protect` — `deletion` + `non_fast_forward` +
+  `required_linear_history`, no bypass → force-push, deletion, and
+  non-linear (merge-commit) history blocked for EVERYONE, including
+  admin.
+- `baseline-pr-and-checks` — `pull_request` (1 approval) +
+  `required_status_checks` (strict; every job name in the validate /
+  release workflows must pass), with an admin RepositoryRole `always`
+  bypass → the canonical `publish.py` direct push to the default branch
+  succeeds (a fast-forward is not a force-push and adds no merge
+  commit), while outside-contributor PRs are still gated by review +
+  checks.
 
 Loads skill: **workflow-protect-branch** (mode=APPLY)
 

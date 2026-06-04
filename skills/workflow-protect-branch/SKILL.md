@@ -4,7 +4,7 @@ description: |
   default-branch rulesets via the GitHub Rulesets API. SHOW =
   read-only fetch + cache. APPLY = auto-detect CI job names, POST/PUT
   TWO rulesets — a no-bypass history-protect ruleset and an
-  admin-bypass required-checks ruleset. Idempotent.
+  admin-bypass PR-and-checks ruleset. Idempotent.
   Trigger with phrases like "protect main branch", "apply branch
   rules" (apply), or "show branch rules" (show).
 ---
@@ -24,14 +24,15 @@ rulesets):
 
 | Ruleset | Rules | `bypass_actors` |
 |---|---|---|
-| `default-branch-no-force-no-delete` | `non_fast_forward`, `deletion` | `[]` (nobody, incl. admin) |
-| `default-branch-required-checks` | `required_status_checks` (strict) | admin RepositoryRole, `always` |
+| `baseline-history-protect` | `deletion`, `non_fast_forward`, `required_linear_history` | `[]` (nobody, incl. admin) |
+| `baseline-pr-and-checks` | `pull_request`, `required_status_checks` (strict) | admin RepositoryRole, `always` |
 
 Two, not one, because `bypass_actors` applies to the WHOLE ruleset,
 never per-rule: a single combined ruleset with an admin bypass would
 also let admin force-push/delete. The split lets `publish.py`'s direct
-push bypass ONLY the checks (un-greenable before a push → `GH013`)
-while force-push + deletion stay blocked for all.
+push bypass the PR + checks gate (checks are un-greenable before a push
+→ `GH013`) while force-push, deletion, and non-linear history stay
+blocked for all.
 
 ## Prerequisites
 
@@ -58,7 +59,7 @@ while force-push + deletion stay blocked for all.
    "Expected context to be present".
 3. Build BOTH ruleset JSON bodies in tmpfiles (no inline `${{ }}`):
    the no-bypass history-protect ruleset and the admin-bypass
-   required-checks ruleset.
+   PR-and-checks ruleset.
 4. For EACH ruleset, POST or PUT to `/repos/$REPO/rulesets`
    depending on whether one of that name already exists.
 5. Run SHOW again to refresh the cache + emit a diff.
@@ -97,16 +98,17 @@ Full commands + both JSON bodies: see Resources.
 ## Scope
 
 ONLY queries (SHOW) or applies (APPLY) the two canonical
-default-branch rulesets (`default-branch-no-force-no-delete` +
-`default-branch-required-checks`) via the GitHub Rulesets REST API.
+default-branch rulesets (`baseline-history-protect` +
+`baseline-pr-and-checks`) via the GitHub Rulesets REST API.
 Does NOT:
 
 - Manage non-default branches — both target `~DEFAULT_BRANCH`.
 - Touch environment- or org-level rulesets — repo-level only.
 - Push, commit, or modify the entrusted repo's working tree.
-- Configure required reviews — only required_status_checks +
-  non_fast_forward + deletion.
-- Add bypass actors beyond admin RepositoryRole on the checks
+- Manage rules beyond the ratified baseline — exactly `deletion`,
+  `non_fast_forward`, `required_linear_history` (history) plus
+  `pull_request` (1 approval) + `required_status_checks` (PR + checks).
+- Add bypass actors beyond admin RepositoryRole on the pr-and-checks
   ruleset; the history ruleset stays bypass-less for all.
 
 Idempotent — APPLY converges to the same two-ruleset state.
@@ -125,4 +127,5 @@ Idempotent — APPLY converges to the same two-ruleset state.
   - Step 4: Discover both existing rulesets
   - Step 5: POST or PUT each ruleset (APPLY only)
   - Step 6: Verify both present post-apply
+  - Step 6.5: Delete orphaned legacy rulesets (APPLY only)
   - Step 7: Write report + refresh agent cache

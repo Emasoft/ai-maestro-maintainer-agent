@@ -105,11 +105,11 @@ the Guardian-filed issue and Dependabot's own PR are linkable.
 
 **Detection.** Chain `workflow-protect-branch` SHOW. Compare the
 returned ruleset(s) against the previously-cached
-`branch-rules.json`. A delta is any change in `enforcement`,
-`required_status_checks`, `non_fast_forward`, `deletion`, the list
-of rule types, OR `bypass_actors` (stripping the admin bypass from
-the checks ruleset, or adding any bypass to the history ruleset,
-is security-relevant drift).
+`branch-rules.json`. A delta is any change in `enforcement`, the list
+of rule types (`deletion`, `non_fast_forward`, `required_linear_history`,
+`pull_request`, `required_status_checks`), OR `bypass_actors`
+(stripping the admin bypass from the pr-and-checks ruleset, or adding
+any bypass to the history ruleset, is security-relevant drift).
 
 **Baseline shape** (the canonical two-ruleset split — see
 `workflow-protect-branch`):
@@ -117,16 +117,18 @@ is security-relevant drift).
 ```json
 {
   "t3": {
-    "default-branch-no-force-no-delete": {
+    "baseline-history-protect": {
       "id": 16946501,
       "enforcement": "active",
-      "non_fast_forward": true,
       "deletion": true,
+      "non_fast_forward": true,
+      "required_linear_history": true,
       "bypass_actors": 0
     },
-    "default-branch-required-checks": {
+    "baseline-pr-and-checks": {
       "id": 17025842,
       "enforcement": "active",
+      "pull_request": true,
       "required_checks": ["validate", "workflow-security"],
       "admin_bypass": true
     }

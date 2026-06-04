@@ -1,5 +1,5 @@
 {
-  "name": "default-branch-no-force-no-delete",
+  "name": "baseline-history-protect",
   "target": "branch",
   "enforcement": "active",
   "conditions": {
@@ -9,8 +9,9 @@
     }
   },
   "rules": [
+    { "type": "deletion" },
     { "type": "non_fast_forward" },
-    { "type": "deletion" }
+    { "type": "required_linear_history" }
   ],
   "bypass_actors": []
 }

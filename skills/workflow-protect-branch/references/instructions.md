@@ -10,6 +10,7 @@
 - [Step 4: Discover both existing rulesets](#step-4-discover-both-existing-rulesets)
 - [Step 5: POST or PUT each ruleset (APPLY only)](#step-5-post-or-put-each-ruleset-apply-only)
 - [Step 6: Verify both present post-apply](#step-6-verify-both-present-post-apply)
+- [Step 6.5: Delete orphaned legacy rulesets (APPLY only)](#step-65-delete-orphaned-legacy-rulesets-apply-only)
 - [Step 7: Write report + refresh agent cache](#step-7-write-report--refresh-agent-cache)
 
 ## Why two rulesets, not one
@@ -28,8 +29,8 @@ SPLIT the protection into two rulesets on `~DEFAULT_BRANCH`:
 
 | Ruleset | rules | `bypass_actors` | Effect |
 |---|---|---|---|
-| `default-branch-no-force-no-delete` | `[non_fast_forward, deletion]` | `[]` | force-push + branch-deletion blocked for EVERYONE incl. admin. A normal fast-forward push is NOT a force-push, so it is not blocked. |
-| `default-branch-required-checks` | `[required_status_checks]` (strict, the CI job ids) | `[{actor_id:5, actor_type:"RepositoryRole", bypass_mode:"always"}]` | admin (publish.py) direct-push bypasses just the checks; outside-contributor PRs are still gated. |
+| `baseline-history-protect` | `[deletion, non_fast_forward, required_linear_history]` | `[]` | force-push, branch-deletion, and non-linear (merge-commit) history blocked for EVERYONE incl. admin. A normal fast-forward push is NOT a force-push and adds no merge commit, so it is not blocked. |
+| `baseline-pr-and-checks` | `[pull_request, required_status_checks]` (strict, the CI job ids) | `[{actor_id:5, actor_type:"RepositoryRole", bypass_mode:"always"}]` | admin (publish.py) direct-push bypasses BOTH the PR requirement and the checks; outside-contributor PRs are still gated by review + checks. |
 
 Result: publish.py's normal push succeeds (admin bypasses checks; a
 fast-forward isn't a force-push), force-push/deletion stay blocked for
@@ -86,7 +87,7 @@ shell-grep recipe produced the wrong context list.
 CHECKS_JSON="$(python3 -c "
 import yaml, json, glob
 checks=[]
-for f in sorted(glob.glob('.github/workflows/*.yml')):
+for f in sorted(glob.glob('.github/workflows/*.yml') + glob.glob('.github/workflows/*.yaml')):
     with open(f) as fh: wf = yaml.safe_load(fh) or {}
     for job_id in (wf.get('jobs') or {}):
         checks.append({'context': job_id})
@@ -121,15 +122,16 @@ interpolation in the shell.
 TMP_HIST="$(mktemp -t ruleset-hist.XXXXXX.json)"
 cat > "$TMP_HIST" <<JSON
 {
-  "name": "default-branch-no-force-no-delete",
+  "name": "baseline-history-protect",
   "target": "branch",
   "enforcement": "active",
   "conditions": {
     "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] }
   },
   "rules": [
+    { "type": "deletion" },
     { "type": "non_fast_forward" },
-    { "type": "deletion" }
+    { "type": "required_linear_history" }
   ],
   "bypass_actors": []
 }
@@ -142,13 +144,23 @@ JSON
 TMP_CHECKS="$(mktemp -t ruleset-checks.XXXXXX.json)"
 cat > "$TMP_CHECKS" <<JSON
 {
-  "name": "default-branch-required-checks",
+  "name": "baseline-pr-and-checks",
   "target": "branch",
   "enforcement": "active",
   "conditions": {
     "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] }
   },
   "rules": [
+    {
+      "type": "pull_request",
+      "parameters": {
+        "required_approving_review_count": 1,
+        "dismiss_stale_reviews_on_push": true,
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
+        "required_review_thread_resolution": true
+      }
+    },
     {
       "type": "required_status_checks",
       "parameters": {
@@ -169,21 +181,25 @@ declares as its default at apply time — portable across repos that
 use `main`, `master`, or a custom default.
 
 `strict_required_status_checks_policy: true` means a PR head must be
-up to date with the base branch (the default-merge checkbox). It does
-NOT block admin's direct push, because `bypass_actors` exempts the
-admin RepositoryRole from this entire (checks-only) ruleset.
+up to date with the base branch (the default-merge checkbox). Neither
+the `pull_request` rule nor the checks block admin's direct push,
+because `bypass_actors` exempts the admin RepositoryRole from this
+entire (PR-and-checks) ruleset — that is exactly what lets `publish.py`
+push straight to the default branch.
 
 The admin bypass lives ONLY on Body B. Body A's `bypass_actors` is
-`[]` so force-push and deletion stay blocked for everyone, including
-admin — see [Why two rulesets](#why-two-rulesets-not-one).
+`[]` so force-push, deletion, and non-linear (merge-commit) history
+stay blocked for everyone, including admin — a linear fast-forward push
+(what publish.py does) adds no merge commit, so it satisfies
+`required_linear_history`. See [Why two rulesets](#why-two-rulesets-not-one).
 
 ## Step 4: Discover both existing rulesets
 
 ```bash
 HIST_ID="$(gh api "repos/$REPO/rulesets" \
-  --jq '[.[] | select(.name=="default-branch-no-force-no-delete")] | .[0].id // empty')"
+  --jq '[.[] | select(.name=="baseline-history-protect")] | .[0].id // empty')"
 CHECKS_ID="$(gh api "repos/$REPO/rulesets" \
-  --jq '[.[] | select(.name=="default-branch-required-checks")] | .[0].id // empty')"
+  --jq '[.[] | select(.name=="baseline-pr-and-checks")] | .[0].id // empty')"
 ```
 
 `// empty` yields an empty string (not `null`) when a name has no
@@ -228,7 +244,7 @@ two rulesets are independent.
 # Use the REST API directly — `gh ruleset list` requires gh ≥ 2.44 and is
 # absent on older hosts. The REST endpoint has been stable since gh 2.4.
 NAMES="$(gh api "repos/$REPO/rulesets" --jq '.[].name')"
-for want in default-branch-no-force-no-delete default-branch-required-checks; do
+for want in baseline-history-protect baseline-pr-and-checks; do
   printf '%s\n' "$NAMES" | grep -qx "$want" || {
     echo "VERIFY FAIL: ruleset '$want' not present post-apply" >&2
     exit 65
@@ -250,7 +266,57 @@ HIST_BYPASS="$(gh api "repos/$REPO/rulesets/$HIST_NEW_ID" \
   echo "VERIFY FAIL: history ruleset has $HIST_BYPASS bypass actor(s), want 0" >&2
   exit 66
 }
+
+# Confirm the ratified rule set actually landed — a partial apply can
+# leave a ruleset present-by-name but missing required_linear_history or
+# the pull_request rule, silently weakening the baseline.
+HIST_RULES="$(gh api "repos/$REPO/rulesets/$HIST_NEW_ID" \
+  --jq '[.rules[].type] | sort | join(",")')"
+CHECKS_RULES="$(gh api "repos/$REPO/rulesets/$CHECKS_NEW_ID" \
+  --jq '[.rules[].type] | sort | join(",")')"
+[ "$HIST_RULES" = "deletion,non_fast_forward,required_linear_history" ] || {
+  echo "VERIFY FAIL: history rules = [$HIST_RULES], want deletion,non_fast_forward,required_linear_history" >&2
+  exit 67
+}
+[ "$CHECKS_RULES" = "pull_request,required_status_checks" ] || {
+  echo "VERIFY FAIL: pr-and-checks rules = [$CHECKS_RULES], want pull_request,required_status_checks" >&2
+  exit 67
+}
 ```
+
+## Step 6.5: Delete orphaned legacy rulesets (APPLY only)
+
+Re-applying the ratified `baseline-*` pair supersedes the
+pre-ratification rulesets. Once BOTH new rulesets verify present and
+correctly-shaped (Step 6), delete any orphaned legacy ruleset BY NAME —
+never a blanket "delete every ruleset", only the documented superseded
+names. Order matters: new applied + verified FIRST, legacy removed
+SECOND, so a crash in between still leaves the branch protected by the
+new pair.
+
+```bash
+DELETED_LEGACY=()
+for name in default-branch-no-force-no-delete \
+            default-branch-required-checks \
+            default-branch-ruleset \
+            janitor-baseline; do
+  OLD_ID="$(gh api "repos/$REPO/rulesets" \
+    --jq "[.[] | select(.name==\"$name\")] | .[0].id // empty")"
+  [ -z "$OLD_ID" ] && continue
+  gh api -X DELETE "repos/$REPO/rulesets/$OLD_ID" \
+    && DELETED_LEGACY+=("$name") \
+    && echo "deleted orphaned legacy ruleset: $name ($OLD_ID)"
+done
+```
+
+The four names are the full superseded set agreed on issue #7 /
+janitor #14: the maintainer's old pair
+(`default-branch-no-force-no-delete`, `default-branch-required-checks`),
+the even-older single `default-branch-ruleset`, and the janitor's old
+single `janitor-baseline`. Deleting only these named rulesets — and only
+after the new pair verifies — is the ratified convergence behavior, and
+is EXEMPT (apply-baseline-as-is) per the governance exempt-operations
+list. SHOW mode never reaches this step.
 
 ## Step 7: Write report + refresh agent cache
 
@@ -291,20 +357,20 @@ schema change. The two relevant entries look like:
 [
   {
     "id": 16946501,
-    "name": "default-branch-no-force-no-delete",
+    "name": "baseline-history-protect",
     "target": "branch",
     "enforcement": "active",
     "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
-    "rules": [{"type": "non_fast_forward"}, {"type": "deletion"}],
+    "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}, {"type": "required_linear_history"}],
     "bypass_actors": []
   },
   {
     "id": 17025842,
-    "name": "default-branch-required-checks",
+    "name": "baseline-pr-and-checks",
     "target": "branch",
     "enforcement": "active",
     "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
-    "rules": [{"type": "required_status_checks", "parameters": {...}}],
+    "rules": [{"type": "pull_request", "parameters": {...}}, {"type": "required_status_checks", "parameters": {...}}],
     "bypass_actors": [{"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"}]
   }
 ]
@@ -318,6 +384,7 @@ Return the APPLY disposition (both rulesets):
   "history_ruleset": {"id": 16946501, "action": "updated"},
   "checks_ruleset": {"id": 17025842, "action": "updated"},
   "required_checks": ["validate", "workflow-security"],
+  "deleted_legacy": ["default-branch-no-force-no-delete", "default-branch-required-checks"],
   "report": "/path/to/<ts>-ruleset.json",
   "cache_path": "/Users/.../branch-rules.json"
 }
@@ -330,12 +397,14 @@ For SHOW mode the disposition lists both:
   "mode": "show",
   "ruleset_count": 2,
   "rulesets": {
-    "default-branch-no-force-no-delete": {
+    "baseline-history-protect": {
       "id": 16946501, "enforcement": "active",
-      "non_fast_forward": true, "deletion": true, "bypass_actors": 0
+      "deletion": true, "non_fast_forward": true,
+      "required_linear_history": true, "bypass_actors": 0
     },
-    "default-branch-required-checks": {
+    "baseline-pr-and-checks": {
       "id": 17025842, "enforcement": "active",
+      "pull_request": true,
       "required_checks": ["validate", "workflow-security"],
       "admin_bypass": true
     }
@@ -344,11 +413,10 @@ For SHOW mode the disposition lists both:
 }
 ```
 
-A repo that pre-dates this split may still carry a legacy single
-`default-branch-ruleset`. APPLY does NOT delete it automatically
-(deletion is out of scope per the Scope section) — surface it in the
-disposition as `legacy_ruleset_present: true` so the caller can
-remove it manually once the two new rulesets verify.
+APPLY removes the superseded legacy rulesets automatically in Step 6.5
+and reports them in the disposition's `deleted_legacy` array (empty when
+the repo was already clean). SHOW mode never deletes — it only reads and
+caches.
 
 Cleanup (APPLY only):
 
