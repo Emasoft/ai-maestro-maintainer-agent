@@ -3,7 +3,7 @@ trdd-id: f51d24c6-d541-4e45-97b4-ebea95904853
 title: Migrate maintainer branch-ruleset source to the ratified baseline-* pair
 column: testing
 created: 2026-06-04T20:01:34+0200
-updated: 2026-06-04T22:56:06+0200
+updated: 2026-06-04T23:05:10+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -132,6 +132,30 @@ janitor on #14):** `workflow-scan`, `workflow-pin-actions`,
 - JSON templates parse (`python3 -m json.tool`).
 - `uvx zizmor` unaffected (no workflow files touched).
 - CPV `--strict` CRITICAL=0 MAJOR=0.
+
+## Shared follow-ups (post-SHA-exchange)
+
+Two refinements surfaced during cross-plugin review on janitor #14,
+agreed by both plugins + MANAGER to land byte-identical AFTER the SHA
+exchange (not before — avoids diverging mid-reconcile):
+
+1. **Job-level `if: github.event_name == 'push'` filter.** The PR-trigger
+   filter (commit `cde65eb`) checks the WORKFLOW's `on:`, but a job inside
+   a PR-triggered workflow can itself be gated push-only via a job-level
+   `if: github.event_name == 'push'`. Such a job passes the workflow-level
+   filter yet never reports on a PR → still deadlocks a non-admin PR.
+   Refine the detection to also skip job-level push-only guards.
+
+2. **gh-stub tightening to real-API semantics.** Both the PATCH-vs-PUT
+   and push-only-context bugs stayed latent because the test GitHub-API
+   stub answers any method / any path with success. Tighten both plugins'
+   stubs: method→status (`PATCH /rulesets/{id}`→404, `PUT`→200,
+   `POST /rulesets`→201), unknown-path→404, and a check-runs fixture where
+   a push-only job never reports on a `pull_request` event — so the whole
+   class is caught in-suite, not on live GitHub.
+
+Both are tracked on janitor #14; land them paired so the two plugins stay
+byte-identical.
 
 ## Approval log
 
