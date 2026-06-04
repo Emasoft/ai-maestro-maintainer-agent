@@ -79,7 +79,7 @@ Manual scan:
 ```
 User: "scan workflows for security issues"
 → uvx zizmor … --format=json .github/workflows/
-→ actionlint .github/workflows/*.yml
+→ actionlint .github/workflows/*.y*ml
 → Write report to reports/workflow-scan/<ts>-scan.md
 → Return: {exit_code: 14, highest_severity: "high", total: 12, …}
 ```

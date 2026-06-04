@@ -78,7 +78,7 @@ fix applies, file a tracking issue with the rule ID + report link.
 **Detection.** `gh api repos/$REPO/dependabot/alerts --jq '[.[] |
 select(.state=="open" and .dependency.package.ecosystem=="actions")]
 | length'`. Falls back to checking the latest release SHA for every
-SHA-pinned action in `.github/workflows/*.yml` if Dependabot is not
+SHA-pinned action in `.github/workflows/*.y*ml` if Dependabot is not
 enabled.
 
 **Baseline shape:**

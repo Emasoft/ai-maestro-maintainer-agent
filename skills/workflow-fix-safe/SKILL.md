@@ -37,7 +37,7 @@ branch. Pushing is the caller's responsibility.
 1. Pre-scan baseline via the **workflow-scan** skill.
 2. Run `uvx zizmor --gh-token "$(gh auth token)" --fix=safe
    .github/workflows/`.
-3. Layer idempotent hardening on each `.github/workflows/*.yml`:
+3. Layer idempotent hardening on each `.github/workflows/*.y*ml`:
    top-level `permissions: contents: read`, `concurrency:`,
    per-job `timeout-minutes:`, per-checkout
    `persist-credentials: false`, plus a jq `--arg` trap audit
@@ -83,7 +83,7 @@ User: "fix the safe zizmor findings"
 ## Scope
 
 ONLY applies SAFE zizmor auto-fixes plus the documented idempotent
-hardening edits to `.github/workflows/*.yml`. Does NOT:
+hardening edits to `.github/workflows/*.y*ml`. Does NOT:
 
 - Pass `--fix=all` or `--fix=unsafe-only` — those need human review.
 - Force-push (R19.7) or use `--no-verify`.

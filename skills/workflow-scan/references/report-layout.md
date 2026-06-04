@@ -65,7 +65,7 @@ within severity. Each entry is anchored:
 
 ```bash
 uvx zizmor --gh-token "$(gh auth token)" .github/workflows/
-actionlint .github/workflows/*.yml
+actionlint .github/workflows/*.y*ml
 ```
 
 ## Suppress a finding

@@ -45,7 +45,7 @@ Some findings will be "held back" by safe mode (they need
 
 ## Step 4: Hardening edits
 
-For each `.github/workflows/*.yml`, add or update via Read+Edit
+For each `.github/workflows/*.y*ml`, add or update via Read+Edit
 (yaml-aware, line-precise — never sed/awk):
 
 ### Top-level permissions block

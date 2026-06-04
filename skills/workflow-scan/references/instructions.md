@@ -48,7 +48,8 @@ Exit codes (zizmor v1.x contract):
 ALINT_LOG="$DIR/$TS-actionlint.log"
 : > "$ALINT_LOG"
 ALINT_COUNT=0
-for f in .github/workflows/*.yml; do
+for f in .github/workflows/*.y*ml; do
+  [ -e "$f" ] || continue
   actionlint "$f" >> "$ALINT_LOG" 2>&1 || ALINT_COUNT=$((ALINT_COUNT + 1))
 done
 ```

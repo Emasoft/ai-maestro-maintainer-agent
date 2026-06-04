@@ -54,7 +54,7 @@ blocked for all.
 
 1. Run SHOW first to capture the pre-state.
 2. Auto-detect status check names by YAML-parsing every
-   `.github/workflows/*.yml` and reading the `jobs:` keys. Never
+   `.github/workflows/*.y*ml` and reading the `jobs:` keys. Never
    grep+awk — shell heuristics over-match and the POST 422s with
    "Expected context to be present".
 3. Build BOTH ruleset JSON bodies in tmpfiles (no inline `${{ }}`):

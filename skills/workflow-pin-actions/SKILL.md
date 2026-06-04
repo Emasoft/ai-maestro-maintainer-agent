@@ -35,7 +35,7 @@ current branch. Never pushes. Never bumps majors.
 ## Instructions
 
 1. Discover unpinned references with a tight regex over
-   `.github/workflows/*.yml`. Skip `./`, `../`, and `docker://`
+   `.github/workflows/*.y*ml`. Skip `./`, `../`, and `docker://`
    refs.
 2. For each unique `name@ref`, resolve the commit SHA via
    `gh api repos/{owner}/{repo}/commits/{ref} --jq .sha` and the
@@ -77,7 +77,7 @@ User: "SHA-pin every action in the workflows"
 → Resolve each via gh api commits/v4 --jq .sha
 → Rewrite inline with 40-char SHA + semver comment
 → workflow-scan post-sweep — zero unpinned-uses findings
-→ git add .github/workflows/*.yml
+→ git add .github/workflows/*.y*ml
 → git commit -m "chore(ci): SHA-pin third-party actions"
 → Return: {pinned: 5, skipped_local: 0, commit: "abc1234", …}
 ```

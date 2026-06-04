@@ -93,7 +93,7 @@ Parse the parsable output: `path:line:col: [level] message (rule)`.
 - Style rules (`trailing-spaces`, `new-line-at-end-of-file`) → LOW
   `style-nit` (the `fix-style` mode rewrites these).
 
-SKIP `.github/workflows/*.yml` here — those are linted by
+SKIP `.github/workflows/*.y*ml` here — those are linted by
 `actionlint` inside `workflow-scan`, and re-linting with yamllint
 would double-report.
 
