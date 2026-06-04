@@ -299,7 +299,9 @@ DELETED_LEGACY=()
 for name in default-branch-no-force-no-delete \
             default-branch-required-checks \
             default-branch-ruleset \
-            janitor-baseline; do
+            janitor-baseline \
+            main-hardening \
+            main-ci-gate; do
   OLD_ID="$(gh api "repos/$REPO/rulesets" \
     --jq "[.[] | select(.name==\"$name\")] | .[0].id // empty")"
   [ -z "$OLD_ID" ] && continue
@@ -309,14 +311,19 @@ for name in default-branch-no-force-no-delete \
 done
 ```
 
-The four names are the full superseded set agreed on issue #7 /
-janitor #14: the maintainer's old pair
-(`default-branch-no-force-no-delete`, `default-branch-required-checks`),
-the even-older single `default-branch-ruleset`, and the janitor's old
-single `janitor-baseline`. Deleting only these named rulesets — and only
-after the new pair verifies — is the ratified convergence behavior, and
-is EXEMPT (apply-baseline-as-is) per the governance exempt-operations
-list. SHOW mode never reaches this step.
+The six names are the full pre-ratification superseded set agreed on
+issue #7 / janitor #14 (the union across both plugins): the maintainer's
+old pair (`default-branch-no-force-no-delete`,
+`default-branch-required-checks`), the even-older single
+`default-branch-ruleset`, and the janitor's lineage — `janitor-baseline`
+(v0.5.x) plus its v0.6.x split pair `main-hardening` / `main-ci-gate`.
+Including the janitor's names matters because this agent guards
+downstream repos the janitor may have hardened earlier; cleaning the
+union lets whichever plugin applies last fully converge the repo to the
+`baseline-*` pair. Deleting only these named rulesets — and only after
+the new pair verifies — is the ratified convergence behavior, and is
+EXEMPT (apply-baseline-as-is) per the governance exempt-operations list.
+SHOW mode never reaches this step.
 
 ## Step 7: Write report + refresh agent cache
 
