@@ -45,6 +45,15 @@ bypassed ruleset — verified live 2026-05-29 on
 `Emasoft/ai-maestro-maintainer-agent` (the v1.3.1 publish that surfaced
 this).
 
+> **Emergency history scrub.** Because `baseline-history-protect` is
+> `bypass_actors: []` on `non_fast_forward`, NOBODY — admin included —
+> can force-push to rewrite the default branch. Scrubbing a leaked
+> secret out of history is therefore reachable ONLY out-of-band by the
+> repo owner: Settings → Rules → disable the ruleset, `git push
+> --force-with-lease` the scrubbed history, then re-enable. Never via a
+> push while the ruleset is active — the protection that blocks an
+> attacker's force-push blocks yours too. This is by design.
+
 ## Step 0: Decide mode (SHOW vs APPLY)
 
 Match the user's trigger phrase:
@@ -86,30 +95,49 @@ shell-grep recipe produced the wrong context list.
 ```bash
 CHECKS_JSON="$(python3 -c "
 import yaml, json, glob
+
+def triggers(wf):
+    # GitHub's workflow 'on:' key parses as the YAML 1.1 boolean True under
+    # PyYAML, so look it up under BOTH True and the literal 'on'.
+    on = wf.get(True, wf.get('on'))
+    if isinstance(on, str):  return {on}
+    if isinstance(on, list): return set(on)
+    if isinstance(on, dict): return set(on.keys())
+    return set()
+
 checks=[]
 for f in sorted(glob.glob('.github/workflows/*.yml') + glob.glob('.github/workflows/*.yaml')):
     with open(f) as fh: wf = yaml.safe_load(fh) or {}
+    # Only jobs from PR-triggered workflows can serve as required PR checks. A
+    # push-only job (release, notify, tag) never reports on a PR, so requiring it
+    # would deadlock every non-admin PR (the check stays pending forever).
+    if not ({'pull_request', 'pull_request_target'} & triggers(wf)):
+        continue
     for job_id in (wf.get('jobs') or {}):
         checks.append({'context': job_id})
 print(json.dumps(checks))
 ")"
 ```
 
-For this plugin that yields the four actual job ids:
+For this plugin that yields the two PR-applicable job ids — the
+`notify` / `validate-tag` jobs live in push-only workflows
+(`notify-marketplace.yml` on `push`, `release.yml` on tag `push`), so
+the filter correctly excludes them:
 
 ```json
 [
-  { "context": "notify" },
-  { "context": "validate-tag" },
   { "context": "validate" },
   { "context": "workflow-security" }
 ]
 ```
 
-If a workflow declares jobs that are NOT meant to be required checks
-(e.g. an opt-in deployment job, a chronologically-later release job),
-filter `CHECKS_JSON` post-hoc — never silently drop them by hand-
-maintaining a separate list.
+The `on: pull_request` filter is what makes the right set automatic:
+push-only workflows (release, tag, notify) are excluded by construction,
+so a `release` / `notify` job can never land in `required_status_checks`
+and deadlock a contributor PR on a multi-author repo (the check never
+reports on a PR → the PR can never go green). If a PR-triggered workflow
+ALSO declares a job that genuinely should not gate merges, filter
+`CHECKS_JSON` post-hoc — never hand-maintain a separate inclusion list.
 
 ## Step 3: Build the two ruleset JSON bodies (APPLY only)
 
