@@ -249,7 +249,11 @@ apply_ruleset() {  # $1=existing-id (may be empty)  $2=tmpfile  → echoes "id<T
     resp="$(gh api -X POST "repos/$REPO/rulesets" --input "$body")"
     action="created"
   else
-    # If PUT 404s (ruleset deleted between our list and our write), retry as POST.
+    # GitHub's "update a ruleset" is PUT, NOT PATCH — a PATCH 404s on real
+    # GitHub (verified cross-plugin on janitor #14; it stays latent under a
+    # gh-stub that answers any method). Keep this PUT.
+    # If the PUT itself 404s (ruleset deleted between our list and our write),
+    # retry as POST.
     resp="$(gh api -X PUT "repos/$REPO/rulesets/$id" --input "$body" 2>/dev/null)" \
       && action="updated" \
       || { resp="$(gh api -X POST "repos/$REPO/rulesets" --input "$body")"; action="created"; }
