@@ -3,7 +3,7 @@ trdd-id: f51d24c6-d541-4e45-97b4-ebea95904853
 title: Migrate maintainer branch-ruleset source to the ratified baseline-* pair
 column: testing
 created: 2026-06-04T20:01:34+0200
-updated: 2026-06-06T00:06:49+0200
+updated: 2026-06-06T00:12:50+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -161,31 +161,43 @@ byte-identical.
    Surfaced by the 2026-06-05 security audit (no ruleset protects `v*`
    release tags → a moved/deleted published tag re-points installers at
    arbitrary code; a post-hoc CI gate can't catch a tag moved onto a
-   commit that itself passes CI). Agreed byte-identical with the janitor
-   on #7 (janitor endorsed 2026-06-05T22:03Z; maintainer accepted the
-   `v*` scoping 2026-06-05T22:05Z). Ratified shape:
+   commit that itself passes CI). **Tri-party converged byte-identical**
+   (maintainer #7 + janitor + MANAGER on janitor #14, 2026-06-05). Spec:
    ```
    name: baseline-tag-protect
    target: tag
    enforcement: active
-   conditions.ref_name.include: ["refs/tags/v*"]   # lock exact spelling at apply time via readback
+   conditions.ref_name.include: ["refs/tags/v*.*.*"]  # lock exact spelling at apply time via readback
    conditions.ref_name.exclude: []
    bypass_actors: []
-   rules: [deletion, non_fast_forward]
+   rules: [deletion, update]
    ```
-   Scoped to `refs/tags/v*` (NOT `~ALL`) deliberately: the invariant is
-   *immutable published version tags*; `~ALL` would freeze intentionally-
-   moving pointers (`latest`/`nightly`) for zero security gain. No bypass
-   actor needed — `[deletion, non_fast_forward]` blocks delete+move but
-   NOT new-tag creation, so publish.py still cuts each `vX.Y.Z`. Open
-   detail: the exact GitHub-accepted `ref_name.include` literal for a
-   `target: tag` ruleset — verify via readback on first apply and pin
-   what GitHub echoes (same discipline as `actor_id:5`). **Tier-2** (it
-   EXTENDS the ratified baseline) → awaiting MANAGER co-ratify; both
-   plugins already endorse it. Maintainer lands it as a 3rd payload in
-   `workflow-protect-branch` (+ orphan-cleanup name awareness) in the
-   same publish that clears CPV-G3; janitor mirrors it in
-   `branch_protection_lib.py`. Janitor TRDD: `TRDD-8546a187`.
+   **Rule = `[deletion, update]` (NOT `non_fast_forward`).** `update`
+   ("restrict updates") blocks EVERY move of an existing tag; bare
+   `non_fast_forward` only blocks the non-fast-forward path, so a tag
+   *fast-forward-moved* onto a descendant commit (append a malicious
+   commit on top of the tagged one, move the tag forward) would slip
+   through — `update` closes that edge and is the complete immutability
+   statement. `non_fast_forward` is redundant under `update`. Creation
+   stays unrestricted → publish.py still cuts each `vX.Y.Z`, no bypass
+   actor needed.
+   **Scope = `refs/tags/v*.*.*`** (full-semver release tags only): the
+   invariant is *immutable published version tags*; `~ALL`/`v*` would
+   freeze a future movable alias (`v1`/`latest`/`nightly`) for zero gain.
+   Maintainer fact: `git tag -l` here = only `v1.0.1 … v1.3.1`, zero
+   movable aliases (janitor same) — nothing in flight conflicts.
+   **Open detail:** the exact GitHub-accepted `ref_name.include` literal
+   for a `target: tag` ruleset — verify via readback on first apply and
+   pin what GitHub echoes (same discipline as `actor_id:5`). Both
+   verify-blocks assert `rules == [deletion, update]` (echoed form) +
+   `bypass_actors == []`.
+   **Governance = Tier-3 / USER** (MANAGER escalated — touches
+   published-release integrity). All three plugins endorse the same
+   byte-identical spec; awaiting the USER's ratify. Maintainer lands it
+   as a 3rd payload in `workflow-protect-branch` (+ orphan-cleanup name
+   awareness) folded into the same CPV-G3-cleared publish so it ships
+   WITH the migration; janitor mirrors it in `branch_protection_lib.py`.
+   Janitor TRDD: `TRDD-8546a187`.
 
 ## Audit-discovered maintainer-internal hardening (no baseline change)
 
