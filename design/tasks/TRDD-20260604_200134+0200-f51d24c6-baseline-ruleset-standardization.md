@@ -3,7 +3,7 @@ trdd-id: f51d24c6-d541-4e45-97b4-ebea95904853
 title: Migrate maintainer branch-ruleset source to the ratified baseline-* pair
 column: testing
 created: 2026-06-04T20:01:34+0200
-updated: 2026-06-04T23:05:10+0200
+updated: 2026-06-06T00:06:49+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -156,6 +156,63 @@ exchange (not before — avoids diverging mid-reconcile):
 
 Both are tracked on janitor #14; land them paired so the two plugins stay
 byte-identical.
+
+3. **`baseline-tag-protect` — third ratified ruleset (TAG protection).**
+   Surfaced by the 2026-06-05 security audit (no ruleset protects `v*`
+   release tags → a moved/deleted published tag re-points installers at
+   arbitrary code; a post-hoc CI gate can't catch a tag moved onto a
+   commit that itself passes CI). Agreed byte-identical with the janitor
+   on #7 (janitor endorsed 2026-06-05T22:03Z; maintainer accepted the
+   `v*` scoping 2026-06-05T22:05Z). Ratified shape:
+   ```
+   name: baseline-tag-protect
+   target: tag
+   enforcement: active
+   conditions.ref_name.include: ["refs/tags/v*"]   # lock exact spelling at apply time via readback
+   conditions.ref_name.exclude: []
+   bypass_actors: []
+   rules: [deletion, non_fast_forward]
+   ```
+   Scoped to `refs/tags/v*` (NOT `~ALL`) deliberately: the invariant is
+   *immutable published version tags*; `~ALL` would freeze intentionally-
+   moving pointers (`latest`/`nightly`) for zero security gain. No bypass
+   actor needed — `[deletion, non_fast_forward]` blocks delete+move but
+   NOT new-tag creation, so publish.py still cuts each `vX.Y.Z`. Open
+   detail: the exact GitHub-accepted `ref_name.include` literal for a
+   `target: tag` ruleset — verify via readback on first apply and pin
+   what GitHub echoes (same discipline as `actor_id:5`). **Tier-2** (it
+   EXTENDS the ratified baseline) → awaiting MANAGER co-ratify; both
+   plugins already endorse it. Maintainer lands it as a 3rd payload in
+   `workflow-protect-branch` (+ orphan-cleanup name awareness) in the
+   same publish that clears CPV-G3; janitor mirrors it in
+   `branch_protection_lib.py`. Janitor TRDD: `TRDD-8546a187`.
+
+## Audit-discovered maintainer-internal hardening (no baseline change)
+
+Found by the 2026-06-05 security audit (full report:
+`reports/workflow-protect-branch/20260605_*-baseline-ruleset-security-audit.md`).
+All Tier-0 (no ratified-baseline change) → land via publish.py after the
+CPV-G3 unblock; no cross-plugin re-ratification needed:
+
+- **C2** bootstrap `ruleset-required-checks.json` literal-apply footgun —
+  hardcoded `ci` context + the raw `gh api --input` follow-up deadlock
+  any PR on a repo whose CI job ≠ `ci`. Blank the template's checks
+  array; drop the raw-apply follow-up (protect-branch auto-detects).
+- **C3** Step-6 verify never asserts `required_status_checks` contexts
+  are non-empty → an empty auto-detection yields a hollow checks rule
+  that still "passes". Guard Step-2 (`[]`→warn/abort) + Step-6 readback.
+- **C4** bypass verify checks actor_TYPE not actor_ID → a `Maintain`
+  (id 4) bypass passes the `RepositoryRole` assertion. Pin `actor_id==5`.
+- **C5** no retry loop on `gh api` net calls; orphan-delete swallows
+  DELETE failures silently. Wrap mutating calls in the retry loop.
+- **C6** Step-2 `yaml.safe_load` has no try/except → one malformed
+  workflow aborts the whole apply. Skip-with-warning per file.
+- **D1** guardian T3 diffs branch rules only vs the session-start
+  snapshot → a repo already off-baseline at startup is never flagged.
+  Also compare the snapshot against the ratified spec.
+- **D2** approval-gate `approve-protected-edit` is permanent-per-issue,
+  not bound to a diff/SHA → replayable within an issue. Bind approval to
+  a planned-diff fingerprint.
 
 ## Approval log
 
