@@ -3,7 +3,7 @@ trdd-id: f51d24c6-d541-4e45-97b4-ebea95904853
 title: Migrate maintainer branch-ruleset source to the ratified baseline-* pair
 column: testing
 created: 2026-06-04T20:01:34+0200
-updated: 2026-06-06T00:12:50+0200
+updated: 2026-06-06T00:16:46+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -232,3 +232,12 @@ CPV-G3 unblock; no cross-plugin re-ratification needed:
   peers agreed (janitor #14 converged byte-identical; manager #7 approved
   Path 1). Applying the ratified baseline as-is is EXEMPT (manager-approval
   §F). No deviation from the ratified spec.
+- 2026-06-05 — `baseline-tag-protect` (follow-up #3): tri-party consensus
+  CLOSED. All three plugins hold the byte-identical spec
+  `target: tag` / `refs/tags/v*.*.*` / `[deletion, update]` / no bypass.
+  MANAGER self-corrected (`update` > `non_fast_forward`, owning the ff-move
+  edge), confirmed on janitor #14, and escalated to USER for Tier-3 ratify
+  with recommendation = APPROVE. Maintainer relayed the closed spec on #7.
+  **Status: awaiting USER ratify** — the only remaining gate for the tag
+  ruleset; lands byte-identical in the same CPV-G3-cleared publish as the
+  pair. Nothing else open between the three plugins.
