@@ -3,7 +3,7 @@ trdd-id: f51d24c6-d541-4e45-97b4-ebea95904853
 title: Migrate maintainer branch-ruleset source to the ratified baseline-* pair
 column: testing
 created: 2026-06-04T20:01:34+0200
-updated: 2026-06-06T00:16:46+0200
+updated: 2026-06-06T02:40:28+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -27,7 +27,7 @@ impacts: [ci-pipeline]
 attempts: 1
 last-test-result: pass
 last-test-at: 2026-06-04T20:24:03+0200
-implementation-commits: [c8fe5ce, 089c979, 31fe57f, cde65eb, 138dfdd]
+implementation-commits: [c8fe5ce, 089c979, 31fe57f, cde65eb, 138dfdd, b71a1ff]
 external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/7", "github.com/Emasoft/ai-maestro-janitor/issues/14"]
 ---
 
@@ -191,13 +191,17 @@ byte-identical.
    pin what GitHub echoes (same discipline as `actor_id:5`). Both
    verify-blocks assert `rules == [deletion, update]` (echoed form) +
    `bypass_actors == []`.
-   **Governance = Tier-3 / USER** (MANAGER escalated — touches
-   published-release integrity). All three plugins endorse the same
-   byte-identical spec; awaiting the USER's ratify. Maintainer lands it
-   as a 3rd payload in `workflow-protect-branch` (+ orphan-cleanup name
-   awareness) folded into the same CPV-G3-cleared publish so it ships
-   WITH the migration; janitor mirrors it in `branch_protection_lib.py`.
-   Janitor TRDD: `TRDD-8546a187`.
+   **Governance = Tier-3 / USER → RATIFIED 2026-06-06** (USER approved
+   directly + MANAGER relayed on #7/#14, recommendation=approve).
+   **IMPLEMENTED in maintainer source — commit `b71a1ff`** (the 3rd
+   payload in `workflow-protect-branch` instructions+SKILL: Body C build
+   / discover / apply / verify / disposition / Why-subsection / TOC;
+   `workflow-bootstrap` ruleset-tag-protect.json template + stash +
+   post-merge prose; guardian T3 baseline snapshot; command). 467 tests
+   pass; CPV `--strict` clean on all touched files. Still ships in the
+   same CPV-G3-cleared publish as the pair (not yet pushed). Janitor
+   mirrors it in `branch_protection_lib.py` (TRDD-8546a187); first-apply
+   readback-pins the `ref_name.include` literal, byte-identical.
 
 ## Audit-discovered maintainer-internal hardening (no baseline change)
 
@@ -206,10 +210,14 @@ Found by the 2026-06-05 security audit (full report:
 All Tier-0 (no ratified-baseline change) → land via publish.py after the
 CPV-G3 unblock; no cross-plugin re-ratification needed:
 
-- **C2** bootstrap `ruleset-required-checks.json` literal-apply footgun —
-  hardcoded `ci` context + the raw `gh api --input` follow-up deadlock
-  any PR on a repo whose CI job ≠ `ci`. Blank the template's checks
-  array; drop the raw-apply follow-up (protect-branch auto-detects).
+- **C2** ✅ ADDRESSED in `b71a1ff` — bootstrap literal-apply footgun:
+  the raw `gh api --input` follow-up was replaced with skill-only
+  guidance (the post-merge prose now explicitly warns the
+  required-checks template's `ci` context is a PLACEHOLDER and a
+  verbatim POST deadlocks PRs on repos whose CI job ≠ `ci`; the skill
+  rebuilds the context list by auto-detect). Template's `ci` left as a
+  documented placeholder rather than blanked, since the skill always
+  overrides it — net effect: no one is told to apply it raw anymore.
 - **C3** Step-6 verify never asserts `required_status_checks` contexts
   are non-empty → an empty auto-detection yields a hollow checks rule
   that still "passes". Guard Step-2 (`[]`→warn/abort) + Step-6 readback.
