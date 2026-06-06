@@ -3,7 +3,7 @@ trdd-id: f51d24c6-d541-4e45-97b4-ebea95904853
 title: Migrate maintainer branch-ruleset source to the ratified baseline-* pair
 column: testing
 created: 2026-06-04T20:01:34+0200
-updated: 2026-06-06T02:40:28+0200
+updated: 2026-06-06T02:41:55+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -35,20 +35,34 @@ external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/7", "gith
 
 ## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative) — 2026-06-04
 
-**Current state:** Migration IMPLEMENTED + locally verified on branch
-`feat/baseline-ruleset-standardization` (2 commits: `c8fe5ce` core
-baseline-* rename + `required_linear_history` + `pull_request` +
-orphan-delete; `089c979` `.yml`/`.yaml` glob sweep). 467 tests pass;
-CPV `--strict` reports ZERO findings in the touched files (the 18
-remaining are pre-existing upstream FPs, CPV #68). Source now emits the
-ratified `baseline-history-protect` + `baseline-pr-and-checks` pair.
-NOT yet pushed; live repo rulesets NOT yet re-applied.
+**Current state (2026-06-06):** The full THREE-ruleset baseline is
+IMPLEMENTED + verified on branch `feat/baseline-ruleset-standardization`.
+The pair migration (`c8fe5ce`, `089c979`) PLUS `baseline-tag-protect`
+(USER-ratified Tier-3; commit `b71a1ff` — Body C build/apply/verify in
+workflow-protect-branch, the ruleset-tag-protect.json template, bootstrap
+stash+prose, guardian T3, command; audit-finding C2 folded in). 467 tests
+pass; CPV `--strict` is CLEAN on every touched file. NOT yet pushed; live
+repo rulesets NOT yet re-applied.
 
-**NEXT ACTION (awaiting repo-owner go):** push the branch + open the PR
-against `main`; post the two commit SHAs on issue #7 for the manager to
-verify. After merge, optionally re-apply the live rulesets on this repo
-via `workflow-protect-branch` APPLY (which now also orphan-deletes the
-old `default-branch-*` pair).
+**THE ONE BLOCKER — CPV-G3 (publish gate), pre-existing + partly
+upstream:** publish.py requires CPV `--strict` exit 0, but the plugin has
+pre-existing findings in OTHER files: MINOR=4 (sentinel Pyright nits —
+OURS, fixable: `scripts/sentinel/autofix.py:648`,
+`scripts/sentinel/rules/missing_persist_creds.py:54`,
+`scripts/sentinel/rules/unscoped_app_token.py:40`,
+`scripts/sentinel_scan.py:113`) + NIT=14 (CPV #68 supply-chain FPs in
+classification-paths / install-recipes / protocols docs — UPSTREAM, do
+NOT edit our docs). `--strict` blocks on exit 1-4, so fixing Pyright
+alone won't clear it; the NIT FPs also block → need a CPV
+suppression/allowlist or a newer CPV release.
+
+**NEXT ACTIONS:** (a) remaining Tier-0 audit hardening (C3-C6, D1-D2) is
+more source work, same gate; (b) CPV-G3 unblock — fix the 4 Pyright nits
++ find a way past the #68 NIT FPs (CPV suppression / newer-CPV /
+upstream). Once CPV-G3 clears: run publish.py (ships pair + tag-protect
+together), re-apply live rulesets via `workflow-protect-branch` APPLY,
+post SHAs on #7; janitor mirrors byte-identical + first-apply
+readback-pins the tag `ref_name.include`.
 
 **Load-bearing facts:**
 - Ratified baseline agreed BYTE-IDENTICAL by both plugins (manager #7,
@@ -69,6 +83,9 @@ old `default-branch-*` pair).
   `[deletion, non_fast_forward, required_linear_history]`.
 - ✗ "checks ruleset has only `required_status_checks`" — now
   `[pull_request, required_status_checks]`.
+- ✗ "the baseline is a PAIR (two rulesets)" — now THREE: the pair PLUS
+  `baseline-tag-protect` (target tag, `refs/tags/v*.*.*`,
+  `[deletion, update]`, no bypass), USER-ratified + implemented `b71a1ff`.
 
 **Durable artifacts to read before acting:**
 - `~/.claude/.../memory/project_ratified_baseline_rulesets.md` — ratified spec.
