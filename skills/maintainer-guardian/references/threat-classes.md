@@ -1,8 +1,10 @@
-# Guardian threat classes — T1 through T5
+# Guardian threat classes — T1 through T6
 
-The Guardian skill detects 5 classes of supply-chain threat. Each
+The Guardian skill detects 6 classes of supply-chain threat. Each
 class has a detector (read-only), a delta-vs-baseline check, and a
-route (what the Guardian does when a delta is positive).
+route (what the Guardian does when a delta is positive). T3
+additionally carries an absolute baseline-compliance check that fires
+independent of any delta (see T3).
 
 ## Table of Contents
 
@@ -103,18 +105,45 @@ the Guardian-filed issue and Dependabot's own PR are linkable.
 
 ## T3 — Branch-rule drift
 
-**Detection.** Chain `workflow-protect-branch` SHOW. Compare the
-returned ruleset(s) against the previously-cached
-`branch-rules.json`. A delta is any change in `enforcement`, the list
-of rule types (`deletion`, `non_fast_forward`, `required_linear_history`,
-`pull_request`, `required_status_checks`, `update`), OR `bypass_actors`
-(stripping the admin bypass from the pr-and-checks ruleset, or adding
-any bypass to the history or tag ruleset, is security-relevant drift).
-A MISSING ruleset (one of the three baseline names absent) is itself a
-hit — the baseline must carry all three.
+T3 runs TWO independent checks, because drift-vs-snapshot ALONE has a
+blind spot (D1): a repo that is ALREADY off-baseline at session start
+has its wrong state captured as "normal" and is then never flagged. The
+absolute check below closes that hole.
+
+- **T3-absolute — baseline compliance (standing).** Compare the
+  session-start snapshot against the RATIFIED three-ruleset spec (the
+  table below), NOT against a prior snapshot. For each canonical name
+  assert: present, `enforcement: active`, the exact rule-type set, and the
+  exact bypass shape. A missing ruleset, a wrong rule-type set, a
+  stripped/added bypass, a non-`active` enforcement, OR a still-live
+  legacy ruleset (`default-branch-*`, `janitor-baseline`,
+  `main-hardening`, `main-ci-gate`) is a non-compliance hit. This fires
+  on the very FIRST baseline and on every SCAN until the repo complies —
+  independent of any delta (same standing-finding semantics as T6 mode
+  3). THIS is the check that catches a pre-existing-wrong repo.
+- **T3-relative — drift.** Compare the current SHOW against the
+  previously-cached `branch-rules.json`. A delta is any change in
+  `enforcement`, the rule-type list (`deletion`, `non_fast_forward`,
+  `required_linear_history`, `pull_request`, `required_status_checks`,
+  `update`), OR `bypass_actors` (stripping the admin bypass from
+  pr-and-checks, or adding any bypass to history/tag, is security-relevant
+  drift). A baseline ruleset that DISAPPEARS between snapshots is a hit.
+  THIS catches a change made DURING the session.
+
+**Detection.** Chain `workflow-protect-branch` SHOW once — its output
+feeds both checks. The ratified spec is the absolute reference; keep it
+byte-identical with `workflow-protect-branch`:
+
+| name | target | enforcement | rule types | bypass |
+|---|---|---|---|---|
+| `baseline-history-protect` | branch | active | `deletion, non_fast_forward, required_linear_history` | none |
+| `baseline-pr-and-checks` | branch | active | `pull_request, required_status_checks` | RepositoryRole Admin (id 5) |
+| `baseline-tag-protect` | tag | active | `deletion, update` | none |
 
 **Baseline shape** (the canonical three-ruleset baseline — see
-`workflow-protect-branch`):
+`workflow-protect-branch`). `baseline_compliance` records the
+T3-absolute verdict captured at session start, so a pre-existing-wrong
+repo is visible in the snapshot itself, not just in later deltas:
 
 ```json
 {
@@ -142,19 +171,45 @@ hit — the baseline must carry all three.
       "deletion": true,
       "update": true,
       "bypass_actors": 0
+    },
+    "baseline_compliance": {
+      "compliant": false,
+      "deviations": [
+        "baseline-tag-protect: missing",
+        "default-branch-required-checks: legacy ruleset still live"
+      ]
     }
   }
 }
 ```
 
-**Delta.** ANY difference is a hit — branch rules don't drift by
-accident; if they changed, someone took action and Guardian wants
-the authorized user to know.
+`baseline_compliance.compliant` is `true` only when all three canonical
+rulesets are present with the ratified shape AND no legacy ruleset
+remains. The example above shows a pre-existing-wrong repo (the exact
+case D1 fixed): tag protection never applied + a legacy checks ruleset
+still live. On a compliant repo, `deviations` is `[]`.
 
-**Route.** Alert the authorized user via direct message (R6
-governance edge). Do NOT auto-revert — the user may have made the
-change intentionally. Guardian's job is observability, not policy
-enforcement.
+**Delta — two kinds.**
+
+1. **T3-absolute (standing).** `baseline_compliance.compliant == false`
+   is a hit on EVERY scan until remediated — it does not require a
+   change since the last snapshot. This is what surfaces a repo that was
+   already off-baseline before the Guardian first looked.
+2. **T3-relative (drift).** ANY difference between the current SHOW and
+   the previous snapshot is a hit — branch rules don't drift by
+   accident; if they changed, someone took action.
+
+**Route.**
+
+- **T3-absolute non-compliance** → alert the authorized user with the
+  `deviations` list and recommend `workflow-protect-branch` APPLY (which
+  re-applies the ratified pair+tag and sweeps legacy names). Applying the
+  ratified baseline as-is is EXEMPT (manager-approval §F), so the fix is
+  routine; only a DEVIATION from the baseline would need approval.
+- **T3-relative drift** → alert the authorized user via direct message
+  (R6 governance edge). Do NOT auto-revert — the user may have made the
+  change intentionally. Guardian's job is observability, not policy
+  enforcement.
 
 ---
 
@@ -349,7 +404,8 @@ repo (no source file SHAs captured, no delta possible).
 | T1 critical/high | +N | safe-fix PR via workflow-fix-safe OR tracking issue |
 | T1 medium/low | +N | accumulate only; weekly digest issue |
 | T2 | +N | tracking issue with Dependabot link |
-| T3 | any change | alert authorized user (R6 direct edge) |
+| T3-absolute | non-compliant (standing) | alert + recommend `workflow-protect-branch` APPLY (re-apply ratified baseline — EXEMPT) |
+| T3-relative | any change | alert authorized user (R6 direct edge) |
 | T4 | any path moved | alert authorized user (post-hoc, observability) |
 | T5 | +N | STOP CYCLE + alert (secret in history is critical) |
 | T6 weakening / strip | any | alert authorized user; refuse to push |

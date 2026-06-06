@@ -3,7 +3,7 @@ trdd-id: f51d24c6-d541-4e45-97b4-ebea95904853
 title: Migrate maintainer branch-ruleset source to the ratified baseline-* pair
 column: testing
 created: 2026-06-04T20:01:34+0200
-updated: 2026-06-06T14:18:00+0200
+updated: 2026-06-06T14:22:59+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -56,8 +56,9 @@ NOT edit our docs). `--strict` blocks on exit 1-4, so fixing Pyright
 alone won't clear it; the NIT FPs also block → need a CPV
 suppression/allowlist or a newer CPV release.
 
-**NEXT ACTIONS:** (a) ✅ C3-C6 LANDED (Phase 1, this session) — see the
-audit-hardening section; D1-D2 remain (more source work, same gate);
+**NEXT ACTIONS:** (a) ✅ C3-C6 LANDED (Phase 1) + ✅ D1 LANDED (Phase 2),
+this session — see the audit-hardening section; **only D2 remains** (more
+source work, same gate);
 (b) CPV-G3 unblock — fix the 4 Pyright nits + find a way past the #68 NIT
 FPs (CPV suppression / newer-CPV / upstream). Once CPV-G3 clears: run
 publish.py (ships pair + tag-protect + the Tier-0 hardening together),
@@ -255,9 +256,15 @@ CPV-G3 unblock; no cross-plugin re-ratification needed:
   wrapped in try/except `yaml.YAMLError`: one malformed workflow is
   skipped-with-warning to stderr; the C3 guard re-asserts the result is
   non-empty so a swallowed parse cannot silently yield `[]`.
-- **D1** guardian T3 diffs branch rules only vs the session-start
-  snapshot → a repo already off-baseline at startup is never flagged.
-  Also compare the snapshot against the ratified spec.
+- **D1** ✅ ADDRESSED (Phase 2) — guardian T3 now runs TWO checks:
+  **T3-absolute** (compares the session-start snapshot against the
+  ratified three-ruleset spec → flags a repo ALREADY off-baseline at
+  startup, standing finding like T6 mode 3) + **T3-relative** (the
+  existing drift-vs-snapshot). Added `baseline_compliance` to the
+  baseline shape, a spec table, split routing (non-compliance →
+  recommend APPLY/EXEMPT; drift → alert), and fixed the stale
+  "T1 through T5" doc title → T6. Anchor `#t3--branch-rule-drift`
+  preserved so the TOC/SKILL refs stay valid.
 - **D2** approval-gate `approve-protected-edit` is permanent-per-issue,
   not bound to a diff/SHA → replayable within an issue. Bind approval to
   a planned-diff fingerprint.

@@ -33,7 +33,10 @@ maintainer no longer waits for someone to file an issue saying
 **BASELINE** (mode=baseline, invoked at session start):
 
 1. Chain **workflow-scan** to capture zizmor + actionlint state.
-2. Chain **workflow-protect-branch** SHOW to capture branch rules.
+2. Chain **workflow-protect-branch** SHOW to capture branch rules, AND
+   assess them against the ratified baseline spec (T3-absolute) — record
+   the `baseline_compliance` verdict so a repo already off-baseline at
+   session start is flagged, not silently captured as "normal".
 3. Inventory the canonical protected-paths list (see
    `maintainer-approval-gate/references/protected-paths.md`); for
    each path, capture its last-modified commit SHA.
@@ -52,7 +55,9 @@ maintainer no longer waits for someone to file an issue saying
    - T1 new zizmor finding → if safe-fixable, propose workflow-fix-safe
      auto-fix PR; else file tracking issue + label.
    - T2 stale SHA pin → file tracking issue with Dependabot PR link.
-   - T3 branch-rule drift → alert authorized user; refuse to push.
+   - T3 drift (vs snapshot) OR standing baseline non-compliance (vs the
+     ratified spec) → alert authorized user; for non-compliance recommend
+     `workflow-protect-branch` APPLY (re-apply ratified baseline — EXEMPT).
    - T4 protected-path touched → alert authorized user.
    - T5 secret-leak marker → STOP everything, alert immediately.
    - T6 pkg-manager safety knob weakened/stripped → alert authorized
@@ -76,8 +81,10 @@ Full per-class commands + routing tables:
 ## Output
 
 - **BASELINE**: `{mode, snapshot_path, t1_count, t2_count, t3_status,
-  t4_count, t5_count, t6_status}` + the refreshed snapshot file.
-  (`t6_status` is `clean`, `missing-knobs`, or `not-a-node-repo`.)
+  t3_compliance, t4_count, t5_count, t6_status}` + the refreshed snapshot
+  file. (`t3_compliance` is `compliant` or a non-empty deviations list
+  from the T3-absolute check; `t6_status` is `clean`, `missing-knobs`, or
+  `not-a-node-repo`.)
 - **SCAN**: `{mode, delta, route_decisions[], state_path, report}` plus the refreshed state file plus (optionally) issues/PRs filed.
 
 ## Error Handling
