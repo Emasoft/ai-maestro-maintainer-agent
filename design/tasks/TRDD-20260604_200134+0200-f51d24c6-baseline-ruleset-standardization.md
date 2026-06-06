@@ -3,7 +3,7 @@ trdd-id: f51d24c6-d541-4e45-97b4-ebea95904853
 title: Migrate maintainer branch-ruleset source to the ratified baseline-* pair
 column: testing
 created: 2026-06-04T20:01:34+0200
-updated: 2026-06-06T14:32:50+0200
+updated: 2026-06-06T14:36:15+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -27,7 +27,7 @@ impacts: [ci-pipeline]
 attempts: 1
 last-test-result: pass
 last-test-at: 2026-06-04T20:24:03+0200
-implementation-commits: [c8fe5ce, 089c979, 31fe57f, cde65eb, 138dfdd, b71a1ff]
+implementation-commits: [c8fe5ce, 089c979, 31fe57f, cde65eb, 138dfdd, b71a1ff, fde5e59, 99c3f9e, 976d311, 58e3234]
 external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/7", "github.com/Emasoft/ai-maestro-janitor/issues/14"]
 ---
 
