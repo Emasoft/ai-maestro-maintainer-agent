@@ -14,6 +14,7 @@ subprocess output / real strings provided by the caller.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import subprocess
@@ -35,11 +36,13 @@ def resolve_agent_dir(env: dict | None = None, cwd: Path | str | None = None) ->
       2. $CLAUDE_PROJECT_DIR  (Claude Code project dir)
       3. The caller's cwd (last-resort fallback; defaults to os.getcwd()).
     """
-    env = env if env is not None else os.environ
-    aimaestro = env.get("AIMAESTRO_AGENT_DIR")
+    # Use a fresh local (not the annotated `env` param) so the type checker
+    # infers the dict|os._Environ union freely; both expose .get().
+    resolved = env if env is not None else os.environ
+    aimaestro = resolved.get("AIMAESTRO_AGENT_DIR")
     if aimaestro:
         return Path(aimaestro)
-    claude = env.get("CLAUDE_PROJECT_DIR")
+    claude = resolved.get("CLAUDE_PROJECT_DIR")
     if claude:
         return Path(claude)
     if cwd is None:
@@ -188,6 +191,20 @@ def planned_diff_hits(planned_paths: list[str], globs: list[str]) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# Planned-diff fingerprint (D2 — replay-proof approval binding)
+# protected-paths.md > "Diff-fingerprint binding":
+#     git diff HEAD -- | git hash-object --stdin | cut -c1-12
+# git hash-object computes SHA-1 of `blob <len>\0<content>`; we reproduce that
+# exact formula so the Python model and the documented bash agree byte-for-byte.
+# ---------------------------------------------------------------------------
+def diff_fingerprint(diff_text: str) -> str:
+    """12-char git-blob fingerprint of a planned diff (matches git hash-object)."""
+    data = diff_text.encode()
+    blob = b"blob " + str(len(data)).encode() + b"\0" + data
+    return hashlib.sha1(blob).hexdigest()[:12]
+
+
+# ---------------------------------------------------------------------------
 # Approval-comment grammar matcher
 # protected-paths.md > "Approval-comment grammar" + the VERIFY snippet.
 # ---------------------------------------------------------------------------
@@ -195,18 +212,21 @@ APPROVE_RE = re.compile(r"\bapprove-protected-edit\b")
 REJECT_RE = re.compile(r"\breject-protected-edit\b")
 
 
-def classify_approval(comments: list[dict], authorized_user: str) -> str:
+def classify_approval(comments: list[dict], authorized_user: str, fingerprint: str) -> str:
     """Return 'ok' / 'pending' / 'rejected' from a list of issue comments.
 
     Each comment is a dict with keys:
         author: { login: str }
         body:   str
 
-    Matches the exact algorithm in protected-paths.md's VERIFY section:
+    Matches the exact algorithm in protected-paths.md's VERIFY section (D2):
       * a comment from authorized_user with `reject-protected-edit` → rejected
-        wins over any approval.
-      * else any approve → ok.
-      * else pending.
+        (wins over any approval; needs no fingerprint).
+      * else an `approve-protected-edit` from authorized_user that ALSO carries
+        the current `fingerprint` → ok.
+      * else pending. This is fail-closed and covers a missing approval, an
+        impostor approval, AND a stale/bare approval that lacks the current
+        fingerprint (the diff was re-scoped since it was approved).
     """
     rejected = False
     approved = False
@@ -217,7 +237,10 @@ def classify_approval(comments: list[dict], authorized_user: str) -> str:
             continue
         if REJECT_RE.search(body):
             rejected = True
-        if APPROVE_RE.search(body):
+        # The approval must carry the CURRENT fingerprint (literal substring),
+        # not merely the phrase — this is the replay-proof binding. An empty
+        # fingerprint can never match, so the gate stays closed (fail-closed).
+        if APPROVE_RE.search(body) and fingerprint and fingerprint in body:
             approved = True
     if rejected:
         return "rejected"

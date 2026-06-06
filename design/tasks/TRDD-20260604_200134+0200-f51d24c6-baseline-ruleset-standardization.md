@@ -3,7 +3,7 @@ trdd-id: f51d24c6-d541-4e45-97b4-ebea95904853
 title: Migrate maintainer branch-ruleset source to the ratified baseline-* pair
 column: testing
 created: 2026-06-04T20:01:34+0200
-updated: 2026-06-06T14:22:59+0200
+updated: 2026-06-06T14:32:50+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -40,9 +40,12 @@ IMPLEMENTED + verified on branch `feat/baseline-ruleset-standardization`.
 The pair migration (`c8fe5ce`, `089c979`) PLUS `baseline-tag-protect`
 (USER-ratified Tier-3; commit `b71a1ff` — Body C build/apply/verify in
 workflow-protect-branch, the ruleset-tag-protect.json template, bootstrap
-stash+prose, guardian T3, command; audit-finding C2 folded in). 467 tests
-pass; CPV `--strict` is CLEAN on every touched file. NOT yet pushed; live
-repo rulesets NOT yet re-applied.
+stash+prose, guardian T3, command; audit-finding C2 folded in). PLUS the
+full Tier-0 audit-hardening batch landed this session: C3-C6 (`fde5e59`),
+D1 (`99c3f9e`), D2 (Phase 3) — all maintainer-internal, no baseline-shape
+change. 471 tests pass; CPV `--strict` is CLEAN on every touched file
+(MINOR=4 are pre-existing sentinel Pyright nits in `scripts/`, not mine).
+NOT yet pushed; live repo rulesets NOT yet re-applied.
 
 **THE ONE BLOCKER — CPV-G3 (publish gate), pre-existing + partly
 upstream:** publish.py requires CPV `--strict` exit 0, but the plugin has
@@ -56,18 +59,20 @@ NOT edit our docs). `--strict` blocks on exit 1-4, so fixing Pyright
 alone won't clear it; the NIT FPs also block → need a CPV
 suppression/allowlist or a newer CPV release.
 
-**NEXT ACTIONS:** (a) ✅ C3-C6 LANDED (Phase 1) + ✅ D1 LANDED (Phase 2),
-this session — see the audit-hardening section; **only D2 remains** (more
-source work, same gate);
-(b) CPV-G3 unblock — fix the 4 Pyright nits + find a way past the #68 NIT
-FPs (CPV suppression / newer-CPV / upstream). Once CPV-G3 clears: run
-publish.py (ships pair + tag-protect + the Tier-0 hardening together),
-re-apply live rulesets via `workflow-protect-branch` APPLY, post SHAs on
-#7; janitor mirrors byte-identical + first-apply readback-pins the tag
-`ref_name.include`. The C3-C6 hardening is maintainer-internal (Tier 0,
-no baseline-shape change) so it needs NO cross-plugin re-ratification —
-the ratified `baseline-*` JSON shape is byte-identical; only the
-build/verify *procedure* got stricter.
+**NEXT ACTIONS:** (a) ✅ ALL Tier-0 audit hardening LANDED this session —
+C3-C6 (Phase 1, `fde5e59`), D1 (Phase 2, `99c3f9e`), D2 (Phase 3) — see
+the audit-hardening section. Nothing from the audit remains. (b) CPV-G3
+unblock is the SOLE remaining gate to shipping — fix the 4 Pyright nits
+(`scripts/sentinel*`) + find a way past the #68 NIT FPs (CPV suppression
+/ newer-CPV / upstream). This is the repo owner's call (cross-project: it
+may need a CPV fix). Once CPV-G3 clears: run publish.py (ships pair +
+tag-protect + ALL the Tier-0 hardening together), re-apply live rulesets
+via `workflow-protect-branch` APPLY, post SHAs on #7; janitor mirrors
+byte-identical + first-apply readback-pins the tag `ref_name.include`.
+ALL the C3-C6/D1/D2 hardening is maintainer-internal (Tier 0, no
+baseline-shape change) → NO cross-plugin re-ratification needed; the
+ratified `baseline-*` JSON shape stays byte-identical, only the
+build/verify *procedure* + guardian/approval-gate logic got stricter.
 
 **Load-bearing facts:**
 - Ratified baseline agreed BYTE-IDENTICAL by both plugins (manager #7,
@@ -265,9 +270,19 @@ CPV-G3 unblock; no cross-plugin re-ratification needed:
   recommend APPLY/EXEMPT; drift → alert), and fixed the stale
   "T1 through T5" doc title → T6. Anchor `#t3--branch-rule-drift`
   preserved so the TOC/SKILL refs stay valid.
-- **D2** approval-gate `approve-protected-edit` is permanent-per-issue,
-  not bound to a diff/SHA → replayable within an issue. Bind approval to
-  a planned-diff fingerprint.
+- **D2** ✅ ADDRESSED (Phase 3) — approval is now bound to a 12-char
+  planned-diff fingerprint (`git diff HEAD -- | git hash-object --stdin
+  | cut -c1-12`). CHECK publishes the fingerprint + asks the user to echo
+  `approve-protected-edit <fp>`; VERIFY recomputes the LIVE fingerprint
+  and releases ONLY on an exact match — a stale (re-scoped-diff) or bare
+  (no-fp) approval is fail-closed to `pending`, never `ok`. Updated both
+  SKILL.md + protected-paths.md (new "Diff-fingerprint binding" section +
+  TOC, both embedded SKILL TOCs synced) AND the test model:
+  `skill_helpers.classify_approval` now takes `fingerprint` + a new
+  `diff_fingerprint` helper (faithful to git's blob-hash formula);
+  test_approval_gate.py gained 4 tests incl. a REAL `git hash-object`
+  cross-check (no mock). Also fixed a pre-existing Pyright nit in
+  `resolve_agent_dir` surfaced in the same file. 471/471 pass.
 
 ## Approval log
 
