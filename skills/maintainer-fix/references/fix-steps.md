@@ -150,8 +150,12 @@ fi
 
 On the next patrol cycle, the gate's VERIFY mode reads the issue
 comments and looks for `approve-protected-edit` from
-`$AUTHORIZED_USER`. If found, the fix resumes from Step 6
-(commit). If a `reject-protected-edit` is found instead, the
+`$AUTHORIZED_USER` carrying the planned-diff fingerprint that CHECK
+published (D2 binds the approval to that exact diff). If a matching
+approval is found, the fix resumes from Step 6 (commit). A stale
+approval — one whose fingerprint no longer matches because the fix
+was re-scoped since it was approved — stays `pending` (re-run CHECK
+to re-request). If a `reject-protected-edit` is found instead, the
 branch is left in place and the issue gets `fix-rejected`.
 
 Why this step is mandatory: an adversarial bug report saying
