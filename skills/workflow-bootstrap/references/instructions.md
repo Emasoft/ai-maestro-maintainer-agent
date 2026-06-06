@@ -50,8 +50,9 @@ Files in this directory:
 | `templates/zizmor-job.yml` | The `workflow-security` job (appended to every CI workflow) |
 | `templates/dependabot.yml` | Weekly `github-actions` Dependabot config (always seeded) |
 | `templates/npmrc-hardened` | `.npmrc` with 24h quarantine + exotic-subdep block (nodejs only) |
-| `templates/ruleset-no-force-no-delete.json` | History-protect ruleset (`non_fast_forward` + `deletion`, no bypass) — consumed by `workflow-protect-branch` post-merge |
-| `templates/ruleset-required-checks.json` | Required-checks ruleset (strict, admin RepositoryRole bypass) — consumed by `workflow-protect-branch` post-merge |
+| `templates/ruleset-no-force-no-delete.json` | History-protect ruleset (`deletion` + `non_fast_forward` + `required_linear_history`, no bypass) — consumed by `workflow-protect-branch` post-merge |
+| `templates/ruleset-required-checks.json` | PR-and-checks ruleset (`pull_request` + `required_status_checks`, strict, admin RepositoryRole bypass) — consumed by `workflow-protect-branch` post-merge |
+| `templates/ruleset-tag-protect.json` | Tag-protect ruleset (`deletion` + `update` on `refs/tags/v*.*.*`, no bypass) — consumed by `workflow-protect-branch` post-merge |
 
 ## Step-by-step commands
 
@@ -88,15 +89,18 @@ if [ "$LANG" = "node" ]; then
 fi
 
 # Ruleset specs are stashed to tmpfiles (NOT committed) —
-# workflow-protect-branch picks them up post-merge. TWO rulesets:
-# a no-bypass history-protect ruleset and an admin-bypass
-# required-checks ruleset (see workflow-protect-branch for why the
-# split is required on direct-push repos).
+# workflow-protect-branch picks them up post-merge. THREE rulesets:
+# a no-bypass history-protect ruleset, an admin-bypass pr-and-checks
+# ruleset (see workflow-protect-branch for why the branch split is
+# required on direct-push repos), and a no-bypass tag-protect ruleset
+# (immutable v*.*.* release tags).
 RULESET_HIST_TMP=$(mktemp -t ruleset-hist.XXXXXX.json)
 RULESET_CHECKS_TMP=$(mktemp -t ruleset-checks.XXXXXX.json)
+RULESET_TAG_TMP=$(mktemp -t ruleset-tag.XXXXXX.json)
 cp "$SKILL_REFS/ruleset-no-force-no-delete.json" "$RULESET_HIST_TMP"
 cp "$SKILL_REFS/ruleset-required-checks.json"    "$RULESET_CHECKS_TMP"
-echo "rulesets stashed at: $RULESET_HIST_TMP , $RULESET_CHECKS_TMP"
+cp "$SKILL_REFS/ruleset-tag-protect.json"        "$RULESET_TAG_TMP"
+echo "rulesets stashed at: $RULESET_HIST_TMP , $RULESET_CHECKS_TMP , $RULESET_TAG_TMP"
 
 # Step 6 — feature branch
 git checkout -b chore/bootstrap-ci
@@ -119,27 +123,38 @@ git commit -m "chore: bootstrap secure CI baseline (zizmor-clean)"
 cat <<EOF
 ok: bootstrap branch chore/bootstrap-ci is ready.
   1. Open the PR: gh pr create --base main --head chore/bootstrap-ci
-  2. After merge, apply BOTH rulesets (or just invoke the
-     workflow-protect-branch skill, which does this idempotently):
-     gh api -X POST "repos/\$REPO/rulesets" --input $RULESET_HIST_TMP
-     gh api -X POST "repos/\$REPO/rulesets" --input $RULESET_CHECKS_TMP
+  2. After merge, apply the baseline by invoking the
+     workflow-protect-branch skill (APPLY mode) — it auto-detects this
+     repo's CI job names, builds all THREE rulesets (history-protect,
+     pr-and-checks, tag-protect), POSTs/PUTs them idempotently, and
+     verifies the bypass + rule shapes. Stashed payloads:
+       $RULESET_HIST_TMP , $RULESET_CHECKS_TMP , $RULESET_TAG_TMP
+     Do NOT POST the required-checks template verbatim — its
+     required_status_checks context list is a placeholder ("ci"); a
+     literal apply deadlocks PRs on any repo whose CI job is not named
+     "ci". The skill rebuilds that list from the repo's actual
+     PR-applicable jobs, which is why invoking the skill is the
+     supported path.
 EOF
 ```
 
 ## Post-merge ruleset apply
 
-Two rulesets ship as templates, not one — see
-`workflow-protect-branch` for the full rationale (a single combined
-ruleset with an admin bypass would also let admin force-push/delete,
-because `bypass_actors` applies to the whole ruleset). The
-`templates/ruleset-required-checks.json` spec requires both `ci` and
-`workflow-security` status checks. `workflow-protect-branch`
-auto-detects job names from local workflows, so by the time the PR
-has merged and the bootstrap commit is on `main`, running
-`workflow-protect-branch` will pick up exactly those job names and
-POST both rulesets to GitHub. Prefer invoking the skill over the raw
-`gh api` calls above — the skill is idempotent and verifies the
-bypass shapes.
+Three rulesets ship as templates — see `workflow-protect-branch` for
+the full rationale (the two BRANCH rulesets are split because
+`bypass_actors` applies to the whole ruleset, so a single combined
+ruleset with an admin bypass would also let admin force-push/delete;
+the TAG ruleset is independent). The
+`templates/ruleset-required-checks.json` carries a PLACEHOLDER
+`required_status_checks` context (`ci`) — it is NOT the source of
+truth. `workflow-protect-branch` (APPLY) rebuilds that list by
+auto-detecting the repo's actual PR-applicable job names, then POSTs
+or PUTs all three rulesets. ALWAYS invoke the skill rather than POST
+the templates verbatim: a literal apply of the required-checks
+template would require a check context `ci` that never reports on a
+repo whose CI job is named otherwise, deadlocking every PR. The skill
+is idempotent, rebuilds the check contexts, readback-pins the tag
+ruleset's `ref_name.include`, and verifies the bypass + rule shapes.
 
 ## Per-language walk-throughs
 

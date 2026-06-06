@@ -17,7 +17,7 @@ description: |
 Scaffolds a secure GitHub Actions baseline on a freshly-entrusted
 repo. Detects the primary language, writes a CI workflow plus a
 zizmor-security job, applies hardening from the start, stashes the
-two branch-ruleset specs, then chains `workflow-pin-actions` and
+three baseline-ruleset specs, then chains `workflow-pin-actions` and
 `workflow-scan` so the pipeline is zizmor-clean on the first push.
 Refuses to overwrite existing workflows.
 
@@ -59,9 +59,10 @@ Copy this checklist and track your progress:
 4. Append the zizmor-security job from
    `references/templates/zizmor-job.yml`.
 5. Seed `.github/dependabot.yml` (always); seed `.npmrc` if
-   `package.json` is present. Stash the two ruleset templates
-   (`ruleset-no-force-no-delete.json` + `ruleset-required-checks.json`)
-   to tmpfiles — `workflow-protect-branch` applies the split post-merge.
+   `package.json` is present. Stash the three ruleset templates to
+   tmpfiles (`ruleset-no-force-no-delete.json`,
+   `ruleset-required-checks.json`, `ruleset-tag-protect.json`) —
+   `workflow-protect-branch` applies all three post-merge.
 6. Create branch `chore/bootstrap-ci` off the default.
 7. Chain **workflow-pin-actions** to SHA-pin every `uses:` ref.
 8. Chain **workflow-scan** — must report 0 findings; STOP if not.

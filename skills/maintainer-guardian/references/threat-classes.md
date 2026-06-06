@@ -107,11 +107,13 @@ the Guardian-filed issue and Dependabot's own PR are linkable.
 returned ruleset(s) against the previously-cached
 `branch-rules.json`. A delta is any change in `enforcement`, the list
 of rule types (`deletion`, `non_fast_forward`, `required_linear_history`,
-`pull_request`, `required_status_checks`), OR `bypass_actors`
+`pull_request`, `required_status_checks`, `update`), OR `bypass_actors`
 (stripping the admin bypass from the pr-and-checks ruleset, or adding
-any bypass to the history ruleset, is security-relevant drift).
+any bypass to the history or tag ruleset, is security-relevant drift).
+A MISSING ruleset (one of the three baseline names absent) is itself a
+hit — the baseline must carry all three.
 
-**Baseline shape** (the canonical two-ruleset split — see
+**Baseline shape** (the canonical three-ruleset baseline — see
 `workflow-protect-branch`):
 
 ```json
@@ -131,6 +133,15 @@ any bypass to the history ruleset, is security-relevant drift).
       "pull_request": true,
       "required_checks": ["validate", "workflow-security"],
       "admin_bypass": true
+    },
+    "baseline-tag-protect": {
+      "id": 17118003,
+      "enforcement": "active",
+      "target": "tag",
+      "ref_name": ["refs/tags/v*.*.*"],
+      "deletion": true,
+      "update": true,
+      "bypass_actors": 0
     }
   }
 }

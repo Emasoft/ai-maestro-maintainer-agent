@@ -1,38 +1,42 @@
 ---
 description: |
   Use when the user wants to QUERY or APPLY the maintained repo's
-  default-branch rulesets via the GitHub Rulesets API. SHOW =
-  read-only fetch + cache. APPLY = auto-detect CI job names, POST/PUT
-  TWO rulesets — a no-bypass history-protect ruleset and an
-  admin-bypass PR-and-checks ruleset. Idempotent.
+  default-branch + release-tag rulesets via the GitHub Rulesets API.
+  SHOW = read-only fetch + cache. APPLY = auto-detect CI job names,
+  POST/PUT THREE rulesets — no-bypass history-protect, admin-bypass
+  PR-and-checks, and no-bypass tag-protect. Idempotent.
   Trigger with phrases like "protect main branch", "apply branch
   rules" (apply), or "show branch rules" (show).
 ---
 
-# workflow-protect-branch — idempotent default-branch rulesets
+# workflow-protect-branch — idempotent branch + tag rulesets
 
-Applies a deterministic TWO-ruleset split to the maintained repo's
-default branch via the GitHub Rulesets REST API. Idempotent —
-re-running converges to the same state.
+Applies a deterministic THREE-ruleset baseline to the maintained repo
+via the GitHub Rulesets REST API. Idempotent — re-running converges to
+the same state.
 
 ## Overview
 
 Two modes: **SHOW** (read-only — fetches + caches the deployed
 rulesets; run by the main agent at startup and after each push) and
-**APPLY** (auto-detects status check names, then POSTs/PUTs **two**
+**APPLY** (auto-detects status check names, then POSTs/PUTs **three**
 rulesets):
 
-| Ruleset | Rules | `bypass_actors` |
-|---|---|---|
-| `baseline-history-protect` | `deletion`, `non_fast_forward`, `required_linear_history` | `[]` (nobody, incl. admin) |
-| `baseline-pr-and-checks` | `pull_request`, `required_status_checks` (strict) | admin RepositoryRole, `always` |
+| Ruleset | `target` | Rules | `bypass_actors` |
+|---|---|---|---|
+| `baseline-history-protect` | branch | `deletion`, `non_fast_forward`, `required_linear_history` | `[]` (nobody, incl. admin) |
+| `baseline-pr-and-checks` | branch | `pull_request`, `required_status_checks` (strict) | admin RepositoryRole, `always` |
+| `baseline-tag-protect` | tag | `deletion`, `update` (scope `refs/tags/v*.*.*`) | `[]` (nobody) |
 
-Two, not one, because `bypass_actors` applies to the WHOLE ruleset,
-never per-rule: a single combined ruleset with an admin bypass would
-also let admin force-push/delete. The split lets `publish.py`'s direct
-push bypass the PR + checks gate (checks are un-greenable before a push
-→ `GH013`) while force-push, deletion, and non-linear history stay
-blocked for all.
+The two branch rulesets are split (not combined) because `bypass_actors`
+applies to the WHOLE ruleset, never per-rule: a single combined ruleset
+with an admin bypass would also let admin force-push/delete. The split
+lets `publish.py`'s direct push bypass the PR + checks gate (checks are
+un-greenable before a push → `GH013`) while force-push, deletion, and
+non-linear history stay blocked for all. The tag ruleset is independent
+(`target: tag`): `[deletion, update]` makes published `v*.*.*` tags
+immutable (no move, no delete) while leaving tag *creation* open, so
+publish.py still cuts releases — no bypass actor needed.
 
 ## Prerequisites
 
@@ -57,22 +61,25 @@ blocked for all.
    `.github/workflows/*.y*ml` and reading the `jobs:` keys. Never
    grep+awk — shell heuristics over-match and the POST 422s with
    "Expected context to be present".
-3. Build BOTH ruleset JSON bodies in tmpfiles (no inline `${{ }}`):
-   the no-bypass history-protect ruleset and the admin-bypass
-   PR-and-checks ruleset.
+3. Build ALL THREE ruleset JSON bodies in tmpfiles (no inline `${{ }}`):
+   no-bypass history-protect, admin-bypass PR-and-checks, no-bypass
+   tag-protect.
 4. For EACH ruleset, POST or PUT to `/repos/$REPO/rulesets`
    depending on whether one of that name already exists.
-5. Run SHOW again to refresh the cache + emit a diff.
+5. Verify each landed with the ratified rules + bypass shape; on the
+   first apply, readback-pin the tag ruleset's `ref_name.include`.
+6. Run SHOW again to refresh the cache + emit a diff.
 
-Full commands + both JSON bodies: see Resources.
+Full commands + all three JSON bodies: see Resources.
 
 ## Output
 
 - **SHOW**: `{mode, ruleset_count, rulesets, cache_path}` + refreshed
   cache at `$AGENT_DIR/.aimaestro/state/branch-rules.json` (the full
-  ruleset array — covers both).
+  ruleset array — covers all three).
 - **APPLY**: `{mode, history_ruleset:{id,action},
-  checks_ruleset:{id,action}, required_checks, report, cache_path}`.
+  checks_ruleset:{id,action}, tag_ruleset:{id,action},
+  required_checks, report, cache_path}`.
 
 ## Error Handling
 
@@ -91,27 +98,28 @@ Full commands + both JSON bodies: see Resources.
 → SHOW → GET /rulesets → cache → return summary
 
 "apply branch protection to main"
-→ APPLY → detect jobs → POST/PUT history ruleset (no bypass) +
-  POST/PUT checks ruleset (admin bypass) → SHOW refresh
+→ APPLY → detect jobs → POST/PUT history (no bypass) + checks (admin
+  bypass) + tag-protect (no bypass) → verify → SHOW refresh
 ```
 
 ## Scope
 
-ONLY queries (SHOW) or applies (APPLY) the two canonical
-default-branch rulesets (`baseline-history-protect` +
-`baseline-pr-and-checks`) via the GitHub Rulesets REST API.
-Does NOT:
+ONLY queries (SHOW) or applies (APPLY) the three canonical baseline
+rulesets (`baseline-history-protect` + `baseline-pr-and-checks` +
+`baseline-tag-protect`) via the GitHub Rulesets REST API. Does NOT:
 
-- Manage non-default branches — both target `~DEFAULT_BRANCH`.
+- Manage non-default branches — both branch rulesets target
+  `~DEFAULT_BRANCH`; the tag ruleset targets `refs/tags/v*.*.*`.
 - Touch environment- or org-level rulesets — repo-level only.
 - Push, commit, or modify the entrusted repo's working tree.
-- Manage rules beyond the ratified baseline — exactly `deletion`,
-  `non_fast_forward`, `required_linear_history` (history) plus
-  `pull_request` (1 approval) + `required_status_checks` (PR + checks).
+- Manage rules beyond the ratified baseline — `deletion`,
+  `non_fast_forward`, `required_linear_history` (history),
+  `pull_request` + `required_status_checks` (pr-and-checks),
+  `deletion` + `update` (tag-protect).
 - Add bypass actors beyond admin RepositoryRole on the pr-and-checks
-  ruleset; the history ruleset stays bypass-less for all.
+  ruleset; the history + tag rulesets stay bypass-less for all.
 
-Idempotent — APPLY converges to the same two-ruleset state.
+Idempotent — APPLY converges to the same three-ruleset state.
 
 ## Resources
 
@@ -120,12 +128,13 @@ Idempotent — APPLY converges to the same two-ruleset state.
   `workflow-pin-actions`.
 - [Full step-by-step instructions](references/instructions.md):
   - Why two rulesets, not one
+  - The third ruleset: tag protection
   - Step 0: Decide mode (SHOW vs APPLY)
   - Step 1: Verify admin permission (APPLY only)
   - Step 2: Auto-detect required checks (APPLY only)
-  - Step 3: Build the two ruleset JSON bodies (APPLY only)
-  - Step 4: Discover both existing rulesets
+  - Step 3: Build the three ruleset JSON bodies (APPLY only)
+  - Step 4: Discover all existing rulesets
   - Step 5: POST or PUT each ruleset (APPLY only)
-  - Step 6: Verify both present post-apply
+  - Step 6: Verify all present post-apply
   - Step 6.5: Delete orphaned legacy rulesets (APPLY only)
   - Step 7: Write report + refresh agent cache

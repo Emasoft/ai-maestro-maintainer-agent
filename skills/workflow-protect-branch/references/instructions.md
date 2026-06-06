@@ -3,13 +3,14 @@
 ## Table of Contents
 
 - [Why two rulesets, not one](#why-two-rulesets-not-one)
+- [The third ruleset: tag protection](#the-third-ruleset-tag-protection-baseline-tag-protect)
 - [Step 0: Decide mode (SHOW vs APPLY)](#step-0-decide-mode-show-vs-apply)
 - [Step 1: Verify admin permission (APPLY only)](#step-1-verify-admin-permission-apply-only)
 - [Step 2: Auto-detect required checks (APPLY only)](#step-2-auto-detect-required-checks-apply-only)
-- [Step 3: Build the two ruleset JSON bodies (APPLY only)](#step-3-build-the-two-ruleset-json-bodies-apply-only)
-- [Step 4: Discover both existing rulesets](#step-4-discover-both-existing-rulesets)
+- [Step 3: Build the three ruleset JSON bodies (APPLY only)](#step-3-build-the-three-ruleset-json-bodies-apply-only)
+- [Step 4: Discover all existing rulesets](#step-4-discover-all-existing-rulesets)
 - [Step 5: POST or PUT each ruleset (APPLY only)](#step-5-post-or-put-each-ruleset-apply-only)
-- [Step 6: Verify both present post-apply](#step-6-verify-both-present-post-apply)
+- [Step 6: Verify all present post-apply](#step-6-verify-all-present-post-apply)
 - [Step 6.5: Delete orphaned legacy rulesets (APPLY only)](#step-65-delete-orphaned-legacy-rulesets-apply-only)
 - [Step 7: Write report + refresh agent cache](#step-7-write-report--refresh-agent-cache)
 
@@ -53,6 +54,45 @@ this).
 > --force-with-lease` the scrubbed history, then re-enable. Never via a
 > push while the ruleset is active — the protection that blocks an
 > attacker's force-push blocks yours too. This is by design.
+
+## The third ruleset: tag protection (`baseline-tag-protect`)
+
+A branch ruleset on `~DEFAULT_BRANCH` does NOT protect tags. Every plugin
+that ships releases off `v*.*.*` tags needs a THIRD, independent ruleset
+so a published version tag cannot be moved or deleted — otherwise a
+leaked token (or accident) could re-point an existing `vX.Y.Z` at
+arbitrary code and every installer pinned to that tag pulls it. A
+post-hoc CI gate can't catch a tag moved onto a commit that itself passes
+CI.
+
+| Ruleset | `target` | `ref_name.include` | rules | `bypass_actors` |
+|---|---|---|---|---|
+| `baseline-tag-protect` | `tag` | `["refs/tags/v*.*.*"]` | `[deletion, update]` | `[]` |
+
+- **`update`, NOT `non_fast_forward`.** `update` ("restrict updates")
+  blocks EVERY change to an existing tag. Bare `non_fast_forward` only
+  blocks the non-fast-forward path — a tag *fast-forward-moved onto a
+  descendant* commit (append a malicious child commit, ff-move the tag
+  onto it) is a fast-forward and would slip through. `update` closes that
+  edge, is minimal-complete, and is correct regardless of how GitHub
+  evaluates tag fast-forwards.
+- **No bypass actor.** `[deletion, update]` blocks delete + move but NOT
+  tag *creation*, so `publish.py` still cuts each new `vX.Y.Z` — no admin
+  bypass needed (unlike the PR-and-checks ruleset). Zero publish-path
+  impact.
+- **Scope `refs/tags/v*.*.*`** (full-semver release tags only), NOT
+  `~ALL`/`v*`: the invariant is *immutable published version tags*;
+  `~ALL`/`v*` would freeze a future movable alias (`v1`/`latest`/
+  `nightly`) for zero gain.
+- **Readback-pin the literal.** The exact GitHub-accepted spelling of a
+  `target: tag` ruleset's `ref_name.include` is pinned on the first real
+  apply (same discipline as `actor_id:5`): ship `refs/tags/v*.*.*`, then
+  pin whatever GitHub echoes. The Step-6 verify asserts the landed
+  `rules == [deletion, update]` and `bypass_actors == []`.
+
+Tri-party ratified byte-identical (maintainer #7 + janitor #14 + MANAGER;
+USER Tier-3 approved 2026-06-06). The janitor mirrors it in its
+`branch_protection_lib.py`.
 
 ## Step 0: Decide mode (SHOW vs APPLY)
 
@@ -139,7 +179,7 @@ reports on a PR → the PR can never go green). If a PR-triggered workflow
 ALSO declares a job that genuinely should not gate merges, filter
 `CHECKS_JSON` post-hoc — never hand-maintain a separate inclusion list.
 
-## Step 3: Build the two ruleset JSON bodies (APPLY only)
+## Step 3: Build the three ruleset JSON bodies (APPLY only)
 
 Write each to its own tmpfile — never inline with `${{ }}`
 interpolation in the shell.
@@ -204,6 +244,33 @@ cat > "$TMP_CHECKS" <<JSON
 JSON
 ```
 
+**Body C — tag-protect, NO bypass:**
+
+```bash
+TMP_TAG="$(mktemp -t ruleset-tag.XXXXXX.json)"
+cat > "$TMP_TAG" <<JSON
+{
+  "name": "baseline-tag-protect",
+  "target": "tag",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": { "include": ["refs/tags/v*.*.*"], "exclude": [] }
+  },
+  "rules": [
+    { "type": "deletion" },
+    { "type": "update" }
+  ],
+  "bypass_actors": []
+}
+JSON
+```
+
+`baseline-tag-protect` targets `tag`, not `branch`, so it is independent
+of the two branch rulesets. `update` blocks every move of an existing
+`v*.*.*` tag; `deletion` blocks tag deletion; tag *creation* stays open
+so publish.py cuts new releases. No bypass actor. Rationale +
+readback-pin: [The third ruleset](#the-third-ruleset-tag-protection-baseline-tag-protect).
+
 The `~DEFAULT_BRANCH` magic ref resolves to whatever branch the repo
 declares as its default at apply time — portable across repos that
 use `main`, `master`, or a custom default.
@@ -221,13 +288,15 @@ stay blocked for everyone, including admin — a linear fast-forward push
 (what publish.py does) adds no merge commit, so it satisfies
 `required_linear_history`. See [Why two rulesets](#why-two-rulesets-not-one).
 
-## Step 4: Discover both existing rulesets
+## Step 4: Discover all existing rulesets
 
 ```bash
 HIST_ID="$(gh api "repos/$REPO/rulesets" \
   --jq '[.[] | select(.name=="baseline-history-protect")] | .[0].id // empty')"
 CHECKS_ID="$(gh api "repos/$REPO/rulesets" \
   --jq '[.[] | select(.name=="baseline-pr-and-checks")] | .[0].id // empty')"
+TAG_ID="$(gh api "repos/$REPO/rulesets" \
+  --jq '[.[] | select(.name=="baseline-tag-protect")] | .[0].id // empty')"
 ```
 
 `// empty` yields an empty string (not `null`) when a name has no
@@ -235,7 +304,7 @@ match, so the Step-5 `-z` test routes a missing ruleset to POST.
 
 ## Step 5: POST or PUT each ruleset (APPLY only)
 
-Apply BOTH. A helper keeps the create-or-update logic in one place:
+Apply all three. A helper keeps the create-or-update logic in one place:
 
 ```bash
 # Extract the .id from a ruleset response body. python3 is already a hard
@@ -263,20 +332,21 @@ apply_ruleset() {  # $1=existing-id (may be empty)  $2=tmpfile  → echoes "id<T
 
 read HIST_NEW_ID   HIST_ACTION   < <(apply_ruleset "$HIST_ID"   "$TMP_HIST")
 read CHECKS_NEW_ID CHECKS_ACTION < <(apply_ruleset "$CHECKS_ID" "$TMP_CHECKS")
+read TAG_NEW_ID    TAG_ACTION    < <(apply_ruleset "$TAG_ID"    "$TMP_TAG")
 ```
 
 These snippets are bash (process substitution `< <(...)` and `local`).
 If any 4xx response other than 404, STOP — capture the response body in
 the report and surface to the caller. Apply order does not matter; the
-two rulesets are independent.
+three rulesets are independent.
 
-## Step 6: Verify both present post-apply
+## Step 6: Verify all present post-apply
 
 ```bash
 # Use the REST API directly — `gh ruleset list` requires gh ≥ 2.44 and is
 # absent on older hosts. The REST endpoint has been stable since gh 2.4.
 NAMES="$(gh api "repos/$REPO/rulesets" --jq '.[].name')"
-for want in baseline-history-protect baseline-pr-and-checks; do
+for want in baseline-history-protect baseline-pr-and-checks baseline-tag-protect; do
   printf '%s\n' "$NAMES" | grep -qx "$want" || {
     echo "VERIFY FAIL: ruleset '$want' not present post-apply" >&2
     exit 65
@@ -314,17 +384,35 @@ CHECKS_RULES="$(gh api "repos/$REPO/rulesets/$CHECKS_NEW_ID" \
   echo "VERIFY FAIL: pr-and-checks rules = [$CHECKS_RULES], want pull_request,required_status_checks" >&2
   exit 67
 }
+
+# Tag ruleset: immutable published-version tags. Assert the ratified
+# shape landed — [deletion, update], NO bypass actor. The ref_name
+# literal is readback-pinned on first apply; rules + bypass are the
+# load-bearing assertions (a wrong shape silently un-protects tags).
+TAG_RULES="$(gh api "repos/$REPO/rulesets/$TAG_NEW_ID" \
+  --jq '[.rules[].type] | sort | join(",")')"
+TAG_BYPASS="$(gh api "repos/$REPO/rulesets/$TAG_NEW_ID" \
+  --jq '(.bypass_actors // []) | length')"
+[ "$TAG_RULES" = "deletion,update" ] || {
+  echo "VERIFY FAIL: tag rules = [$TAG_RULES], want deletion,update" >&2
+  exit 67
+}
+[ "$TAG_BYPASS" = "0" ] || {
+  echo "VERIFY FAIL: tag ruleset has $TAG_BYPASS bypass actor(s), want 0" >&2
+  exit 66
+}
 ```
 
 ## Step 6.5: Delete orphaned legacy rulesets (APPLY only)
 
-Re-applying the ratified `baseline-*` pair supersedes the
-pre-ratification rulesets. Once BOTH new rulesets verify present and
+Re-applying the ratified `baseline-*` set supersedes the
+pre-ratification rulesets. Once ALL THREE new rulesets verify present and
 correctly-shaped (Step 6), delete any orphaned legacy ruleset BY NAME —
 never a blanket "delete every ruleset", only the documented superseded
 names. Order matters: new applied + verified FIRST, legacy removed
-SECOND, so a crash in between still leaves the branch protected by the
-new pair.
+SECOND, so a crash in between still leaves the branch + tags protected by
+the new set. (The tag ruleset is new — it has no legacy predecessor, so
+the delete list below stays the branch-lineage names only.)
 
 ```bash
 DELETED_LEGACY=()
@@ -389,8 +477,8 @@ mv -f "$CACHE_TMP" "$CACHE_DIR/branch-rules.json"
 ```
 
 The cache is the full ruleset **array** (`gh api .../rulesets`
-returns every ruleset), so it already holds BOTH entries with no
-schema change. The two relevant entries look like:
+returns every ruleset), so it already holds all three entries with no
+schema change. The three relevant entries look like:
 
 ```json
 [
@@ -411,6 +499,15 @@ schema change. The two relevant entries look like:
     "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
     "rules": [{"type": "pull_request", "parameters": {...}}, {"type": "required_status_checks", "parameters": {...}}],
     "bypass_actors": [{"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"}]
+  },
+  {
+    "id": 17118003,
+    "name": "baseline-tag-protect",
+    "target": "tag",
+    "enforcement": "active",
+    "conditions": {"ref_name": {"include": ["refs/tags/v*.*.*"], "exclude": []}},
+    "rules": [{"type": "deletion"}, {"type": "update"}],
+    "bypass_actors": []
   }
 ]
 ```
@@ -422,6 +519,7 @@ Return the APPLY disposition (both rulesets):
   "mode": "apply",
   "history_ruleset": {"id": 16946501, "action": "updated"},
   "checks_ruleset": {"id": 17025842, "action": "updated"},
+  "tag_ruleset": {"id": 17118003, "action": "updated"},
   "required_checks": ["validate", "workflow-security"],
   "deleted_legacy": ["default-branch-no-force-no-delete", "default-branch-required-checks"],
   "report": "/path/to/<ts>-ruleset.json",
@@ -434,7 +532,7 @@ For SHOW mode the disposition lists both:
 ```json
 {
   "mode": "show",
-  "ruleset_count": 2,
+  "ruleset_count": 3,
   "rulesets": {
     "baseline-history-protect": {
       "id": 16946501, "enforcement": "active",
@@ -446,6 +544,11 @@ For SHOW mode the disposition lists both:
       "pull_request": true,
       "required_checks": ["validate", "workflow-security"],
       "admin_bypass": true
+    },
+    "baseline-tag-protect": {
+      "id": 17118003, "enforcement": "active",
+      "target": "tag", "ref_name": ["refs/tags/v*.*.*"],
+      "deletion": true, "update": true, "bypass_actors": 0
     }
   },
   "cache_path": "/Users/.../branch-rules.json"
@@ -460,5 +563,5 @@ caches.
 Cleanup (APPLY only):
 
 ```bash
-rm -f "$TMP_HIST" "$TMP_CHECKS"
+rm -f "$TMP_HIST" "$TMP_CHECKS" "$TMP_TAG"
 ```
