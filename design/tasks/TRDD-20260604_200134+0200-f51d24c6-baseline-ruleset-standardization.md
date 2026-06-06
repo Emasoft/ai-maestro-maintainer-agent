@@ -3,7 +3,7 @@ trdd-id: f51d24c6-d541-4e45-97b4-ebea95904853
 title: Migrate maintainer branch-ruleset source to the ratified baseline-* pair
 column: testing
 created: 2026-06-04T20:01:34+0200
-updated: 2026-06-06T02:41:55+0200
+updated: 2026-06-06T14:18:00+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -56,13 +56,17 @@ NOT edit our docs). `--strict` blocks on exit 1-4, so fixing Pyright
 alone won't clear it; the NIT FPs also block → need a CPV
 suppression/allowlist or a newer CPV release.
 
-**NEXT ACTIONS:** (a) remaining Tier-0 audit hardening (C3-C6, D1-D2) is
-more source work, same gate; (b) CPV-G3 unblock — fix the 4 Pyright nits
-+ find a way past the #68 NIT FPs (CPV suppression / newer-CPV /
-upstream). Once CPV-G3 clears: run publish.py (ships pair + tag-protect
-together), re-apply live rulesets via `workflow-protect-branch` APPLY,
-post SHAs on #7; janitor mirrors byte-identical + first-apply
-readback-pins the tag `ref_name.include`.
+**NEXT ACTIONS:** (a) ✅ C3-C6 LANDED (Phase 1, this session) — see the
+audit-hardening section; D1-D2 remain (more source work, same gate);
+(b) CPV-G3 unblock — fix the 4 Pyright nits + find a way past the #68 NIT
+FPs (CPV suppression / newer-CPV / upstream). Once CPV-G3 clears: run
+publish.py (ships pair + tag-protect + the Tier-0 hardening together),
+re-apply live rulesets via `workflow-protect-branch` APPLY, post SHAs on
+#7; janitor mirrors byte-identical + first-apply readback-pins the tag
+`ref_name.include`. The C3-C6 hardening is maintainer-internal (Tier 0,
+no baseline-shape change) so it needs NO cross-plugin re-ratification —
+the ratified `baseline-*` JSON shape is byte-identical; only the
+build/verify *procedure* got stricter.
 
 **Load-bearing facts:**
 - Ratified baseline agreed BYTE-IDENTICAL by both plugins (manager #7,
@@ -235,15 +239,22 @@ CPV-G3 unblock; no cross-plugin re-ratification needed:
   rebuilds the context list by auto-detect). Template's `ci` left as a
   documented placeholder rather than blanked, since the skill always
   overrides it — net effect: no one is told to apply it raw anymore.
-- **C3** Step-6 verify never asserts `required_status_checks` contexts
-  are non-empty → an empty auto-detection yields a hollow checks rule
-  that still "passes". Guard Step-2 (`[]`→warn/abort) + Step-6 readback.
-- **C4** bypass verify checks actor_TYPE not actor_ID → a `Maintain`
-  (id 4) bypass passes the `RepositoryRole` assertion. Pin `actor_id==5`.
-- **C5** no retry loop on `gh api` net calls; orphan-delete swallows
-  DELETE failures silently. Wrap mutating calls in the retry loop.
-- **C6** Step-2 `yaml.safe_load` has no try/except → one malformed
-  workflow aborts the whole apply. Skip-with-warning per file.
+- **C3** ✅ ADDRESSED (Phase 1) — Step-2 now aborts (exit 64) when
+  auto-detection yields `[]`/empty (no hollow checks rule can be built),
+  AND Step-6 readback asserts the landed `required_status_checks` list
+  length ≥ 1 (exit 67 on a hollow gate).
+- **C4** ✅ ADDRESSED (Phase 1) — Step-6 now reads `actor_id` and asserts
+  `CHECKS_BYPASS_ID == 5` (Admin), so a weaker `Maintain` (id 4) bypass
+  no longer passes the `RepositoryRole`-only check (exit 66).
+- **C5** ✅ ADDRESSED (Phase 1) — added `gh_api_retry()` (transient-only,
+  fail-fast on 4xx per github-timeouts.md; bounded 30×6s) wrapping the
+  POST/PUT in `apply_ruleset` and the Step-6.5 DELETE; a persistent
+  DELETE failure is recorded in `ORPHAN_FAILED` → surfaced in the Step-7
+  disposition `failed_legacy_deletes` (no longer swallowed).
+- **C6** ✅ ADDRESSED (Phase 1) — Step-2 per-file `yaml.safe_load` is now
+  wrapped in try/except `yaml.YAMLError`: one malformed workflow is
+  skipped-with-warning to stderr; the C3 guard re-asserts the result is
+  non-empty so a swallowed parse cannot silently yield `[]`.
 - **D1** guardian T3 diffs branch rules only vs the session-start
   snapshot → a repo already off-baseline at startup is never flagged.
   Also compare the snapshot against the ratified spec.

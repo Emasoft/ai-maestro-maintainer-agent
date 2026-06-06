@@ -134,7 +134,7 @@ shell-grep recipe produced the wrong context list.
 
 ```bash
 CHECKS_JSON="$(python3 -c "
-import yaml, json, glob
+import yaml, json, glob, sys
 
 def triggers(wf):
     # GitHub's workflow 'on:' key parses as the YAML 1.1 boolean True under
@@ -147,7 +147,17 @@ def triggers(wf):
 
 checks=[]
 for f in sorted(glob.glob('.github/workflows/*.yml') + glob.glob('.github/workflows/*.yaml')):
-    with open(f) as fh: wf = yaml.safe_load(fh) or {}
+    # C6: one malformed workflow file must NOT abort protecting the whole repo.
+    # Skip-with-warning the unparseable file (a single bad YAML is a narrower
+    # problem than leaving the default branch unprotected); the remaining
+    # workflows still contribute their checks. Fail-soft is correct ONLY here
+    # because the downstream C3 guard re-asserts the result is non-empty before
+    # any ruleset is built — a swallowed parse cannot silently yield [].
+    try:
+        with open(f) as fh: wf = yaml.safe_load(fh) or {}
+    except yaml.YAMLError as e:
+        print('WARN: skipping unparseable workflow %s: %s' % (f, e), file=sys.stderr)
+        continue
     # Only jobs from PR-triggered workflows can serve as required PR checks. A
     # push-only job (release, notify, tag) never reports on a PR, so requiring it
     # would deadlock every non-admin PR (the check stays pending forever).
@@ -157,6 +167,22 @@ for f in sorted(glob.glob('.github/workflows/*.yml') + glob.glob('.github/workfl
         checks.append({'context': job_id})
 print(json.dumps(checks))
 ")"
+```
+
+**C3 guard — refuse an empty context list.** If auto-detection yields `[]`
+(no PR-triggered workflow, or every PR workflow was skipped/unparseable),
+building Body B with `required_status_checks: []` would create a checks rule
+that enforces **zero** checks — a hollow gate that the Step-6 verify (rule
+type present) would still pass. Abort before building anything:
+
+```bash
+if [ -z "$CHECKS_JSON" ] || [ "$CHECKS_JSON" = "[]" ]; then
+  echo "ABORT: no PR-applicable CI checks detected in .github/workflows/." >&2
+  echo "  A pr-and-checks ruleset with an empty required-checks list enforces" >&2
+  echo "  zero checks (a hollow gate). Add a pull_request-triggered workflow," >&2
+  echo "  or run SHOW to inspect the current rules without applying." >&2
+  exit 64
+fi
 ```
 
 For this plugin that yields the two PR-applicable job ids — the
@@ -312,20 +338,48 @@ Apply all three. A helper keeps the create-or-update logic in one place:
 # an HTTP request and cannot filter piped stdin.
 ruleset_id_from() { python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])'; }
 
+# C5: bounded retry for a MUTATING gh api call (POST/PUT/DELETE). Per
+# ~/.claude/rules/github-timeouts.md, retry ONLY transient failures (DNS,
+# connection reset/timeout, HTTP 5xx, EOF, TLS handshake); a 4xx
+# (auth/404/422/non-fast-forward) returns immediately so the caller can act on
+# it — e.g. apply_ruleset's PUT→POST fallback on a genuine 404. The case
+# default is fail-fast, so an UNRECOGNISED error is never retried (safe
+# direction). Echoes the response body on success; on give-up returns gh's exit
+# code with the captured error on stderr. Bounded 30 tries × 6s.
+gh_api_retry() {
+  local i=0 out rc errfile; errfile="$(mktemp)"
+  while :; do
+    if out="$(GH_HTTP_TIMEOUT=300 gh api "$@" 2>"$errfile")"; then
+      printf '%s' "$out"; rm -f "$errfile"; return 0
+    fi
+    rc=$?
+    case "$(cat "$errfile")" in
+      *"Could not resolve host"*|*"Failed to connect"*|*"Connection reset"*|\
+      *"timed out"*|*"HTTP 5"*|*"unexpected EOF"*|*"handshake"*)
+        i=$((i+1))
+        if [ "$i" -ge 30 ]; then cat "$errfile" >&2; rm -f "$errfile"; return "$rc"; fi
+        sleep 6 ;;
+      *)  # non-transient (4xx, auth, non-fast-forward, …) — fail fast
+        cat "$errfile" >&2; rm -f "$errfile"; return "$rc" ;;
+    esac
+  done
+}
+
 apply_ruleset() {  # $1=existing-id (may be empty)  $2=tmpfile  → echoes "id<TAB>action"
   local id="$1" body="$2" resp action
   if [ -z "$id" ]; then
-    resp="$(gh api -X POST "repos/$REPO/rulesets" --input "$body")"
+    resp="$(gh_api_retry -X POST "repos/$REPO/rulesets" --input "$body")"
     action="created"
   else
     # GitHub's "update a ruleset" is PUT, NOT PATCH — a PATCH 404s on real
     # GitHub (verified cross-plugin on janitor #14; it stays latent under a
     # gh-stub that answers any method). Keep this PUT.
     # If the PUT itself 404s (ruleset deleted between our list and our write),
-    # retry as POST.
-    resp="$(gh api -X PUT "repos/$REPO/rulesets/$id" --input "$body" 2>/dev/null)" \
+    # retry as POST. gh_api_retry fails FAST on that 404 (non-transient), so
+    # the `||` fallback fires promptly; 2>/dev/null mutes the expected-404 noise.
+    resp="$(gh_api_retry -X PUT "repos/$REPO/rulesets/$id" --input "$body" 2>/dev/null)" \
       && action="updated" \
-      || { resp="$(gh api -X POST "repos/$REPO/rulesets" --input "$body")"; action="created"; }
+      || { resp="$(gh_api_retry -X POST "repos/$REPO/rulesets" --input "$body")"; action="created"; }
   fi
   printf '%s\t%s\n' "$(printf '%s' "$resp" | ruleset_id_from)" "$action"
 }
@@ -358,10 +412,22 @@ done
 # the GH013 block (or the force-push hole).
 CHECKS_BYPASS="$(gh api "repos/$REPO/rulesets/$CHECKS_NEW_ID" \
   --jq '[.bypass_actors[].actor_type] | join(",")')"
+CHECKS_BYPASS_ID="$(gh api "repos/$REPO/rulesets/$CHECKS_NEW_ID" \
+  --jq '[.bypass_actors[].actor_id] | join(",")')"
 HIST_BYPASS="$(gh api "repos/$REPO/rulesets/$HIST_NEW_ID" \
   --jq '(.bypass_actors // []) | length')"
 [ "$CHECKS_BYPASS" = "RepositoryRole" ] || {
   echo "VERIFY FAIL: checks ruleset lost its admin bypass ($CHECKS_BYPASS)" >&2
+  exit 66
+}
+# C4: the actor_type check alone is not enough — assert the bypassed role is
+# Admin (id 5), not a weaker role. GitHub built-in RepositoryRole ids:
+# 1 Read, 2 Triage, 3 Write, 4 Maintain, 5 Admin. A Maintain (4) bypass would
+# pass the actor_type assertion above yet hand PR/checks bypass to a
+# broader-than-intended role — exactly the kind of silent over-grant the verify
+# exists to catch.
+[ "$CHECKS_BYPASS_ID" = "5" ] || {
+  echo "VERIFY FAIL: checks bypass actor_id = [$CHECKS_BYPASS_ID], want 5 (Admin)" >&2
   exit 66
 }
 [ "$HIST_BYPASS" = "0" ] || {
@@ -382,6 +448,18 @@ CHECKS_RULES="$(gh api "repos/$REPO/rulesets/$CHECKS_NEW_ID" \
 }
 [ "$CHECKS_RULES" = "pull_request,required_status_checks" ] || {
   echo "VERIFY FAIL: pr-and-checks rules = [$CHECKS_RULES], want pull_request,required_status_checks" >&2
+  exit 67
+}
+
+# C3 readback: the rule TYPE being present is not enough — confirm the landed
+# required_status_checks actually enforces ≥1 context. A regressed
+# auto-detection or a partial apply could leave the rule present but with an
+# empty context list (a hollow gate). The Step-2 guard blocks building [] in
+# the first place; this is the post-apply seatbelt.
+CHECKS_COUNT="$(gh api "repos/$REPO/rulesets/$CHECKS_NEW_ID" \
+  --jq '[.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[]] | length')"
+[ "${CHECKS_COUNT:-0}" -ge 1 ] || {
+  echo "VERIFY FAIL: pr-and-checks ruleset enforces 0 required checks (hollow gate)" >&2
   exit 67
 }
 
@@ -416,6 +494,7 @@ the delete list below stays the branch-lineage names only.)
 
 ```bash
 DELETED_LEGACY=()
+ORPHAN_FAILED=()
 for name in default-branch-no-force-no-delete \
             default-branch-required-checks \
             default-branch-ruleset \
@@ -425,9 +504,18 @@ for name in default-branch-no-force-no-delete \
   OLD_ID="$(gh api "repos/$REPO/rulesets" \
     --jq "[.[] | select(.name==\"$name\")] | .[0].id // empty")"
   [ -z "$OLD_ID" ] && continue
-  gh api -X DELETE "repos/$REPO/rulesets/$OLD_ID" \
-    && DELETED_LEGACY+=("$name") \
-    && echo "deleted orphaned legacy ruleset: $name ($OLD_ID)"
+  if gh_api_retry -X DELETE "repos/$REPO/rulesets/$OLD_ID" >/dev/null; then
+    DELETED_LEGACY+=("$name")
+    echo "deleted orphaned legacy ruleset: $name ($OLD_ID)"
+  else
+    # C5: a persistent DELETE failure must be SURFACED, not swallowed — the
+    # legacy ruleset is still live and may still enforce stale/weaker rules.
+    # Record it for the Step-7 disposition (`failed_legacy_deletes`) so the
+    # caller can retry or remove it by hand. The new pair is already
+    # applied+verified, so the branch/tags stay protected meanwhile.
+    ORPHAN_FAILED+=("$name:$OLD_ID")
+    echo "WARN: could not delete orphaned legacy ruleset $name ($OLD_ID) — recorded for disposition" >&2
+  fi
 done
 ```
 
@@ -522,10 +610,16 @@ Return the APPLY disposition (both rulesets):
   "tag_ruleset": {"id": 17118003, "action": "updated"},
   "required_checks": ["validate", "workflow-security"],
   "deleted_legacy": ["default-branch-no-force-no-delete", "default-branch-required-checks"],
+  "failed_legacy_deletes": [],
   "report": "/path/to/<ts>-ruleset.json",
   "cache_path": "/Users/.../branch-rules.json"
 }
 ```
+
+`failed_legacy_deletes` is the `ORPHAN_FAILED` array from Step 6.5 (C5) —
+`"<name>:<id>"` for every legacy ruleset whose DELETE persistently failed.
+Empty on a clean run; a non-empty array means those rulesets are still live
+and need a manual retry / removal.
 
 For SHOW mode the disposition lists both:
 
