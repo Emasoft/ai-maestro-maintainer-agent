@@ -3,7 +3,7 @@ trdd-id: f51d24c6-d541-4e45-97b4-ebea95904853
 title: Migrate maintainer branch-ruleset source to the ratified baseline-* pair
 column: testing
 created: 2026-06-04T20:01:34+0200
-updated: 2026-06-06T14:36:15+0200
+updated: 2026-06-08T18:05:11+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -27,7 +27,7 @@ impacts: [ci-pipeline]
 attempts: 1
 last-test-result: pass
 last-test-at: 2026-06-04T20:24:03+0200
-implementation-commits: [c8fe5ce, 089c979, 31fe57f, cde65eb, 138dfdd, b71a1ff, fde5e59, 99c3f9e, 976d311, 58e3234]
+implementation-commits: [c8fe5ce, 089c979, 31fe57f, cde65eb, 138dfdd, b71a1ff, fde5e59, 99c3f9e, 976d311, 58e3234, b02b24c]
 external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/7", "github.com/Emasoft/ai-maestro-janitor/issues/14"]
 ---
 
@@ -43,29 +43,32 @@ workflow-protect-branch, the ruleset-tag-protect.json template, bootstrap
 stash+prose, guardian T3, command; audit-finding C2 folded in). PLUS the
 full Tier-0 audit-hardening batch landed this session: C3-C6 (`fde5e59`),
 D1 (`99c3f9e`), D2 (Phase 3) — all maintainer-internal, no baseline-shape
-change. 471 tests pass; CPV `--strict` is CLEAN on every touched file
-(MINOR=4 are pre-existing sentinel Pyright nits in `scripts/`, not mine).
+change. PLUS the 4 sentinel Pyright nits (our-side CPV-G3 portion) FIXED
+this session (`b02b24c`). 471/471 tests pass; pyright 0/0/0 across
+`scripts/`; CPV `--strict` clean on every touched file.
 NOT yet pushed; live repo rulesets NOT yet re-applied.
 
-**THE ONE BLOCKER — CPV-G3 (publish gate), pre-existing + partly
-upstream:** publish.py requires CPV `--strict` exit 0, but the plugin has
-pre-existing findings in OTHER files: MINOR=4 (sentinel Pyright nits —
-OURS, fixable: `scripts/sentinel/autofix.py:648`,
-`scripts/sentinel/rules/missing_persist_creds.py:54`,
-`scripts/sentinel/rules/unscoped_app_token.py:40`,
-`scripts/sentinel_scan.py:113`) + NIT=14 (CPV #68 supply-chain FPs in
+**THE ONE BLOCKER — CPV-G3 (publish gate), now purely UPSTREAM:**
+publish.py requires CPV `--strict` exit 0. The MINOR=4 sentinel Pyright
+nits (OURS) are FIXED this session — `b02b24c`: positional-only `_Client`
+protocol (the 3 fetch_* methods are always called positionally, so
+`LocalClient`'s intentionally-unused `_repo` slot no longer needs to
+name-match) + single-eval narrowing in missing_persist_creds /
+unscoped_app_token (evaluate `step.get("with")` once so isinstance narrows
+the assigned value). Remaining: NIT=14 (CPV #68 supply-chain FPs in
 classification-paths / install-recipes / protocols docs — UPSTREAM, do
-NOT edit our docs). `--strict` blocks on exit 1-4, so fixing Pyright
-alone won't clear it; the NIT FPs also block → need a CPV
-suppression/allowlist or a newer CPV release.
+NOT edit our docs). `--strict` blocks on exit 1-4, so the NIT FPs alone
+still block → need a CPV suppression/allowlist or a newer CPV release
+(cross-project: a CPV fork+PR for #65/#68 is the repo-owner's call).
 
 **NEXT ACTIONS:** (a) ✅ ALL Tier-0 audit hardening LANDED this session —
 C3-C6 (Phase 1, `fde5e59`), D1 (Phase 2, `99c3f9e`), D2 (Phase 3) — see
-the audit-hardening section. Nothing from the audit remains. (b) CPV-G3
-unblock is the SOLE remaining gate to shipping — fix the 4 Pyright nits
-(`scripts/sentinel*`) + find a way past the #68 NIT FPs (CPV suppression
-/ newer-CPV / upstream). This is the repo owner's call (cross-project: it
-may need a CPV fix). Once CPV-G3 clears: run publish.py (ships pair +
+the audit-hardening section. Nothing from the audit remains. (b) The 4
+sentinel Pyright nits are FIXED (`b02b24c`). CPV-G3 unblock is now the
+SOLE remaining gate to shipping, and its ONLY residual sub-blocker is the
+#68 NIT FPs (CPV suppression / newer-CPV / upstream). This is the repo
+owner's call (cross-project: it may need a CPV fix). Once CPV-G3 clears:
+run publish.py (ships pair +
 tag-protect + ALL the Tier-0 hardening together), re-apply live rulesets
 via `workflow-protect-branch` APPLY, post SHAs on #7; janitor mirrors
 byte-identical + first-apply readback-pins the tag `ref_name.include`.
