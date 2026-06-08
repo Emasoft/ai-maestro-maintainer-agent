@@ -36,7 +36,12 @@ class UnscopedAppToken(Rule):
                 if not (uses and "create-github-app-token" in str(uses)):
                     continue
 
-                with_block = step.get("with") if isinstance(step.get("with"), dict) else {}
+                # Evaluate step.get("with") ONCE into a variable so the
+                # isinstance() narrows the same value that is assigned (a
+                # second .get() call is a distinct expression Pyright cannot
+                # link, leaving with_block typed as possibly-None).
+                with_raw = step.get("with") if isinstance(step, dict) else None
+                with_block = with_raw if isinstance(with_raw, dict) else {}
                 has_permissions = any(str(k).startswith("permission-") for k in with_block.keys())
 
                 if not has_permissions:

@@ -50,7 +50,12 @@ class MissingPersistCreds(Rule):
                 if not (uses and _CHECKOUT_RX.search(str(uses))):
                     continue
 
-                with_block = step.get("with") if isinstance(step.get("with"), dict) else {}
+                # Evaluate step.get("with") ONCE into a variable so the
+                # isinstance() narrows the same value that is assigned (a
+                # second .get() call is a distinct expression Pyright cannot
+                # link, leaving with_block typed as possibly-None).
+                with_raw = step.get("with") if isinstance(step, dict) else None
+                with_block = with_raw if isinstance(with_raw, dict) else {}
                 persist = with_block.get("persist-credentials")
 
                 # persist-credentials: false — mitigated, no finding.
