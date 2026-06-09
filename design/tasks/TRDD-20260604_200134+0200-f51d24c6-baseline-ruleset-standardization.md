@@ -3,7 +3,7 @@ trdd-id: f51d24c6-d541-4e45-97b4-ebea95904853
 title: Migrate maintainer branch-ruleset source to the ratified baseline-* pair
 column: testing
 created: 2026-06-04T20:01:34+0200
-updated: 2026-06-08T18:05:11+0200
+updated: 2026-06-09T23:50:50+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -44,9 +44,22 @@ stash+prose, guardian T3, command; audit-finding C2 folded in). PLUS the
 full Tier-0 audit-hardening batch landed this session: C3-C6 (`fde5e59`),
 D1 (`99c3f9e`), D2 (Phase 3) — all maintainer-internal, no baseline-shape
 change. PLUS the 4 sentinel Pyright nits (our-side CPV-G3 portion) FIXED
-this session (`b02b24c`). 471/471 tests pass; pyright 0/0/0 across
+this session (`b02b24c`). 476/476 tests pass; pyright 0/0/0 across
 `scripts/`; CPV `--strict` clean on every touched file.
-NOT yet pushed; live repo rulesets NOT yet re-applied.
+NOT yet pushed (publish still CPV-G3-gated).
+
+**LIVE RULESETS APPLIED 2026-06-09 (user go: "implement/fix all issues
+valid").** The three ratified rulesets were POSTed to the live repo via
+the workflow-protect-branch APPLY procedure run verbatim:
+`baseline-history-protect` id 17471104, `baseline-pr-and-checks`
+id 17471105 (checks auto-detected: `validate`, `workflow-security`),
+`baseline-tag-protect` id 17471106. Verify-block PASSED (rules, params,
+bypass_actors byte-match the ratified spec). READBACK-PIN: GitHub echoed
+`ref_name.include == ["refs/tags/v*.*.*"]` UNCHANGED — no reconciliation
+needed; janitor can pin the same literal. Legacy pair
+`default-branch-no-force-no-delete` (16946501) +
+`default-branch-required-checks` (17025842) deleted AFTER verify
+(Step 6.5 ordering). Live state == ratified baseline, exactly 3 rulesets.
 
 **THE ONE BLOCKER — CPV-G3 (publish gate), now purely UPSTREAM:**
 publish.py requires CPV `--strict` exit 0. The MINOR=4 sentinel Pyright
@@ -69,9 +82,10 @@ SOLE remaining gate to shipping, and its ONLY residual sub-blocker is the
 #68 NIT FPs (CPV suppression / newer-CPV / upstream). This is the repo
 owner's call (cross-project: it may need a CPV fix). Once CPV-G3 clears:
 run publish.py (ships pair +
-tag-protect + ALL the Tier-0 hardening together), re-apply live rulesets
-via `workflow-protect-branch` APPLY, post SHAs on #7; janitor mirrors
-byte-identical + first-apply readback-pins the tag `ref_name.include`.
+tag-protect + ALL the Tier-0 hardening together) and post SHAs on #7.
+✅ Live rulesets APPLIED + readback-pinned 2026-06-09 (see STATE head) —
+the janitor mirrors byte-identical; the echoed tag literal is
+`refs/tags/v*.*.*` verbatim, so the janitor pins the same form.
 ALL the C3-C6/D1/D2 hardening is maintainer-internal (Tier 0, no
 baseline-shape change) → NO cross-plugin re-ratification needed; the
 ratified `baseline-*` JSON shape stays byte-identical, only the
