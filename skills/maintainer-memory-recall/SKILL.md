@@ -118,5 +118,6 @@ memgrep is absent; never blocks on a missing binary.
   the schema, the read-the-notes rule, the dual-test method).
 - `maintainer-memory-write` — the WRITE side (authoring + the
   non-destructive correction protocol).
-- `tools/memgrep/SKILL.md` in the `ai-maestro-janitor` repo — the
-  memgrep tool reference (the janitor owns/distributes the binary).
+- The memgrep tool reference doc (SKILL.md under the janitor repo's
+  memgrep tool dir) — the `ai-maestro-janitor` repo owns and
+  distributes the binary.

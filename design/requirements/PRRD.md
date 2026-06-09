@@ -29,4 +29,3 @@ spec: `~/.claude/rules/prrd-design-rules.md`.
 - **G1.1** — Every agent that writes to GitHub (issue, issue comment, PR, PR comment, PR review, discussion, release note) MUST begin the body with a one-line self-identification of which agent/role/plugin authored it, because all AI Maestro agents share the single human-owner GitHub identity (the owner's gh CLI auth). Recommended leading line: _Posted by the Claude developing **<plugin-or-role>** (via the shared @owner gh auth)._ Commit messages SHOULD carry an `Agent: <role>` trailer.
 
 ## 🥈 SILVER — MANAGER-mutable (agents propose via COS)
-

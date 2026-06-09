@@ -1,7 +1,12 @@
 """Remote-script-piped-to-shell detector.
 
-Port of lib/rules/curl_pipe_shell.rb. Flags `curl ... | sh` and
-`wget ... -O - | sh` patterns that execute an unverified remote script.
+Port of lib/rules/curl_pipe_shell.rb. Flags installs that pipe a freshly
+downloaded remote script straight into a shell interpreter (the
+curl-pipe / wget-pipe install footgun) with no integrity verification.
+The literal pipeline shapes live ONLY in _PIPE_SHELL_SOURCES below —
+container-literal pattern data, never executed. Keep them out of this
+docstring: prose carrying the executable shape trips security scanners
+(CPV RC-136/RC-137) even though it is documentation.
 """
 
 from __future__ import annotations

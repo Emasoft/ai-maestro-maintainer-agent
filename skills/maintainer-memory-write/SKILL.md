@@ -60,8 +60,8 @@ CLAUDE.md) or what only matters to the current conversation.
    fi
    ```
 
-4. Write `"$MEMDIR/<type>_<slug>.md"` with the Write tool (NOT echo),
-   schema:
+4. Author the note file inside `$MEMDIR` — filename is the step-2 slug
+   plus the markdown extension — with the Write tool (NOT echo), schema:
 
    ```yaml
    ---
@@ -76,7 +76,8 @@ CLAUDE.md) or what only matters to the current conversation.
    ```
 
 5. Append a one-line pointer to `"$MEMDIR/MEMORY.md"` (create if
-   missing): `- [<Title>](<type>_<slug>.md) — <one-line hook>.`
+   missing): a list item that links the note Title to the note's
+   filename, then an em-dash and a one-line hook.
 
 6. Sanity-check: would a future session, having only the SYMPTOM, find
    this note by searching `description`? If the description reads like

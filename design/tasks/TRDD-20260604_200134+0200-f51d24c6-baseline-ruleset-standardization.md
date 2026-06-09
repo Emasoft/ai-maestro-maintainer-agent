@@ -31,8 +31,6 @@ implementation-commits: [c8fe5ce, 089c979, 31fe57f, cde65eb, 138dfdd, b71a1ff, f
 external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/7", "github.com/Emasoft/ai-maestro-janitor/issues/14"]
 ---
 
-# Migrate maintainer branch-ruleset source to the ratified `baseline-*` pair
-
 ## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative) — 2026-06-04
 
 **Current state (2026-06-06):** The full THREE-ruleset baseline is
@@ -78,8 +76,8 @@ still block → need a CPV suppression/allowlist or a newer CPV release
 C3-C6 (Phase 1, `fde5e59`), D1 (Phase 2, `99c3f9e`), D2 (Phase 3) — see
 the audit-hardening section. Nothing from the audit remains. (b) The 4
 sentinel Pyright nits are FIXED (`b02b24c`). CPV-G3 unblock is now the
-SOLE remaining gate to shipping, and its ONLY residual sub-blocker is the
-#68 NIT FPs (CPV suppression / newer-CPV / upstream). This is the repo
+SOLE remaining gate to shipping, and its ONLY residual sub-blocker is
+the CPV-#68 NIT FPs (CPV suppression / newer-CPV / upstream). This is the repo
 owner's call (cross-project: it may need a CPV fix). Once CPV-G3 clears:
 run publish.py (ships pair +
 tag-protect + ALL the Tier-0 hardening together) and post SHAs on #7.
