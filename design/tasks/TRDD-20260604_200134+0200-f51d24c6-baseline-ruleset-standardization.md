@@ -1,9 +1,11 @@
 ---
 trdd-id: f51d24c6-d541-4e45-97b4-ebea95904853
 title: Migrate maintainer branch-ruleset source to the ratified baseline-* pair
-column: testing
+column: published
 created: 2026-06-04T20:01:34+0200
-updated: 2026-06-09T23:50:50+0200
+updated: 2026-06-10T09:51:18+0200
+published-version: 1.4.0
+published-at: 2026-06-10T07:46:02+0000
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -27,7 +29,7 @@ impacts: [ci-pipeline]
 attempts: 1
 last-test-result: pass
 last-test-at: 2026-06-04T20:24:03+0200
-implementation-commits: [c8fe5ce, 089c979, 31fe57f, cde65eb, 138dfdd, b71a1ff, fde5e59, 99c3f9e, 976d311, 58e3234, b02b24c]
+implementation-commits: [c8fe5ce, 089c979, 31fe57f, cde65eb, 138dfdd, b71a1ff, fde5e59, 99c3f9e, 976d311, 58e3234, b02b24c, 566f777, 5383e10, acb7464, 20b577f, 6d20938, d04138d, 6b5581f]
 external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/7", "github.com/Emasoft/ai-maestro-janitor/issues/14"]
 ---
 
@@ -59,7 +61,22 @@ needed; janitor can pin the same literal. Legacy pair
 `default-branch-required-checks` (17025842) deleted AFTER verify
 (Step 6.5 ordering). Live state == ratified baseline, exactly 3 rulesets.
 
-**THE ONE BLOCKER — CPV-G3 (publish gate), now purely UPSTREAM:**
+**✅ SHIPPED — v1.4.0 published 2026-06-10T07:46Z.** CPV-G3 cleared at
+exit 0 (CRITICAL/MAJOR/MINOR/NIT all 0) via the upstream-blessed
+author-side devitalization (#68 Class B path): upstream CPV v2.121–
+v2.126 fixed most FP classes; our residual 7 doc NITs were devitalized
+honestly (`6d20938` install-recipe download→review→run splits +
+docker-persistence prose; `d04138d` one-char-class triage regex
+needles, runtime-equivalence grep-verified; `c4c009b`→`20b577f` the
+RC-136/137 docstring + MAJOR/lint batch). Full pipeline green: bump
+1.3.1→1.4.0, tag `v1.4.0`, atomic push, GH release, Notify-Marketplace
++ Plugin-Validation + Release workflows all SUCCESS. The 5 Dependabot
+PRs (#2-#6) were verified (tag↔SHA checked) + merged first; the branch
+was rebased and main fast-forwarded (old local-main line archived at
+tag `archive/pre-publish-main-20260610`, all 8 patches contained
+byte-identical in the shipped line).
+
+**HISTORICAL — the blocker as it stood before 2026-06-10 (resolved):**
 publish.py requires CPV `--strict` exit 0. The MINOR=4 sentinel Pyright
 nits (OURS) are FIXED this session — `b02b24c`: positional-only `_Client`
 protocol (the 3 fetch_* methods are always called positionally, so
