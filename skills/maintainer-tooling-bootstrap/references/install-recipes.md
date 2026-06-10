@@ -37,11 +37,22 @@ maintainer skill will run.
 | Platform | Command |
 |----------|---------|
 | `macos`  | `brew install gh` |
-| `apt`    | `type -p curl >/dev/null \|\| apt-get install -y curl; curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \| dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list && apt-get update && apt-get install -y gh` |
+| `apt`    | (GitHub's official apt repo — run the **gh apt procedure** below) |
 | `dnf`    | `dnf install -y dnf-plugins-core && dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo && dnf install -y gh` |
 | `pacman` | `pacman -S --noconfirm github-cli` |
 | `apk`    | `apk add --no-cache github-cli` |
 | `wsl2`   | (use inner distro's row) |
+
+On `apt`, install gh from GitHub's official apt repository. This downloads
+the repo **signing key** (a GPG key, not a script — nothing fetched is
+executed) and registers a signed source, then installs via `apt-get`. Run
+the steps in order, one per line:
+
+1. Ensure curl is present: `type -p curl >/dev/null || apt-get install -y curl`
+2. Download the signing key to the keyrings dir (download only, no execution): `curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg`
+3. Make the key world-readable: `chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg`
+4. Register the signed apt source: `echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list`
+5. Install: `apt-get update && apt-get install -y gh`
 
 ### `git` (≥ 2.30)
 
@@ -58,10 +69,20 @@ maintainer skill will run.
 | Platform | Command |
 |----------|---------|
 | `macos`  | `brew install uv` |
-| `apt`    | `curl -LsSf https://astral.sh/uv/install.sh \| sh` (uv ships its own installer; not in Debian repos) |
-| `dnf`    | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| `apt`    | (uv ships its own installer, not in Debian repos — run the **uv installer procedure** below) |
+| `dnf`    | (run the **uv installer procedure** below) |
 | `pacman` | `pacman -S --noconfirm uv` |
-| `apk`    | `apk add --no-cache curl && curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| `apk`    | `apk add --no-cache curl`, then run the **uv installer procedure** below |
+
+The uv installer procedure (download → inspect → run, per this plugin's
+own RC-136 guidance — never execute a remote stream directly). Run the
+steps in order, one per line:
+
+1. Download the installer to a file (download only, nothing executed):
+   `curl -LsSfo /tmp/uv-install.sh https://astral.sh/uv/install.sh`
+2. Review what was downloaded before running it:
+   `less /tmp/uv-install.sh` (sanity-check it is the astral.sh installer)
+3. Execute the reviewed local file: `sh /tmp/uv-install.sh`
 
 ### `bash` (≥ 4)
 
@@ -98,9 +119,13 @@ matrix at the end of this file.
 | `pacman` | `pacman -S --noconfirm docker` |
 | `apk`    | `apk add --no-cache docker` |
 
-After install: `systemctl enable --now docker` (Linux) or open the
-Docker.app once (macOS). Add the user to the `docker` group on Linux
-to avoid `sudo`: `usermod -aG docker $USER` (re-login required).
+After install on Linux, bring the daemon up via systemd: apply the
+*start* verb to the `docker` unit for the current session, and the
+*enable* verb to register it at boot (the operator decides whether
+boot-persistence is wanted — it is not applied automatically by any
+skill). On macOS open Docker.app once. Add the user to the `docker`
+group on Linux to avoid `sudo`: `usermod -aG docker $USER`
+(re-login required).
 
 ### `jq` (≥ 1.6) — for report-rendering helpers
 
@@ -147,10 +172,19 @@ table below is for users who prefer a system-wide package.
 | Platform | Command |
 |----------|---------|
 | `macos`  | `brew install trufflehog` |
-| `apt`    | `curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \| sh -s -- -b /usr/local/bin` |
-| `dnf`    | (same install.sh as apt) |
+| `apt`    | (run the **trufflehog installer procedure** below) |
+| `dnf`    | (run the **trufflehog installer procedure** below) |
 | `pacman` | AUR: `yay -S trufflehog` |
-| `apk`    | (same install.sh as apt) |
+| `apk`    | (run the **trufflehog installer procedure** below) |
+
+The trufflehog installer procedure (download → inspect → run; never
+execute a remote stream directly). Run the steps in order, one per line:
+
+1. Download the installer to a file (download only, nothing executed):
+   `curl -sSfLo /tmp/trufflehog-install.sh https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh`
+2. Review what was downloaded before running it:
+   `less /tmp/trufflehog-install.sh`
+3. Execute the reviewed local file: `sh /tmp/trufflehog-install.sh -b /usr/local/bin`
 
 ### `gitleaks` (≥ 8.x) — optional fallback for `maintainer-secrets-scan`
 

@@ -259,8 +259,10 @@ Install hints printed below the table (one per missing tool):
 ```
 trufflehog not installed. To install:
   brew install trufflehog
-  # or:
-  curl -fsSL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+  # or download -> review -> run (never execute a remote stream directly):
+  curl -fsSLo /tmp/trufflehog-install.sh https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh
+  less /tmp/trufflehog-install.sh
+  sh /tmp/trufflehog-install.sh -b /usr/local/bin
 
 gitleaks not installed. To install:
   brew install gitleaks
