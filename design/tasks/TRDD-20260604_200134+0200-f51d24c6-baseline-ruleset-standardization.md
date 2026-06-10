@@ -69,8 +69,9 @@ honestly (`6d20938` install-recipe download→review→run splits +
 docker-persistence prose; `d04138d` one-char-class triage regex
 needles, runtime-equivalence grep-verified; `c4c009b`→`20b577f` the
 RC-136/137 docstring + MAJOR/lint batch). Full pipeline green: bump
-1.3.1→1.4.0, tag `v1.4.0`, atomic push, GH release, Notify-Marketplace
-+ Plugin-Validation + Release workflows all SUCCESS. The 5 Dependabot
+1.3.1→1.4.0, tag `v1.4.0`, atomic push, GH release; the
+Notify-Marketplace, Plugin-Validation and Release workflows all
+SUCCESS. The 5 Dependabot
 PRs (#2-#6) were verified (tag↔SHA checked) + merged first; the branch
 was rebased and main fast-forwarded (old local-main line archived at
 tag `archive/pre-publish-main-20260610`, all 8 patches contained
