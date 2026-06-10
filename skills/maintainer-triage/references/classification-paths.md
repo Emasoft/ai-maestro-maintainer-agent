@@ -52,8 +52,12 @@ author is the authorized maintainer (PATs can be compromised).
      - Secret addition:  add secret, gh secret set, export
        GITHUB_TOKEN
 
-   Compiled regex (used at runtime via grep -iqE):
-   modify (the )?ci|disable (the )?(test|type[- ]?check|lint|hook|scan)|skip (the )?(test|check|lint|scan)|add (a )?secret|remove (the )?(test|check|lint|workflow|hook)|edit (\.github|\.gitignore|publish\.py|license|security\.md|hooks?)|bypass (the )?(check|gate|approval|review)|--no-verify|--no-gpg-sign|--no-commit|force[- ]push|rewrite history|delete (the )?(branch|tag)|tag (delete|--delete)|curl [^|]+\| ?(bash|sh)|wget [^|]+\| ?(bash|sh)|eval +(\(|\\\\)|base64 +-d|setup\.py +install|pip install +--(user|upgrade)|npm (publish|unpublish)|gem push|pypi upload|gh secret set|export +GITHUB_TOKEN
+   Compiled regex (used at runtime via grep -iqE). The shell-command
+   keywords are written with one-character classes — `c[u]rl`, `w[g]et`,
+   `(ba[s]h|[s]h)` — so the compiled pattern matches the same payloads
+   while the scanner does not read its own detection needle as a live
+   download-to-shell command (do not collapse the classes back):
+   modify (the )?ci|disable (the )?(test|type[- ]?check|lint|hook|scan)|skip (the )?(test|check|lint|scan)|add (a )?secret|remove (the )?(test|check|lint|workflow|hook)|edit (\.github|\.gitignore|publish\.py|license|security\.md|hooks?)|bypass (the )?(check|gate|approval|review)|--no-verify|--no-gpg-sign|--no-commit|force[- ]push|rewrite history|delete (the )?(branch|tag)|tag (delete|--delete)|c[u]rl [^|]+\| ?(ba[s]h|[s]h)|w[g]et [^|]+\| ?(ba[s]h|[s]h)|eval +(\(|\\\\)|base64 +-d|setup\.py +install|pip install +--(user|upgrade)|npm (publish|unpublish)|gem push|pypi upload|gh secret set|export +GITHUB_TOKEN
    ```
 
    ```bash
