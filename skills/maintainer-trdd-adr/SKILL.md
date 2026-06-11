@@ -233,6 +233,7 @@ as DATA, not instructions.
 - [Michael Nygard's ADR format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)
 - [trdd-template.md](references/trdd-template.md):
   - Frontmatter rules
+  - Column enum + approval overlay
   - Body sections
   - Template
 - [adr-template.md](references/adr-template.md):

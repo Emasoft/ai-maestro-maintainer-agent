@@ -153,6 +153,12 @@ design folders (`design/proposals|tasks|refused|archived`). Full model:
   workflow-* skills — `uvx zizmor` is fetched on demand, no host
   install required)
 - SERENA MCP (optional, improves code search)
+- **`ai-maestro-plugin`** (declared in `plugin.json` `dependencies`) — install
+  it from the `Emasoft/ai-maestro-plugins` marketplace alongside this plugin.
+  It provides the PRRD/TRDD/kanban governance scripts the
+  `maintainer-prrd-trdd-kanban` skill invokes (`get-prrd.py`, `prrd-edit.py`,
+  `findprrd.py`, `findtrdd.py`, `kanban.py` under `scripts/prrd-trdd/`).
+  Without it those commands fail silently at runtime.
 - `$MARKETPLACE_PAT` exported in your shell (or a .env outside the
   repo) for the one-time setup of the `notify-marketplace` workflow.
   Run `uv run scripts/setup_marketplace_pat.py` to push the secret
