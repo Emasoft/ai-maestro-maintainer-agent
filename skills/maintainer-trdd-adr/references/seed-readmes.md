@@ -49,28 +49,40 @@ Three components separated by `-`:
   Generate via `python3 -c "import uuid; print(uuid.uuid4())"`.
 - `<short-slug>` — kebab-case summary (2-4 words).
 
-## Frontmatter (mandatory)
+## Frontmatter (mandatory — v2 `column:` schema)
 
 \`\`\`yaml
 ---
 trdd-id: <full UUID>
 title: <single line, no colon, ≤ 80 chars>
-status: not-started
+column: backburner
 created: <ISO 8601 datetime with TZ offset>
 updated: <same shape>
 ---
 \`\`\`
 
-## Status enum
+State is the single `column:` field. There is no v1 `status:` field.
+
+## Column enum (v2 kanban)
+
+Lifecycle: `backburner → todo → design → dispatch → dev → testing → ai_review
+→ (human_review) → complete`, then `publish → published` (tools) or
+`deploy → live` (services).
 
 | Value | Meaning |
 |---|---|
-| not-started | Authored; no implementation yet |
-| in-progress | At least one commit references this TRDD |
-| completed | Acceptance criteria met |
-| failed | Attempted and abandoned (do NOT retry without reading the post-mortem) |
+| backburner | Authored; parked backlog (no work yet) |
+| todo / design / dispatch | Promoted; being shaped + assigned |
+| dev | At least one commit references this TRDD; implementation underway |
+| testing / ai_review / human_review | Tests + reviews running |
+| complete | Acceptance criteria met (internal-done) |
+| published / live | Terminal — shipped to users / serving traffic |
 | blocked | Waiting on another TRDD (must add `blocked-by: [TRDD-<uid>]` list) |
+| failed | Attempted; retryable (stays in `design/tasks/`; read the post-mortem) |
 | superseded | Replaced by a newer TRDD (must add `superseded-by: [TRDD-<uid>]` list) |
+
+Approval overlay + 4 zone folders (`proposals`/`tasks`/`refused`/`archived`):
+`~/.claude/rules/trdd-approval-tiers.md`.
 
 ## Body sections
 

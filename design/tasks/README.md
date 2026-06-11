@@ -35,28 +35,43 @@ Three components separated by `-`:
   via `python3 -c "import uuid; print(uuid.uuid4())"`.
 - `<short-slug>` — kebab-case summary (2-4 words).
 
-## Frontmatter (mandatory)
+## Frontmatter (mandatory — v2 `column:` schema)
 
 ```yaml
 ---
 trdd-id: <full UUID>
 title: <single line, no colon, ≤ 80 chars>
-status: not-started
+column: backburner
 created: <ISO 8601 datetime with TZ offset>
 updated: <same shape>
 ---
 ```
 
-## Status enum
+State is the single `column:` field (the v2 kanban schema). There is **no v1
+`status:` field**.
 
-| Value | Meaning | Terminal? |
+## Column enum (the v2 kanban pipeline + exceptions)
+
+Lifecycle order: `backburner → todo → design → dispatch → dev → testing →
+ai_review → (human_review) → complete`, then tool TRDDs `→ publish → published`
+and service TRDDs `→ deploy → live → (live_auditing)`.
+
+| Group | Columns | Terminal? |
 |---|---|---|
-| `not-started` | Authored; no implementation yet | no |
-| `in-progress` | At least one commit references this TRDD | no |
-| `completed` | Acceptance criteria met | yes |
-| `failed` | Attempted and abandoned (do not retry without reading the post-mortem) | yes |
-| `blocked` | Waiting on another TRDD (must add `blocked-by: [TRDD-<uid>]` list) | no |
-| `superseded` | Replaced by a newer TRDD (must add `superseded-by: [TRDD-<uid>]` list) | yes |
+| Entry | `backburner`, `todo`, `live_auditing` (entry) | no |
+| Design | `design`, `dispatch` | no |
+| Work | `dev`, `testing`, `ai_review`, `human_review` | no |
+| Ready | `complete` | no (internal-done) |
+| Ship | `publish` → `published` / `deploy` → `live` | `published`/`live` terminal |
+| Exceptions | `blocked` 🔴 (add `blocked-by: [...]`), `failed` (retryable), `superseded` (add `superseded-by: [...]`) | only `superseded` terminal |
+
+**Approval overlay (location = authorization):** `design/proposals/`
+(`column: proposal`, awaiting approval) → `design/tasks/` (`column: planned`,
+authorized) → terminal-DONE TRDDs `git mv` to `design/archived/`
+(`completed`/`cancelled`/`superseded`); refused proposals `git mv` to
+`design/refused/` (`column: refused`). Tier-0 work authors directly in
+`design/tasks/` as `planned`. Full model:
+`~/.claude/rules/trdd-approval-tiers.md`.
 
 ## Body sections
 

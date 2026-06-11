@@ -1,9 +1,9 @@
 ---
 trdd-id: d4112f1e-c932-4461-a3ed-869961655b09
 title: Per-author trust elevation for maintainer-approval-gate protected paths
-status: not-started
+column: backburner
 created: 2026-05-23T17:35:00+0200
-updated: 2026-05-23T17:35:00+0200
+updated: 2026-06-11T11:13:41+0200
 ---
 
 ## TRDD-d4112f1e — Per-author trust elevation for maintainer-approval-gate protected paths

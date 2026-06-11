@@ -1,9 +1,9 @@
 ---
 trdd-id: c0734bde-9d36-49c7-98a7-dcae2f83794d
 title: Supply-chain article response — close article-vector gaps GAP-1 GAP-2 GAP-4 (Phase A)
-status: completed
+column: complete
 created: 2026-05-23T17:50:01+0200
-updated: 2026-05-23T17:50:01+0200
+updated: 2026-06-11T11:13:41+0200
 ---
 
 ## TRDD-c0734bde — Supply-chain article response — close article-vector gaps GAP-1 GAP-2 GAP-4 (Phase A)

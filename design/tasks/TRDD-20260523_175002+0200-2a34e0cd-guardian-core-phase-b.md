@@ -1,9 +1,9 @@
 ---
 trdd-id: 2a34e0cd-01fa-4241-80d8-8ab37105b17c
 title: Guardian Mode core — proactive supply-chain sentinel with 5 threat classes (Phase B)
-status: completed
+column: complete
 created: 2026-05-23T17:50:02+0200
-updated: 2026-05-23T17:50:02+0200
+updated: 2026-06-11T11:13:41+0200
 ---
 
 ## TRDD-2a34e0cd — Guardian Mode core — proactive supply-chain sentinel with 5 threat classes (Phase B)

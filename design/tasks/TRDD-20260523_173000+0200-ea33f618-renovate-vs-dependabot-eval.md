@@ -1,9 +1,9 @@
 ---
 trdd-id: ea33f618-90ad-4bdc-840d-7f9baa747945
 title: Evaluate Renovate as Dependabot replacement for github-actions
-status: completed
+column: complete
 created: 2026-05-23T17:30:00+0200
-updated: 2026-05-23T17:30:00+0200
+updated: 2026-06-11T11:13:41+0200
 ---
 
 ## TRDD-ea33f618 — Evaluate Renovate as Dependabot replacement for github-actions

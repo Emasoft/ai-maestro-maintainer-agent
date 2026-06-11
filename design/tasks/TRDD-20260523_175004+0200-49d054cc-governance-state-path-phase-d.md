@@ -1,9 +1,9 @@
 ---
 trdd-id: 49d054cc-042f-4c33-b2b3-b7947fd2a8d4
 title: Governance state-path fix — relocate per-agent state from $HOME to AGENT_DIR (Phase D)
-status: completed
+column: complete
 created: 2026-05-23T17:50:04+0200
-updated: 2026-05-23T17:50:04+0200
+updated: 2026-06-11T11:13:41+0200
 ---
 
 ## TRDD-49d054cc — Governance state-path fix — relocate per-agent state from $HOME to AGENT_DIR (Phase D)

@@ -1,9 +1,9 @@
 ---
 trdd-id: 2700e67d-de93-43bf-ad88-06340c79d4f1
 title: Guardian wiring + adversarial-content triage path (Phase C)
-status: completed
+column: complete
 created: 2026-05-23T17:50:03+0200
-updated: 2026-05-23T17:50:03+0200
+updated: 2026-06-11T11:13:41+0200
 ---
 
 ## TRDD-2700e67d — Guardian wiring + adversarial-content triage path (Phase C)

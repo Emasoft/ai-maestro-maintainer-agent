@@ -1,9 +1,9 @@
 ---
 trdd-id: e1c2677a-3ac2-4f0c-8958-1e8d0eb663e4
 title: Full plugin audit + remediation pass (single sweep)
-status: completed
+column: complete
 created: 2026-05-27T14:00:00+0200
-updated: 2026-06-11T10:55:11+0200
+updated: 2026-06-11T11:13:41+0200
 ---
 
 <!-- markdownlint-disable MD025 MD004 -->
