@@ -7,5 +7,12 @@
     "email": "713559+Emasoft@users.noreply.github.com"
   },
   "repository": "https://github.com/Emasoft/ai-maestro-maintainer-agent",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "ai-maestro-plugin": {
+      "reason": "Provides the PRRD/TRDD/kanban governance scripts the maintainer-prrd-trdd-kanban skill invokes (get-prrd.py, prrd-edit.py, findprrd.py, findtrdd.py, kanban.py under scripts/prrd-trdd/). Without it those commands are silent runtime failures.",
+      "marketplace": "Emasoft/ai-maestro-plugins",
+      "provides": ["get-prrd.py", "prrd-edit.py", "findprrd.py", "findtrdd.py", "kanban.py"]
+    }
+  }
 }
