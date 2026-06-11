@@ -158,7 +158,11 @@ design folders (`design/proposals|tasks|refused|archived`). Full model:
   It provides the PRRD/TRDD/kanban governance scripts the
   `maintainer-prrd-trdd-kanban` skill invokes (`get-prrd.py`, `prrd-edit.py`,
   `findprrd.py`, `findtrdd.py`, `kanban.py` under `scripts/prrd-trdd/`).
-  Without it those commands fail silently at runtime.
+  Without it those commands fail silently at runtime. As of Claude Code
+  ≥ 2.1.143 this declared dependency is **enforced**: `claude plugin enable`
+  force-enables it (and its transitive deps), and
+  `claude plugin disable ai-maestro-plugin` refuses while this plugin is
+  enabled, printing a copy-pasteable disable-chain hint.
 - `$MARKETPLACE_PAT` exported in your shell (or a .env outside the
   repo) for the one-time setup of the `notify-marketplace` workflow.
   Run `uv run scripts/setup_marketplace_pat.py` to push the secret
@@ -177,6 +181,15 @@ design folders (`design/proposals|tasks|refused|archived`). Full model:
   re-picked-up on the next cycle with a fresh budget. Tight retry loops
   only deepen GitHub's back-off — the skills will never retry the same
   `gh` call inside one invocation.
+- **Model-overload resilience** (Claude Code ≥ 2.1.166). For unattended,
+  heartbeat-driven operation, set the `fallbackModel` session setting (up to
+  three models, tried in order when the primary is overloaded or
+  unavailable). It complements the GitHub rate-limit handling above —
+  `fallbackModel` guards against model-side throttling, the rate-limit hint
+  against GitHub-side throttling — so a transient overload degrades to a
+  fallback model instead of ending the turn. The agent's `model: inherit`
+  frontmatter means it rides whatever the session (or its fallback) resolves
+  to, with no per-skill change.
 - **Tool surface is dynamic.** Skills and the agent in this plugin
   intentionally do NOT declare `allowed-tools`, `disallowed-tools`
   (a skill/slash-command frontmatter field added in Claude Code
