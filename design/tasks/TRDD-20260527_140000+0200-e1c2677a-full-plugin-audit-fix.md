@@ -1,9 +1,9 @@
 ---
 trdd-id: e1c2677a-3ac2-4f0c-8958-1e8d0eb663e4
 title: Full plugin audit + remediation pass (single sweep)
-status: in-progress
+status: completed
 created: 2026-05-27T14:00:00+0200
-updated: 2026-05-27T14:00:00+0200
+updated: 2026-06-11T10:55:11+0200
 ---
 
 <!-- markdownlint-disable MD025 MD004 -->
@@ -12,6 +12,34 @@ updated: 2026-05-27T14:00:00+0200
 
 **Filename:** `design/tasks/TRDD-20260527_140000+0200-e1c2677a-full-plugin-audit-fix.md`
 **Tracked in:** this repo (design/tasks/ is git-tracked)
+
+## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative) — 2026-06-11
+
+**COMPLETED 2026-06-11.** This was the umbrella audit-sweep; its work was
+decomposed into 5 child TRDDs (all now `completed`) plus the Guardian /
+approval-gate / baseline-ruleset / memory work that SHIPPED in **v1.4.0**
+(2026-06-10). Disposition verified item-by-item before closing (not a
+drift-detector rubber-stamp):
+
+- **Phase 1 (audit)** — the 5 audit reports exist under `reports/audit/`
+  (gitignored); findings were decomposed into the children below.
+- **Phase 2-4 deliverables — VERIFIED PRESENT:** all 6 new skills ship
+  (`maintainer-guardian`, `maintainer-pr-triage`, `maintainer-detect-stack`,
+  `maintainer-redact`, `maintainer-secrets-scan`, `maintainer-tooling-bootstrap`),
+  zizmor in `validate.yml`, `.github/dependabot.yml` present (5 Dependabot
+  PRs merged 2026-06-10), trufflehog/gitleaks/bundled secret-scan gate.
+- **Phase 5 (real-repo sandbox e2e)** — covered by `tests/test_real_repos.py`
+  + `tests/test_sandbox.py` in the 476-passing suite (Docker harness,
+  `--network=none`/`--read-only`/`--cap-drop=ALL`), not a separate ad-hoc
+  3-repo run.
+- **Phase 6 / acceptance** — pytest 476/476, CPV `--strict` exit 0,
+  zizmor+actionlint green in CI, `.gitignore` covers `reports/` +
+  `reports_dev/`, the once-"Outstanding" branch-protection item APPLIED
+  LIVE (3 ratified rulesets) and shipped in v1.4.0.
+
+**Children (all `completed`):** `TRDD-c0734bde`, `TRDD-2a34e0cd`,
+`TRDD-2700e67d`, `TRDD-49d054cc` (A-D), `TRDD-e5816c13` (sentinel port).
+Terminal — do not edit the body further; new audit work = a new TRDD.
 
 ## Context
 
