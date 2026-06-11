@@ -121,6 +121,23 @@ rulesets (`baseline-history-protect` + `baseline-pr-and-checks` +
 
 Idempotent — APPLY converges to the same three-ruleset state.
 
+## Single-writer ownership (ruleset-config domain)
+
+The **MAINTAINER is the single authoritative writer of the ruleset-config
+domain** (branch + tag protection) on every repo it guards (PRRD S9):
+
+- **INTEGRATOR** does not write rulesets directly; it coordinates any ruleset
+  change through MANAGER, who relays to the MAINTAINER.
+- **ai-maestro-janitor** auto-enforces the same ratified baseline as a safety
+  net. On a repo where both would apply it, the **janitor yields to the
+  MAINTAINER's explicit APPLY** — both emit the byte-identical ratified triple,
+  so the converged state is identical regardless of who wins the race; the
+  janitor's job is to catch drift when the maintainer is absent, not to
+  contend for the write.
+- A genuine *deviation* from the ratified baseline is never a single-writer
+  decision: it is Tier-2 and needs MANAGER approval BEFORE apply, by whoever
+  raises it.
+
 ## Resources
 
 - Rulesets API: <https://docs.github.com/en/rest/repos/rules>

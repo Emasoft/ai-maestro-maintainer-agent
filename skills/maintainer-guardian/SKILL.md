@@ -95,7 +95,7 @@ Full per-class commands + routing tables:
 | `workflow-scan` chain fails | Skip T1/T2, continue T3/T4/T5 |
 | `workflow-protect-branch` SHOW fails | Mark T3 status `unknown`, continue |
 | Baseline file missing during SCAN | Re-run BASELINE first, retry |
-| T5 hit (suspected secret leak) | Stop, alert authorized user, do NOT scan further |
+| T5 hit (suspected secret leak) | Stop; escalate URGENT to MANAGER via `amp-send` (self-id line in body) AND alert the authorized user; do NOT scan further (see threat-classes T5 → Route) |
 
 ## Examples
 

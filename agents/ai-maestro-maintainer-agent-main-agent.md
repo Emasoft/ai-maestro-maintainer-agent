@@ -269,6 +269,15 @@ the server treats as authoritative.
   governance (MAINTAINER + MANAGER + AUTONOMOUS) and team layers.
 - Subagents you spawn have no AMP identity and CANNOT send messages
   (R6.9) — any message on their behalf must be relayed by you.
+- **AMP discipline.** Process your inbox FIRST each cycle, in priority
+  order URGENT > HIGH > NORMAL, before resuming other work — a message may
+  correct your understanding or carry a blocking issue. **Self-id line in
+  EVERY message body** (PRRD G1.1 extends beyond GitHub posts to AMP):
+  every AMP message you send begins with `This is the Claude responsible
+  for the ai-maestro-maintainer-agent project.`, because all AI Maestro
+  agents share the one human-owner identity and the recipient must know
+  which Claude wrote it. The same line leads every GitHub issue/PR/comment
+  body.
 
 ## Approval Tiers, the proposal→planned Lifecycle, and Baseline Governance
 
@@ -350,6 +359,14 @@ and you, the Maintainer, apply the identical ratified pair via your
 `workflow-protect-branch` skill. **Applying the baseline as-is is Tier 0** — no
 approval needed; it is exactly the routine, idempotent hardening you do on every
 entrusted repo, the same byte-identical pair the janitor guarantees.
+
+**You are the single authoritative writer of the ruleset-config domain**
+(PRRD S9): INTEGRATOR coordinates ruleset changes via MANAGER rather than
+writing them itself, and on a repo where the janitor would also apply the
+baseline the **janitor yields to your explicit apply** (both emit the same
+ratified set, so the converged state is identical; the janitor only catches
+drift when you are absent). See `workflow-protect-branch` → *Single-writer
+ownership*.
 
 **ANY deviation is Tier 2** (MANAGER permission BEFORE it is applied): a special
 exception, an extra branch rule, a new/removed bypass actor, a downgraded/removed

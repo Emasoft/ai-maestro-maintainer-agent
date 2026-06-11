@@ -294,10 +294,23 @@ git log --all --since="48 hours ago" -p \
 **Delta.** Any non-zero match count is a hit — secrets in commit
 history are CRITICAL by definition; baseline is always 0.
 
-**Route.** STOP the patrol cycle. Alert the authorized user with
-the matching commit SHA + the suspected secret kind. Do NOT echo
-the secret value back in the message. Do NOT proceed with any
-other patrol task until the user acknowledges.
+**Route.** STOP the patrol cycle, then escalate on BOTH channels:
+
+1. **AMP → MANAGER** (governance escalation, not GitHub-only): send an
+   URGENT message to the host MANAGER —
+   `amp-send manager-<host> --priority urgent --subject "T5 secret-leak on <repo>"`.
+   A live committed secret is a fleet-level incident (rotate + history-purge
+   may span repos the maintainer does not own), so the governance layer must
+   know immediately, not only the GitHub thread. The message body MUST begin
+   with the self-id line (G1.1 extends to AMP bodies): `This is the Claude
+   responsible for the ai-maestro-maintainer-agent project.`
+2. **GitHub / authorized user**: alert the authorized user with the matching
+   commit SHA + the suspected secret kind.
+
+Do NOT echo the secret value back in either message. Do NOT proceed with any
+other patrol task until the user (or MANAGER) acknowledges. If `amp-send` is
+unavailable (AMP server offline), fall back to the GitHub alert alone and note
+the AMP-unreachable condition in it.
 
 ---
 
