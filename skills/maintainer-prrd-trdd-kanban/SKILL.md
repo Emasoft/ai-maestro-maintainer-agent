@@ -1,7 +1,6 @@
 ---
 name: maintainer-prrd-trdd-kanban
 description: "MAINTAINER's role in the PRRD / TRDD / Kanban workflow. MAINTAINER is read-mostly: audits projects for PRRD compliance, surfaces drift signals, proposes PRRD changes when patterns emerge across multiple projects. Does NOT own kanban columns or mutate PRRDs directly."
-allowed-tools: "Bash(python3:*), Bash(get-prrd.py:*), Bash(prrd-edit.py:*), Bash(findprrd.py:*), Bash(findtrdd.py:*), Bash(kanban.py:*), Bash(git:*), Read, Grep, Glob"
 metadata:
   author: "Emasoft"
   version: "1.0.0"

@@ -94,12 +94,43 @@ Once the agent session is running:
 
 ## Governance Rules
 
+The agent operates under the AI Maestro governance layer (R19) and this
+project's own PRRD (`design/requirements/PRRD.md`).
+
+### Ecosystem rules (R19)
+
 - **R19.6**: Feature requests and change proposals are only accepted from
   the GitHub user authenticated with `gh` on the host. Bug reports are
   welcome from all users.
 - **R19.7**: No force-push, no history rewrite, no tag/branch deletion
-  without MANAGER approval.
+  without MANAGER approval (a Tier-2 gate — see *Approval tiers* below).
 - **R19.8**: All tests must pass before any push.
+- **R6 (v3)**: The MAINTAINER is a governance-layer peer with a direct edge
+  to MANAGER and HUMAN; every other title is reachable only via MANAGER.
+  There is **no CHIEF-OF-STAFF hop** — Tier-2 proposals go directly to MANAGER.
+- **G1.1 (self-id)**: Every GitHub post AND every AMP message body begins with
+  the self-id line identifying which Claude authored it (all agents share the
+  one human-owner identity).
+
+### Project rules (PRRD)
+
+The PRRD carries 1 GOLDEN rule (G1.1, USER-set, immutable to MANAGER) and 8
+SILVER rules (S2–S9, MANAGER-mutable) covering: publish-only-via-`publish.py`
+(S2), the CPV `--strict` exit-0 publish gate (S3), the ratified baseline
+rulesets + the Tier-0-apply / Tier-2-deviate line (S4), real-tests-no-mocks
+(S5), the reports-location rule (S6), no tool-grant frontmatter / ADR-0002
+(S7), the v2 TRDD `column:` schema + 4-zone design folders (S8), and the
+ruleset-config single-writer domain (S9). Query with `get-prrd.py <n>`.
+
+### Approval tiers
+
+Work is gated by the ladder **Tier 0 → MANAGER → USER** (the COS rung is
+skipped for this governance-layer peer). Tier 0 (own in-scope DERIVED tasks;
+applying the ratified baseline as-is) needs no approval; baseline *deviations*,
+governance changes, and release-pipeline entry are Tier 2 (MANAGER); GOLDEN-rule
+and owner-identity changes are Tier 3 (USER). TRDDs flow through the 4-zone
+design folders (`design/proposals|tasks|refused|archived`). Full model:
+`~/.claude/rules/trdd-approval-tiers.md`.
 
 ## Requirements
 
