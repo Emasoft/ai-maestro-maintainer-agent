@@ -44,7 +44,13 @@ logs/
 .cache/
 
 # Claude Code
-.claude/
+.claude/**
+
+# The PROJECT memory scope lives in-repo under .claude/ and MUST be tracked +
+# pushed (the shared, cross-dev wiki memory). Re-include it via these exceptions.
+!.claude/project/
+!.claude/project/memory/
+!.claude/project/memory/**
 
 # LLM Externalizer
 llm_externalizer_output/
