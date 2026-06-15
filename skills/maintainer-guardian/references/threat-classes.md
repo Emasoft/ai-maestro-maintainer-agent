@@ -298,7 +298,7 @@ history are CRITICAL by definition; baseline is always 0.
 
 1. **AMP → MANAGER** (governance escalation, not GitHub-only): send an
    URGENT message to the host MANAGER —
-   `amp-send manager-<host> --priority urgent --subject "T5 secret-leak on <repo>"`.
+   `amp-send manager-<host> "T5 secret-leak on <repo>" "<body — begins with the self-id line>" --type alert --priority urgent`.
    A live committed secret is a fleet-level incident (rotate + history-purge
    may span repos the maintainer does not own), so the governance layer must
    know immediately, not only the GitHub thread. The message body MUST begin

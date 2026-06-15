@@ -43,7 +43,7 @@ reaches team agents directly. For the universal mechanics, see the
    maintainer --routed-via null` (governance routes straight to MANAGER, no
    COS hop).
 7. If findings are serious, notify MANAGER over AMP:
-   `amp-send manager-<host> "Audit findings need attention — see <path>"`.
+   `amp-send manager-<host> "Audit findings need attention" "See <path> for details" --type alert`.
 
 ## Output
 
@@ -71,7 +71,7 @@ kanban.py --check-drift > /tmp/drift.txt
 findtrdd.py --column blocked --sort updated --format table > /tmp/blocked.txt
 findprrd.py --unused > /tmp/unused-rules.txt
 # classify, then write $MAIN_ROOT/reports/maintainer-audit/<TS>-<project>.md
-amp-send manager-host "Audit findings need attention — see <report-path>"
+amp-send manager-host "Audit findings need attention" "See <report-path> for details" --type alert
 ```
 
 A recurring drift signal seen across several projects becomes a proposal:
