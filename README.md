@@ -74,8 +74,6 @@ Once the agent session is running:
 | `workflow-pin-actions` | "pin workflow actions", "SHA-pin actions" |
 | `workflow-protect-branch` | SHOW: "show branch rules", "what branch rules are active", "refresh branch-rule cache" · APPLY: "protect main branch", "apply branch rules" |
 | `maintainer-sandbox` | "sandbox this", "run in a sandbox", "test this package without installing", "shootout these two tools", "reproduce in a clean container", "verify before recommending" |
-| `maintainer-memory-recall` | "have we hit this before", "recall memories about X", "did we already solve this", "search the memory notes" |
-| `maintainer-memory-write` | "remember this", "save a memory", "capture this gotcha", "note that for next time" |
 
 ### Entrusted-repo capability skills (applied on every downstream repo the agent guards)
 

@@ -14,9 +14,9 @@ each skill's frontmatter validity, the no-tool-grant-frontmatter invariant
 guard). Per-skill tests add the structural invariant unique to each skill.
 
 Consistent with this repo's grouped-test convention (test_sentinel_rules_a..f
-cover many rules in one module; test_memory_skills covers two skills): one
-table-driven module gives every one of the 14 skills real, regression-catching
-coverage without 14 near-duplicate stub files.
+cover many rules in one module): one table-driven module gives every one of the
+14 skills real, regression-catching coverage without 14 near-duplicate stub
+files.
 """
 
 from __future__ import annotations

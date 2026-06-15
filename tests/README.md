@@ -32,13 +32,12 @@ It exits 0 on all-pass, 1 on any failure.
 | maintainer-secrets-scan (fast_security_scan.py) | 7 | `test_fast_security_scan.py` |
 | maintainer-commit-msg-why hook | 11 | `test_commit_msg_hook.py` |
 | maintainer-sandbox (Docker harness invariants) | 28 | `test_sandbox.py` |
-| maintainer-memory-recall / -write (memgrep + fallback) | 5 | `test_memory_skills.py` |
 | **14-skill doc contract suite** (patrol, triage, fix, pr-triage, pr-review, workflow-scan/fix-safe/pin-actions/protect-branch, detect-stack, tooling-bootstrap, config-lint, generate-docs, trdd-adr) | 62 | `test_skill_contracts.py` |
 | Sentinel scanner — core + 32 rules + 6 fixers | 336 | `test_sentinel_core.py`, `test_sentinel_autofix.py`, `test_sentinel_rules_a..f.py` |
 | Cross-skill / real-gh / real-git integration | 4 | `test_integration.py` |
 | Real-repo sandbox e2e | 4 | `test_real_repos.py` |
 
-**538 tests total.** Each test has a one-line docstring used by the runner
+**533 tests total.** Each test has a one-line docstring used by the runner
 table (per CLAUDE.md). Every skill, command, hook, and script ships at least
 one real test (PRRD S5); the 14-skill doc-contract suite closed the last
 coverage gap (fleet-readiness audit #10 M12), holding the whole skill set to
@@ -74,7 +73,6 @@ tests/
 ├── test_fast_security_scan.py  # secret-scan catalog
 ├── test_commit_msg_hook.py # commit-message WHY hook
 ├── test_sandbox.py         # Docker harness invariants
-├── test_memory_skills.py   # memgrep recall/write + grep fallback
 ├── test_skill_contracts.py # the 14-skill doc-contract suite
 ├── test_sentinel_core.py   # scanner core
 ├── test_sentinel_autofix.py    # the 6 fixers

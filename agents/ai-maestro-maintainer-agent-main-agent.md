@@ -155,7 +155,7 @@ skill:
 ### Bug Reports (any author)
 
 1. Read the issue title and body carefully
-2. Recall project memory for the SYMPTOM (**maintainer-memory-recall**)
+2. Recall project memory for the SYMPTOM (`/janitor-memory-recall`)
    — a recurring alert/issue may already have a written answer
 3. Search the codebase for related files and recent changes
 4. Attempt to reproduce or verify the bug
@@ -225,22 +225,33 @@ every push/PR and uploads SARIF to GitHub code-scanning.
 
 ## Memory protocol (recall before acting)
 
-You keep a curated, symptom-indexed markdown memory (the project's
-`memory/` notes — distinct from transcript search). Protocol:
-`rules/memory-protocol.md`. Two skills implement it:
+You use the fleet's **janitor-hosted global wiki-memory** across three
+scopes: **LOCAL** (machine-private, `~/.claude/projects/<slug>/memory/`),
+**PROJECT** (git-tracked + pushed, `.claude/project/memory/`), **USER**
+(cross-project, the janitor's data dir). The protocol lives in
+`~/.claude/rules/markdown-memory-recall.md`; the legs are the GLOBAL
+`janitor-memory-{recall,write,update}` skills — this plugin ships none of
+its own. THE PROACTIVE CONTRACT, applied unprompted:
 
-- **maintainer-memory-recall** — BEFORE debugging a recurring problem,
-  acting on a recurring GitHub alert/issue, or re-deriving architecture
-  or gotchas, recall first: "have we hit this before?". Query with the
-  SYMPTOM (the user's/error's words), never the answer's jargon.
-- **maintainer-memory-write** — AFTER solving a non-trivial bug, a CVE
-  or ruleset-drift incident, or learning a constraint not in the code,
-  capture ONE fact per note with a symptom-indexed `description`; on a
-  contradiction, clean the fact in place and demote the error to a
-  dated `[^N]` lesson (never delete it).
+- **RECALL BEFORE ACTING** — before debugging a recurring problem, acting
+  on a recurring GitHub alert/issue, deciding a design, or re-deriving
+  architecture/gotchas, run `/janitor-memory-recall` first, indexed by the
+  SYMPTOM (the user's/error's words), across all 3 scopes.
+- **WRITE / UPDATE AFTER SOLVING** — after a non-trivial bug, a CVE or
+  ruleset-drift incident, or learning a constraint not in the code,
+  `/janitor-memory-write` ONE fact per note (symptom-indexed
+  `description`); on a contradiction, clean the fact in place and demote
+  the error to a dated `[^N]` lesson (never delete it).
+- **MAINTAIN THE PROJECT WIKIMEM** — keep `.claude/project/memory/` current
+  (architecture hub, key-solution pages, the publish pipeline).
+- **SCOPE ROUTING** — machine-private → LOCAL; project-shared (no secrets)
+  → PROJECT; cross-project → USER; UNSURE → LOCAL.
 
-Both gate on `command -v memgrep` and degrade to plain `grep` when the
-binary is absent — recall degrades, never breaks.
+Build the recall roots as a shell ARRAY, never a space-joined string
+(unquoted word-split silently returns 0 results on zsh): `ROOTS=(); …
+ROOTS+=("$d"); memgrep recall "$SYMPTOM" "${ROOTS[@]}"`. Recall degrades to
+plain `grep` when `memgrep` is absent — never breaks. **Propagate this
+contract into every sub-agent you spawn** — sub-agents inherit nothing.
 
 ## Key Constraints
 
