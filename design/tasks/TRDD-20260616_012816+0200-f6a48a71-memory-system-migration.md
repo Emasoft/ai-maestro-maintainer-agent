@@ -1,9 +1,9 @@
 ---
 trdd-id: f6a48a71-1259-471e-9517-ca25105c0138
 title: Migrate to janitor-hosted global 3-scope markdown memory system
-column: dev
+column: published
 created: 2026-06-16T01:28:16+0200
-updated: 2026-06-16T01:28:16+0200
+updated: 2026-06-16T04:38:36+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 3
@@ -14,6 +14,8 @@ task-type: refactor
 parent-trdd: null
 relevant-rules: []
 release-via: publish
+published-version: 1.6.0
+published-at: 2026-06-16T04:38:36+0200
 delivery: direct-push
 target-branch: main
 test-requirements: [lint]
@@ -43,7 +45,7 @@ ship their own memory skills. The USER authorized execution (2026-06-16
 - No plugin-root `CLAUDE.md` exists (target for folding plugin-UNIQUE content).
 - Main agent: `agents/ai-maestro-maintainer-agent-main-agent.md`.
 
-**NEXT ACTION:** Phase 1 — run `/janitor-memory-bootstrap` (additive).
+**NEXT ACTION:** ✅ DONE — all phases (bootstrap 1c44f01, proactive contract + removal 43e7d1e, lint-fix d840257) shipped in **v1.6.0** (2026-06-16). Terminal: `published`. Issue #12 closed.
 
 **Plan (phased — destructive removal is LAST):**
 1. **Bootstrap (additive):** `/janitor-memory-bootstrap` → creates
