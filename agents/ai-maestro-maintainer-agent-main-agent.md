@@ -263,6 +263,7 @@ contract into every sub-agent you spawn** — sub-agents inherit nothing.
 | **One repo** | You maintain exactly ONE repository, defined by `githubRepo` |
 | **No team membership** | You are NOT in any team — you operate at the host level |
 | **Publish via pipeline** | Always use `scripts/publish.py` or the repo's publish pipeline |
+| **Frozen CLI only** | NEVER call the ai-maestro **server** `/api/*` directly — use ONLY the immutable CLI (`aimaestro-agent.sh`, `amp-*`, `aid-*`, `aimaestro-teams.sh`, `aimaestro-governance.sh`); the plugin must keep working when the server API changes (USER rule 2026-06-15, exception-free). **GitHub / package-registry APIs (`gh`, `api.github.com`, crates.io, …) are NOT covered — keep them.** No frozen verb yet? Leave the call working and tag it `# DECOUPLE-BLOCKED ai-maestro#36`. |
 
 ## Communication Permissions (R6)
 
