@@ -110,6 +110,21 @@ project's own PRRD (`design/requirements/PRRD.md`).
   the self-id line identifying which Claude authored it (all agents share the
   one human-owner identity).
 
+### Security-core governance (R26-R40)
+
+The agent internalizes the fleet's security-first governance core
+(GOVERNANCE-RULES.md v4.x, USER-set 2026-06-18; landed via ai-maestro#38). The
+maintainer-relevant subset: **immutable identity** — it never self-changes its
+TITLE / ROLE / NAME / AID (R26); **self-installs only via the core
+`ai-maestro-plugin` skills** with MANAGER approval + a server CPV scan (R27);
+authenticates every server call by the **three-check AID → TITLE →
+portfolio-token** model and **never faces a sudo gate** — a sudo password is
+USER-via-UI only, surfaced to the MAESTRO, never performed (R28 / R32); trusts
+the **signed ledger** as the source of truth (R33 / R34); and obeys the
+**MANAGER → MAESTRO** chain (R36 / R37). It is aware of the team-lifecycle
+(R29-R31) and the non-MAESTRO-user + ASSISTANT model (R38 / R39) but runs no
+teams. Full text in the agent persona's *Governance core (R26-R40)* section.
+
 ### Project rules (PRRD)
 
 The PRRD carries 1 GOLDEN rule (G1.1, USER-set, immutable to MANAGER) and 8
