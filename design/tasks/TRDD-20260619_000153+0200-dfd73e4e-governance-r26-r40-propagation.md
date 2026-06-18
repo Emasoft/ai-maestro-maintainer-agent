@@ -1,9 +1,9 @@
 ---
 trdd-id: dfd73e4e-d34f-4e81-b110-8ee960884be5
 title: Propagate governance R26-R40 into maintainer persona + skills + docs + governance scenarios
-column: dev
+column: published
 created: 2026-06-19T00:01:53+0200
-updated: 2026-06-19T00:18:00+0200
+updated: 2026-06-19T00:12:48+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -14,6 +14,8 @@ task-type: docs
 parent-trdd: null
 relevant-rules: []
 release-via: publish
+published-version: 1.7.0
+published-at: 2026-06-19T00:12:48+0200
 delivery: direct-push
 target-branch: main
 test-requirements: [lint]
@@ -53,12 +55,20 @@ R6/R19/R23 citations stay valid (R23 = decoupling, per the v3.11.0 renumber).
 - R36/R37 obey the MANAGER; the MANAGER obeys only the MAESTRO; one MAESTRO/host; single MAESTRO-DELEGATE.
 - R38/R39 non-MAESTRO user restrictions + the new ASSISTANT agent (awareness; I don't interact with these).
 
-**NEXT ACTION:** Phase 5 — publish via publish.py, then reply on #16 and set
-column → published. Phases 2-4 DONE (commit `f557019`): persona "Governance core
-(R26-R40)" section, README "Security-core governance (R26-R40)" subsection,
-`tests/scenarios/governance-scenarios.md` (SCEN-G01..G07). **CPV `--strict`
-CLEAN** (CRITICAL=0 MAJOR=0 MINOR=0 NIT=0; WARNING=7 all-advisory: the known
-RC-PIPELINE-DRIFT-001 ahead-of-canon set — do NOT `--force-templates`).
+**NEXT ACTION:** ✅ DONE — shipped in **v1.7.0** (release
+<https://github.com/Emasoft/ai-maestro-maintainer-agent/releases/tag/v1.7.0>),
+#16 closed. Terminal: `published`. All phases complete: persona "Governance core
+(R26-R40)" section + README subsection + `tests/scenarios/governance-scenarios.md`
+(SCEN-G01..G07), commit `f557019`; CPV `--strict` clean (CRITICAL=0…NIT=0,
+WARNING=7 all-advisory RC-PIPELINE-DRIFT-001 — do NOT `--force-templates`); 533
+tests pass; published via publish.py (bump commit `d912509`).
+
+**Publish gotcha hit:** the first `publish.py --minor` aborted at [1/11] "working
+tree dirty — M uv.lock". The gate's `uv run`/`uvx` invocations re-sync the lock's
+virtual self-entry to the CURRENT version (1.5.0→1.6.0); the bump to 1.7.0 is
+step 7 (AFTER the gate), so the lock MUST be committed at the OLD version first
+(committed `3dea512`). The lock now lags at 1.6.0 vs plugin.json 1.7.0 — rides a
+future release like the af25cf0 pattern.
 
 ## Plan (phased)
 1. ✅ Phase 0 — gather canonical sources (GOVERNANCE-RULES.md v4.0.2 R26-R40 + #16/#37/#38), audit plugin. DONE.
