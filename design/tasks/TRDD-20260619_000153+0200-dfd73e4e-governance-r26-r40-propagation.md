@@ -3,7 +3,7 @@ trdd-id: dfd73e4e-d34f-4e81-b110-8ee960884be5
 title: Propagate governance R26-R40 into maintainer persona + skills + docs + governance scenarios
 column: dev
 created: 2026-06-19T00:01:53+0200
-updated: 2026-06-19T00:01:53+0200
+updated: 2026-06-19T00:18:00+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -53,10 +53,12 @@ R6/R19/R23 citations stay valid (R23 = decoupling, per the v3.11.0 renumber).
 - R36/R37 obey the MANAGER; the MANAGER obeys only the MAESTRO; one MAESTRO/host; single MAESTRO-DELEGATE.
 - R38/R39 non-MAESTRO user restrictions + the new ASSISTANT agent (awareness; I don't interact with these).
 
-**NEXT ACTION:** Phase 2 — add a "Governance core (R26-R40)" internalization
-section to `agents/ai-maestro-maintainer-agent-main-agent.md`; add a README note;
-create `tests/scenarios/governance-scenarios.md`; CPV `--strict` clean; publish
-via publish.py; reply on #16 when done.
+**NEXT ACTION:** Phase 5 — publish via publish.py, then reply on #16 and set
+column → published. Phases 2-4 DONE (commit `f557019`): persona "Governance core
+(R26-R40)" section, README "Security-core governance (R26-R40)" subsection,
+`tests/scenarios/governance-scenarios.md` (SCEN-G01..G07). **CPV `--strict`
+CLEAN** (CRITICAL=0 MAJOR=0 MINOR=0 NIT=0; WARNING=7 all-advisory: the known
+RC-PIPELINE-DRIFT-001 ahead-of-canon set — do NOT `--force-templates`).
 
 ## Plan (phased)
 1. ✅ Phase 0 — gather canonical sources (GOVERNANCE-RULES.md v4.0.2 R26-R40 + #16/#37/#38), audit plugin. DONE.
