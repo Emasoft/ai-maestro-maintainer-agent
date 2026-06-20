@@ -3,7 +3,7 @@ trdd-id: dfd73e4e-d34f-4e81-b110-8ee960884be5
 title: Propagate governance R26-R40 into maintainer persona + skills + docs + governance scenarios
 column: published
 created: 2026-06-19T00:01:53+0200
-updated: 2026-06-19T00:12:48+0200
+updated: 2026-06-20T21:08:06+0200
 current-owner: ai-maestro-maintainer-agent
 assignee: ai-maestro-maintainer-agent
 priority: 2
@@ -57,7 +57,7 @@ R6/R19/R23 citations stay valid (R23 = decoupling, per the v3.11.0 renumber).
 
 **NEXT ACTION:** ✅ DONE — shipped in **v1.7.0** (release
 <https://github.com/Emasoft/ai-maestro-maintainer-agent/releases/tag/v1.7.0>),
-#16 closed. Terminal: `published`. All phases complete: persona "Governance core
+issue #16 closed. Terminal: `published`. All phases complete: persona "Governance core
 (R26-R40)" section + README subsection + `tests/scenarios/governance-scenarios.md`
 (SCEN-G01..G07), commit `f557019`; CPV `--strict` clean (CRITICAL=0…NIT=0,
 WARNING=7 all-advisory RC-PIPELINE-DRIFT-001 — do NOT `--force-templates`); 533
