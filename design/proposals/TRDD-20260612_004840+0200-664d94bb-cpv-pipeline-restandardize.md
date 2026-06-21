@@ -3,7 +3,7 @@ trdd-id: 664d94bb-2609-4789-a0c5-e22fa1f96c93
 title: CPV canonical-pipeline re-standardization — clear RC-PIPELINE-DRIFT-001
 column: proposal
 created: 2026-06-12T00:48:40+0200
-updated: 2026-06-21T21:53:51+0200
+updated: 2026-06-21T23:11:00+0200
 current-owner: maintainer-agent
 assignee: maintainer-agent
 priority: 4
@@ -29,7 +29,15 @@ external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/10", "git
 
 # CPV canonical-pipeline re-standardization — clear RC-PIPELINE-DRIFT-001
 
-## ⏵ STATE — READ THIS FIRST (authoritative; supersedes the body below) — 2026-06-21
+## ⏵ STATE — READ THIS FIRST (authoritative; supersedes the body below) — 2026-06-21 (23:10)
+
+**UPDATE (2026-06-21 23:10): CPV #145 CLOSED → v2.140.0; dry-run done; AWAITING USER decision on scope.**
+- CPV #145 fixed in **v2.140.0** (ships MD025 in canon `.markdownlint.json`; profile-aware standardize; publish.py ruff/mypy clean). The unblock the USER waited for.
+- Ran `cpv-standardize . --fix --force-templates --dry-run` via uvx@v2.140.0 — report `reports/cpv-standardize/20260621_231013+0200-v2140-dryrun.txt`. Findings:
+  - ✓ Profile-awareness WORKS: it SKIPS `release.yml` + `notify-marketplace.yml` ("at/AHEAD of canon — would downgrade") → my post-hoc CPV gate + PAT preflight + marketplace target PRESERVED, zero regression.
+  - ⚠ SBOM/build-provenance/per-asset-checksums NOT delivered: they live in canon's `release.yml`, which is SKIPPED. My release.yml is a MIXED file (ahead on the gate, behind on SBOM) and the per-file direction classifier resolved it "ahead" → skip. Adopting SBOM needs a MANUAL merge of canon's new release.yml steps into mine.
+  - Migration WOULD overwrite `publish.py` (76KB) + `cpv_network_resilience.py` + `.markdownlint.json` + `.mega-linter.yml` + `cliff.toml`; and CREATE `ci.yml` + `git-hooks/pre-push` + `.jscpd.json` + a pyproject dev-extra (the jscpd copy-paste gate, issue #143).
+- NEXT — USER decides scope: (A) proceed as-is (refresh publish.py/configs + add ci.yml/jscpd gate; clears drift; NO SBOM) → review the publish.py diff → publish; (B) ALSO manually merge SBOM/provenance/checksums into release.yml first (delivers what the fleet #44 row promised) → publish; (C) hold for USER review. **NOTHING written yet — dry-run only, tree clean.** Release also carries committed MD018 fix 8631e60 + #18 self-id fix 3409c1c + uv.lock sync 1d57d85.
 
 **UPDATE (2026-06-21): canon caught up — migrate AFTER CPV #145, then publish.**
 Re-extracted canon's templates against **CPV 2.137.0** (worktree + `git diff`).
