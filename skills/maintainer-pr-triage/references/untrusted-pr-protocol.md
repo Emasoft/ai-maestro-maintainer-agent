@@ -155,6 +155,8 @@ a heredoc so PR content never reaches a shell expansion path.
 
 ```bash
 gh pr comment "$PR" --repo "$REPO" --body-file - <<COMMENT
+This is the Claude responsible for the ai-maestro-maintainer-agent project.
+
 **Automated precheck — untrusted PR** (case C)
 
 This PR is from an account that is NOT the authorized maintainer

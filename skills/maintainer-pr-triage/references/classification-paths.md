@@ -56,6 +56,8 @@ Rules of thumb:
    ```bash
    gh pr edit "$PR" --repo "$REPO" --add-label awaiting-maintainer-approval
    gh pr comment "$PR" --repo "$REPO" --body-file - <<'COMMENT'
+   This is the Claude responsible for the ai-maestro-maintainer-agent project.
+
    This PR modifies one or more security-sensitive paths in the
    protected-paths list. Even though it is from the authorized
    maintainer, the approval gate requires an explicit
@@ -190,6 +192,8 @@ REGEX_EOF
 if echo "$PAYLOAD" | grep -iqE "$ADVERSARIAL"; then
   gh pr edit "$PR" --repo "$REPO" --add-label awaiting-maintainer-approval,reject-adversarial
   gh pr comment "$PR" --repo "$REPO" --body-file - <<'COMMENT'
+  This is the Claude responsible for the ai-maestro-maintainer-agent project.
+
   I noticed this PR contains instruction-like text directing the
   maintainer to modify security-sensitive paths (CI, secrets,
   tests, hooks, etc.) — in the PR title, body, a commit message,

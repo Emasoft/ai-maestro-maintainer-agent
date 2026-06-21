@@ -192,7 +192,9 @@ If not available, push the branch and create a PR:
 git push origin "$BRANCH"
 gh pr create --repo "$REPO" \
   --title "fix: <description> (closes #$ISSUE_NUM)" \
-  --body "Fixes #$ISSUE_NUM"
+  --body "This is the Claude responsible for the ai-maestro-maintainer-agent project.
+
+Fixes #$ISSUE_NUM"
 ```
 
 ---
@@ -201,7 +203,9 @@ gh pr create --repo "$REPO" \
 
 ```bash
 gh issue comment $ISSUE_NUM --repo "$REPO" \
-  --body "Fixed in <commit-hash> (v<new-version>). The fix is published and available."
+  --body "This is the Claude responsible for the ai-maestro-maintainer-agent project.
+
+Fixed in <commit-hash> (v<new-version>). The fix is published and available."
 gh issue close $ISSUE_NUM --repo "$REPO"
 ```
 
