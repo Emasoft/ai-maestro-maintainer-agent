@@ -3,7 +3,7 @@ trdd-id: 664d94bb-2609-4789-a0c5-e22fa1f96c93
 title: CPV canonical-pipeline re-standardization — clear RC-PIPELINE-DRIFT-001
 column: proposal
 created: 2026-06-12T00:48:40+0200
-updated: 2026-06-13T11:39:31+0200
+updated: 2026-06-21T21:53:51+0200
 current-owner: maintainer-agent
 assignee: maintainer-agent
 priority: 4
@@ -24,49 +24,51 @@ test-requirements: [lint, typecheck, unit]
 audit-requirements: []
 review-requirements: [human-review]
 runtime-targets: [macos, linux]
-external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/10", "github.com/Emasoft/ai-maestro-janitor/issues/19", "github.com/Emasoft/ai-maestro-janitor/issues/26"]
+external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/10", "github.com/Emasoft/ai-maestro-maintainer-agent/issues/17", "github.com/Emasoft/ai-maestro/issues/44", "github.com/Emasoft/claude-plugins-validation/issues/145", "github.com/Emasoft/ai-maestro-janitor/issues/19", "github.com/Emasoft/ai-maestro-janitor/issues/26"]
 ---
 
 # CPV canonical-pipeline re-standardization — clear RC-PIPELINE-DRIFT-001
 
-## ⏵ STATE — READ THIS FIRST (authoritative; supersedes the body below) — 2026-06-13
+## ⏵ STATE — READ THIS FIRST (authoritative; supersedes the body below) — 2026-06-21
 
-**FINDING (2026-06-13): the premise was wrong — DO NOT migrate.** I extracted
-canon's actual templates in an isolated worktree (`cpv-remote-validate
-standardize . --fix --force-templates`) and diffed. The result: running
-standardize would **REGRESS** the maintainer plugin across all three files —
-it is NOT behind canon, it is strictly **AHEAD**:
+**UPDATE (2026-06-21): canon caught up — migrate AFTER CPV #145, then publish.**
+Re-extracted canon's templates against **CPV 2.137.0** (worktree + `git diff`).
+Canon advanced a lot since the 2026-06-13 finding:
 
-- `release.yml`: standardize reverts SHA-pinned `actions/checkout@de0fac…#v6.0.2`
-  → **unpinned `actions/checkout@v4`** (a supply-chain regression), removes
-  `permissions: contents: read` + `persist-credentials: false`, and **deletes
-  the post-hoc validate-tag CPV gate** to restore the old release-creating job.
-- `notify-marketplace.yml`: removes the MARKETPLACE_PAT preflight, removes
-  `permissions` + `timeout`, reverts the dispatch action to an older SHA, drops
-  version-in-payload.
-- `publish.py`: strips the `# type: ignore[no-redef,misc]` tuples the plugin's
-  mypy gate needs.
+- The plugin passes `cpv-remote-validate plugin . --strict` **clean** (exit 0:
+  CRITICAL=0 MAJOR=0 MINOR=0 NIT=0; 7 advisory RC-PIPELINE-DRIFT WARNINGs). The
+  validator is now profile-aware and says "at or AHEAD of canon — do NOT
+  --force-templates" for the by-design files.
+- Canon 2.137.0 now **SHA-pins** actions (even bumps versions), **keeps**
+  least-priv `permissions` + `persist-credentials: false`, and **ADDS** an SBOM,
+  a build-provenance attestation (SLSA), per-asset SHA256SUMS, and idempotent
+  release creation — genuine hardening the plugin LACKS and should adopt.
+- But `standardize --force-templates` is still NOT profile-aware, so it would
+  STILL regress the plugin (narrower than before): strips `.markdownlint.json`'s
+  `MD025: front_matter_title` (→ breaks publish on the TRDD docs), overwrites the
+  by-design files, and reformats `publish.py` (ruff E302 / mypy misc risk).
 
-Canon ships **none** of the actionlint / commitlint / macOS-matrix /
-env-sanitization the RC-PIPELINE-DRIFT-001 remediation text advertises — its
-templates are stale relative to its own advice.
+**NEXT ACTION (USER decision 2026-06-21):** do NOT hand-port, do NOT
+force-templates now. Filed **CPV #145** asking canon to make the standardizer
+profile-aware (ship the MD025 config; skip overwriting profile-recognized
+by-design files; guarantee a templated publish.py passes ruff+mypy). **WAIT** for
+CPV to ship #145, THEN migrate to the new canon (gaining SBOM/provenance, zero
+regression) and **publish**. The committed MD018 lint fix `8631e60` rides that
+release. Fleet status posted on this repo's #17 + ai-maestro#44 (DEFERRED pending
+#145, not stalled).
 
-**REVISED ACTION (replaces "Proposed change" below):**
-1. **Do NOT run standardize. Do NOT ship a v1.5.1 for this.** Keep all three
-   files as-is — the warnings are "plugin ahead of canon," documented intentional.
-2. **UPSTREAM** the maintainer's pipeline improvements into the CPV canonical
-   templates (file on `claude-plugins-validation`) so the drift resolves at the
-   source.
-3. **File a CPV bug**: RC-PIPELINE-DRIFT-001 (a) can't distinguish "ahead" from
-   "behind" — it tells ahead-plugins to downgrade; (b) its remediation text
-   claims SHA-pinned actions / actionlint / commitlint / macOS matrix that the
-   shipped `--force-templates` output does not contain (it even emits unpinned
-   `checkout@v4`).
-4. **Warn the fleet**: the programmer-agent (janitor #19) was advised to run the
-   same `--force-templates` — it would strip ITS SHA-pins too. Posted the
-   correction on #19.
+**SUPERSEDED — do NOT carry forward:**
+- ✗ "standardize reverts SHA-pinned `checkout` → unpinned `@v4`, removes
+  permissions, deletes the post-hoc gate" (2026-06-13) — FALSE as of CPV 2.137.0
+  (it SHA-pins + keeps permissions + adds SBOM/provenance). Residual regression
+  is now only MD025-config-strip + by-design-overwrite + publish.py reformat.
+- ✗ "Canon ships none of the SHA-pinning/actionlint it advertises" — FALSE now;
+  canon SHA-pins and adds SLSA provenance.
+- ✗ "File a CPV bug = #118" — DONE + CLOSED (validator half). The standardizer
+  half is the new **CPV #145**.
 
-Evidence diffs preserved: `/tmp/canon-workflows.diff`, `/tmp/canon-publish.diff`.
+Evidence: 2026-06-21 worktree diff analyzed in-session; the 2026-06-13 diffs
+(`/tmp/canon-workflows.diff`, `/tmp/canon-publish.diff`) are now stale.
 The "Proposed change" / "Acceptance criteria" sections below are **SUPERSEDED**
 by this block.
 
