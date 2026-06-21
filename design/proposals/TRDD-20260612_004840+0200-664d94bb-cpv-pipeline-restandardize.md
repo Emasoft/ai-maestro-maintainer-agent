@@ -3,7 +3,7 @@ trdd-id: 664d94bb-2609-4789-a0c5-e22fa1f96c93
 title: CPV canonical-pipeline re-standardization — clear RC-PIPELINE-DRIFT-001
 column: proposal
 created: 2026-06-12T00:48:40+0200
-updated: 2026-06-21T23:11:00+0200
+updated: 2026-06-21T23:20:00+0200
 current-owner: maintainer-agent
 assignee: maintainer-agent
 priority: 4
@@ -37,6 +37,7 @@ external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/10", "git
   - ✓ Profile-awareness WORKS: it SKIPS `release.yml` + `notify-marketplace.yml` ("at/AHEAD of canon — would downgrade") → my post-hoc CPV gate + PAT preflight + marketplace target PRESERVED, zero regression.
   - ⚠ SBOM/build-provenance/per-asset-checksums NOT delivered: they live in canon's `release.yml`, which is SKIPPED. My release.yml is a MIXED file (ahead on the gate, behind on SBOM) and the per-file direction classifier resolved it "ahead" → skip. Adopting SBOM needs a MANUAL merge of canon's new release.yml steps into mine.
   - Migration WOULD overwrite `publish.py` (76KB) + `cpv_network_resilience.py` + `.markdownlint.json` + `.mega-linter.yml` + `cliff.toml`; and CREATE `ci.yml` + `git-hooks/pre-push` + `.jscpd.json` + a pyproject dev-extra (the jscpd copy-paste gate, issue #143).
+- WORKTREE-VERIFIED (23:20) the REAL --fix (isolated worktree, main untouched): migration is SAFE — `release.yml` + `notify-marketplace.yml` PRESERVED (no regression); `publish.py` refresh keeps maintainer logic (the `ai-maestro-plugins` target + post-hoc gate live in the PRESERVED workflows, not publish.py) and GAINS the jscpd gate #143 + cpv_network_resilience integration; `validate.yml`→`ci.yml` is an UPGRADE (adds `lint`+`commitlint` jobs, keeps the remote-CPV `--strict` validate job); `.markdownlint.json` KEEPS `MD025: front_matter_title` (only relaxes MD024 siblings_only→false). New files: ci.yml, .jscpd.json, git-hooks/pre-push, scripts/cpv_network_resilience.py, pyproject dev-extra. ⇒ Option A is now LOW-RISK; only the SBOM/provenance gap remains (option B's manual release.yml merge).
 - NEXT — USER decides scope: (A) proceed as-is (refresh publish.py/configs + add ci.yml/jscpd gate; clears drift; NO SBOM) → review the publish.py diff → publish; (B) ALSO manually merge SBOM/provenance/checksums into release.yml first (delivers what the fleet #44 row promised) → publish; (C) hold for USER review. **NOTHING written yet — dry-run only, tree clean.** Release also carries committed MD018 fix 8631e60 + #18 self-id fix 3409c1c + uv.lock sync 1d57d85.
 
 **UPDATE (2026-06-21): canon caught up — migrate AFTER CPV #145, then publish.**
