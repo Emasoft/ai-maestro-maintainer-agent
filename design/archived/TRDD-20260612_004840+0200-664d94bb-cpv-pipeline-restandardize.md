@@ -1,9 +1,9 @@
 ---
 trdd-id: 664d94bb-2609-4789-a0c5-e22fa1f96c93
 title: CPV canonical-pipeline re-standardization — clear RC-PIPELINE-DRIFT-001
-column: planned
+column: published
 created: 2026-06-12T00:48:40+0200
-updated: 2026-06-22T03:07:45+0200
+updated: 2026-06-22T11:11:55+0200
 current-owner: maintainer-agent
 assignee: maintainer-agent
 priority: 4
@@ -24,14 +24,24 @@ test-requirements: [lint, typecheck, unit]
 audit-requirements: []
 review-requirements: [human-review]
 runtime-targets: [macos, linux]
-external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/10", "github.com/Emasoft/ai-maestro-maintainer-agent/issues/17", "github.com/Emasoft/ai-maestro/issues/44", "github.com/Emasoft/claude-plugins-validation/issues/145", "github.com/Emasoft/ai-maestro-janitor/issues/19", "github.com/Emasoft/ai-maestro-janitor/issues/26", "github.com/Emasoft/claude-plugins-validation/issues/150"]
+implementation-commits: [62e6eda, bb53c82, 8af1f41, 997099d]
+published-version: 1.7.2
+published-at: 2026-06-22T11:11:55+0200
+external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/10", "github.com/Emasoft/ai-maestro-maintainer-agent/issues/17", "github.com/Emasoft/ai-maestro/issues/44", "github.com/Emasoft/claude-plugins-validation/issues/145", "github.com/Emasoft/ai-maestro-janitor/issues/19", "github.com/Emasoft/ai-maestro-janitor/issues/26", "github.com/Emasoft/claude-plugins-validation/issues/150", "github.com/Emasoft/claude-plugins-validation/issues/151"]
 ---
 
 # CPV canonical-pipeline re-standardization — clear RC-PIPELINE-DRIFT-001
 
-## ⏵ STATE — READ THIS FIRST (authoritative; supersedes the body below) — 2026-06-22 (03:07)
+## ⏵ STATE — READ THIS FIRST (authoritative; supersedes the body below) — 2026-06-22 (11:11)
 
-**UPDATE (2026-06-22 03:07): USER invoked /go-on-yourself → AUTHORIZED; column → planned; EXECUTING migration to LATEST canon v2.143.0.**
+**✅ DONE (2026-06-22 11:11): PUBLISHED v1.7.2 — CI fully GREEN. column → published; archived.**
+- Migration to CPV **v2.143.0** canon SHIPPED across two releases: **v1.7.1** (the migration) + **v1.7.2** (follow-on: enabling Checkov/Trivy surfaced Dockerfile-policy gaps in the maintainer-sandbox fixtures → pinned mitm's base tag + added a non-root USER; documented-suppressed the inapplicable HEALTHCHECK on the ephemeral run-once containers — scoped, gate intact).
+- v1.7.2 CI all green: Lint · Validate (CPV --strict exit 0) · Test matrix macOS+ubuntu · workflow-security/zizmor · Release post-hoc gate.
+- Implementation commits: 62e6eda (migration) · bb53c82 (publish.py mypy fix) · 8af1f41 (sandbox Checkov/Trivy fix) · 997099d (uv.lock). Auto-bumps: 31261f0 (1.7.1) · a670f7d (1.7.2).
+- the-skills-menu EXCLUDED (broken canon feature → CPV #150); zizmor RE-ADDED (no security regression). CPV canon bugs reported: #150 + #151. GitHub #17 CLOSED with the full record.
+- DEFERRED fast-follows (own TRDDs/tasks #116/#117): SBOM/provenance/SHA256SUMS into release.yml (fleet #44); the .githooks↔git-hooks hook-convention reconcile.
+
+**UPDATE (2026-06-22 03:07): USER invoked /go-on-yourself → AUTHORIZED; column → planned; EXECUTING migration to LATEST canon v2.143.0.** [SUPERSEDED by the ✅ DONE entry above]
 - Canon advanced to **v2.143.0** (v2.141 fixer CI-preflight; v2.142 validator spec-sync → CC 2.1.185; v2.143 plugin-creator preflight + the-skills-menu "conditional canon"). Re-verified force-templates in a fresh worktree @ v2.143.0 (report `reports/cpv-standardize/20260622_030242+0200-v2143-worktree-verify.txt`).
 - PIPELINE invariants STILL hold @ v2.143.0: `release.yml` + `notify-marketplace.yml` SKIPPED (ahead-of-canon → post-hoc gate + PAT/marketplace target PRESERVED); `.markdownlint.json` KEEPS `MD025: front_matter_title`; `ci.yml` created; `publish.py` refreshed; new files `.jscpd.json` + `git-hooks/pre-push` + `scripts/cpv_network_resilience.py`.
 - ⛔ NEW v2.143.0 REGRESSION — the-skills-menu conversion is BROKEN: force-templates (a) writes an EMPTY `skills/the-skills-menu/SKILL.md` ("this plugin has no operational skills yet" — but the plugin has 22 skills), and (b) STRIPS 11 core skills from the agent frontmatter, pointing it at that empty menu → the agent would LOSE access to maintainer-patrol/triage/fix/guardian/etc. The stub also carries `allowed-tools: Read` (violates the no-tool-frontmatter rule). Filed **CPV #150**. ⇒ EXCLUDE the-skills-menu from THIS migration (revert agent doc + rm the empty stub); adopt it PROPERLY in a separate TRDD (run `the-skills-menu-create` to populate + strip allowed-tools + verify dynamic loading & token savings).
