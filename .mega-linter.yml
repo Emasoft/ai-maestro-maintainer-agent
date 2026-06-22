@@ -42,8 +42,15 @@ PYTHON_MYPY_ARGUMENTS: "--ignore-missing-imports"
 # Copy-paste detection — allow up to 5% duplication (0% is too strict for plugins)
 COPYPASTE_JSCPD_ARGUMENTS: "--threshold 5"
 
-# Checkov — skip workflow-level permission checks (we set permissions per-job)
-REPOSITORY_CHECKOV_ARGUMENTS: "--skip-check CKV2_GHA_1"
+# Checkov — skip workflow-level permission checks (we set permissions per-job).
+# Also skip CKV_DOCKER_2 (HEALTHCHECK): every Dockerfile in this repo is an
+# ephemeral maintainer-sandbox container — run-once tool containers that execute
+# one command and exit, plus an optional throwaway mitmproxy sidecar. None are
+# long-running shipped services, so a container HEALTHCHECK is inapplicable. The
+# non-root-USER (CKV_DOCKER_3) and pinned-base-tag (CKV_DOCKER_7) policies stay
+# ENFORCED — see scripts/sandbox/dockerfiles/mitm.Dockerfile. (Trivy's mirror of
+# this LOW finding, AVD-DS-0026, is scoped the same way in .trivyignore.)
+REPOSITORY_CHECKOV_ARGUMENTS: "--skip-check CKV2_GHA_1,CKV_DOCKER_2"
 
 # Markdown settings — allow long lines in README (badges).
 # Single-quoted so the regex \. is read literally by yamllint.

@@ -1,0 +1,12 @@
+# Trivy ignore file (auto-read from the repo root by `trivy fs .`).
+#
+# AVD-DS-0026 (HEALTHCHECK) — every Dockerfile in this repo is an ephemeral
+# maintainer-sandbox container: run-once tool containers (node-baseline,
+# node-sfw, node-safe-chain, python-baseline) that execute one command and
+# exit, plus an optional throwaway mitmproxy sidecar. None are long-running
+# shipped services, so a container HEALTHCHECK is inapplicable. This mirrors
+# the Checkov CKV_DOCKER_2 skip documented in .mega-linter.yml.
+#
+# The non-root-USER (AVD-DS-0002) and pinned-base-tag (AVD-DS-0001) policies are
+# NOT ignored — they remain enforced and are satisfied in mitm.Dockerfile.
+AVD-DS-0026
