@@ -97,3 +97,10 @@ ignore_missing_imports = true
 # where to find it so intra-package imports resolve. Pyright reads the
 # matching extraPaths from pyrightconfig.json.
 mypy_path = "scripts"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "mypy",
+]

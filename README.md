@@ -1,7 +1,7 @@
 # ai-maestro-maintainer-agent
 
 <!--BADGES-START-->
-[![CI](https://github.com/Emasoft/ai-maestro-maintainer-agent/actions/workflows/validate.yml/badge.svg)](https://github.com/Emasoft/ai-maestro-maintainer-agent/actions/workflows/validate.yml)
+[![CI](https://github.com/Emasoft/ai-maestro-maintainer-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Emasoft/ai-maestro-maintainer-agent/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-1.7.0-blue)](https://github.com/Emasoft/ai-maestro-maintainer-agent/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 <!--BADGES-END-->
@@ -325,7 +325,7 @@ design folders (`design/proposals|tasks|refused|archived`). Full model:
       auto-detected status checks, blocks non-fast-forward pushes,
       and blocks branch deletion.
   A companion `workflow-security` job in
-  `.github/workflows/validate.yml` runs zizmor on every push / PR and
+  `.github/workflows/ci.yml` runs zizmor on every push / PR and
   uploads SARIF to GitHub code-scanning, providing a post-push safety
   net. All third-party actions in this plugin's own workflows are
   SHA-pinned with version comments per zizmor's `unpinned-uses` policy.

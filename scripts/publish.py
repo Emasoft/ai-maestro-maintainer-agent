@@ -35,6 +35,8 @@ Gate stages (--gate mode, called by pre-push hook):
        may initiate a push (verified via process ancestry, NOT env vars).
    G1. Version bump check (local vs remote, auto-detects origin/HEAD)
    G2. Lint (ruff)
+   G2b. Copy-paste check (jscpd, parity with ci.yml Mega-Linter COPYPASTE_JSCPD;
+        WARNs+skips if jscpd/npx unavailable so a push is never false-blocked)
    G3. Validate (uvx cpv-remote-validate plugin . --strict)
    G4. Tests (pytest)
 
@@ -69,33 +71,37 @@ from pathlib import Path
 # pattern from ~/.claude/rules/github-timeouts.md). Shipped verbatim
 # from the canonical CPV install via gen_cpv_network_resilience_py().
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-# The fallback shims in the except: branch intentionally have looser
-# signatures than the canonical implementations. Pyright is told explicitly
-# to accept the assignment-type mismatch via reportAssignmentType: ignore
-# on the single-line import. Mypy uses [no-redef,misc] on the shim defs.
 try:
-    from cpv_network_resilience import gh_with_retry, git_with_retry  # noqa: I001 # pyright: ignore[reportAssignmentType, reportMissingImports]
+    # The typed import here and the loose fallback shims below are conditional
+    # variants of the same name. mypy --strict is silenced by the
+    # [no-redef, misc] on the fallbacks; Pyright reports the import itself as
+    # reportAssignmentType, so it needs its own suppression. Canon's publish.py
+    # template ships the mypy half but not this Pyright half (reported to CPV).
+    from cpv_network_resilience import gh_with_retry, git_with_retry  # pyright: ignore[reportAssignmentType]
 except ImportError:
     # Fallback: scripts/cpv_network_resilience.py was not shipped with this
     # plugin (older scaffold). Define no-op shims so publish.py still works,
     # but warn so the user knows to refresh via `cpv standardize --force-templates`.
     print(
-        "[publish.py] WARNING: scripts/cpv_network_resilience.py missing — network calls will not auto-retry on transient errors. Run `cpv standardize --force-templates` to refresh.",
+        "[publish.py] WARNING: scripts/cpv_network_resilience.py missing — "
+        "network calls will not auto-retry on transient errors. "
+        "Run `cpv standardize --force-templates` to refresh.",
         file=sys.stderr,
     )
-
-    # The fallback shims intentionally use untyped (Any) signatures because
-    # they only run when cpv_network_resilience.py is missing — a degraded
-    # mode. Mypy flags the signature drift with [misc]; the [no-redef, misc]
-    # ignore tuple acknowledges both the redefinition and the signature shape.
-    def gh_with_retry(cmd, **kwargs):  # type: ignore[no-redef,misc]
+    # `misc` is needed alongside `no-redef`: under `mypy --strict` the typed
+    # real import (cpv_network_resilience) and these minimal fallback shims are
+    # conditional variants of the same name with NON-IDENTICAL signatures, which
+    # `--strict` reports as [misc] ("All conditional function variants must have
+    # identical signatures"); the combined code suppresses exactly that, the
+    # standard import-fallback idiom (cf. the tomli fallback at
+    # cpv_lint_engine.py with [no-redef,import-not-found]).
+    def gh_with_retry(cmd, **kwargs):  # type: ignore[no-redef, misc]
         kwargs.pop("max_attempts", None)
         kwargs.pop("backoff", None)
         kwargs.setdefault("check", True)
         kwargs.setdefault("capture_output", False)
         return subprocess.run(cmd, **kwargs)
-
-    def git_with_retry(cmd, **kwargs):  # type: ignore[no-redef,misc]
+    def git_with_retry(cmd, **kwargs):  # type: ignore[no-redef, misc]
         kwargs.pop("max_attempts", None)
         kwargs.pop("backoff", None)
         kwargs.setdefault("check", True)
@@ -112,13 +118,13 @@ def _colors_ok() -> bool:
 
 
 _C = _colors_ok()
-RED = "\033[0;31m" if _C else ""
-GREEN = "\033[0;32m" if _C else ""
+RED    = "\033[0;31m" if _C else ""
+GREEN  = "\033[0;32m" if _C else ""
 YELLOW = "\033[1;33m" if _C else ""
-BLUE = "\033[0;34m" if _C else ""
-BOLD = "\033[1m" if _C else ""
-DIM = "\033[2m" if _C else ""
-NC = "\033[0m" if _C else ""
+BLUE   = "\033[0;34m" if _C else ""
+BOLD   = "\033[1m" if _C else ""
+DIM    = "\033[2m" if _C else ""
+NC     = "\033[0m" if _C else ""
 
 
 # -- Helpers -------------------------------------------------------------------
@@ -127,25 +133,28 @@ NC = "\033[0m" if _C else ""
 def cprint(msg: str) -> None:
     print(msg, flush=True)
 
-
 def run(
-    cmd: list[str],
-    cwd: Path | None = None,
-    *,
-    check: bool = True,
-    capture: bool = False,
+    cmd: list[str], cwd: Path | None = None, *, check: bool = True, capture: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     """Run a command, stream output, fail-fast on error."""
     cprint(f"  {BLUE}$ {' '.join(cmd)}{NC}")
-    result = subprocess.run(cmd, cwd=str(cwd) if cwd else None, text=True, capture_output=capture, timeout=300)
+    # A subprocess exceeding `timeout` raises TimeoutExpired; without this it
+    # would die with a raw traceback instead of the styled fail-fast message
+    # every other failure path uses. Catch it and exit 1.
+    try:
+        result = subprocess.run(cmd, cwd=str(cwd) if cwd else None, text=True,
+                                capture_output=capture, timeout=300)
+    except subprocess.TimeoutExpired:
+        cprint(f"  {RED}Command timed out after 300s: {' '.join(cmd)}{NC}")
+        sys.exit(1)
     if check and result.returncode != 0:
         cprint(f"  {RED}Command failed (exit {result.returncode}){NC}")
         sys.exit(result.returncode)
     return result
 
-
 def get_repo_root() -> Path:
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=True)
+    r = subprocess.run(["git", "rev-parse", "--show-toplevel"],
+                       capture_output=True, text=True, check=True)
     return Path(r.stdout.strip())
 
 
@@ -171,11 +180,7 @@ def _resolve_owner_repo(plugin_root: Path) -> tuple[str, str]:
     """Read remote.origin.url, parse (owner, repo). Exit 1 on failure."""
     result = subprocess.run(
         ["git", "config", "--get", "remote.origin.url"],
-        cwd=str(plugin_root),
-        capture_output=True,
-        text=True,
-        timeout=10,
-        check=False,
+        cwd=str(plugin_root), capture_output=True, text=True, timeout=10, check=False,
     )
     if result.returncode != 0 or not result.stdout.strip():
         cprint(f"  {RED}Could not read remote.origin.url. Run: git remote add origin <url>{NC}")
@@ -206,10 +211,7 @@ def _ensure_gh_auth(owner: str, repo: str) -> None:
     try:
         status = subprocess.run(
             [gh_bin, "auth", "status"],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=False,
+            capture_output=True, text=True, timeout=60, check=False,
         )
     except subprocess.TimeoutExpired:
         cprint(f"  {RED}gh auth status timed out after 60 s — flaky network. Retry, or set CPV_SKIP_GH_AUTH_CHECK=1.{NC}")
@@ -221,10 +223,7 @@ def _ensure_gh_auth(owner: str, repo: str) -> None:
     try:
         perms = subprocess.run(
             [gh_bin, "api", f"repos/{owner}/{repo}", "--jq", ".permissions.push"],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=False,
+            capture_output=True, text=True, timeout=60, check=False,
         )
     except subprocess.TimeoutExpired:
         cprint(f"  {RED}gh permission check timed out after 60 s — set CPV_SKIP_GH_AUTH_CHECK=1 to bypass this gate.{NC}")
@@ -249,14 +248,12 @@ def _ensure_gh_auth(owner: str, repo: str) -> None:
 
 # -- Semver --------------------------------------------------------------------
 
-
 def parse_semver(version: str) -> tuple[int, int, int] | None:
     """Parse 'X.Y.Z' into (major, minor, patch)."""
     m = re.match(r"^(\d+)\.(\d+)\.(\d+)$", version.strip())
     if not m:
         return None
     return int(m.group(1)), int(m.group(2)), int(m.group(3))
-
 
 def bump_semver(current: str, bump_type: str) -> str | None:
     """Bump version by major/minor/patch. Returns new version string or None."""
@@ -275,7 +272,6 @@ def bump_semver(current: str, bump_type: str) -> str | None:
 
 # -- Version readers/writers ---------------------------------------------------
 
-
 def get_current_version(plugin_root: Path) -> str | None:
     """Read version from .claude-plugin/plugin.json."""
     pj = plugin_root / ".claude-plugin" / "plugin.json"
@@ -287,7 +283,6 @@ def get_current_version(plugin_root: Path) -> str | None:
         return str(ver) if ver is not None else None
     except (json.JSONDecodeError, OSError):
         return None
-
 
 def update_plugin_json(root: Path, new_ver: str) -> tuple[bool, str]:
     """Write version to .claude-plugin/plugin.json."""
@@ -301,7 +296,6 @@ def update_plugin_json(root: Path, new_ver: str) -> tuple[bool, str]:
         return True, f"plugin.json -> {new_ver}"
     except (json.JSONDecodeError, OSError) as e:
         return False, f"plugin.json update failed: {e}"
-
 
 def update_self_marketplace_json(root: Path, new_ver: str) -> tuple[bool, str]:
     """Write version to .claude-plugin/marketplace.json (Layout C — both metadata and self-entry)."""
@@ -333,7 +327,10 @@ def update_self_marketplace_json(root: Path, new_ver: str) -> tuple[bool, str]:
                 continue
             entry_name = entry.get("name")
             entry_source = entry.get("source")
-            is_self = (entry_name == plugin_name or plugin_name is None) and entry_source in ("./", {"source": "directory", "path": "./"})
+            is_self = (
+                (entry_name == plugin_name or plugin_name is None)
+                and entry_source in ("./", {"source": "directory", "path": "./"})
+            )
             if is_self:
                 entry["version"] = new_ver
                 bumped_entry = True
@@ -346,6 +343,21 @@ def update_self_marketplace_json(root: Path, new_ver: str) -> tuple[bool, str]:
         return True, f"marketplace.json (metadata + self-entry) -> {new_ver}"
     return True, f"marketplace.json (metadata only — no self-entry matched) -> {new_ver}"
 
+def _project_block(content: str) -> tuple[int, int] | None:
+    """Char span of the [project] table body, or None if absent.
+
+    The project version lives in the [project] table. A whole-file first-match
+    for `version = "..."` writes the WRONG version when a [tool.X] table with
+    its own top-level `version` (e.g. [tool.commitizen]) precedes [project].
+    When there is no [project] table (poetry keeps it under [tool.poetry]),
+    return None so the caller falls back to the legacy whole-file first-match.
+    """
+    m = re.search(r'^\[project\]\s*$', content, re.MULTILINE)
+    if not m:
+        return None
+    start = m.end()
+    nxt = re.search(r'^\[', content[start:], re.MULTILINE)
+    return start, (start + nxt.start() if nxt else len(content))
 
 def update_pyproject_toml(root: Path, new_ver: str) -> tuple[bool, str]:
     """Write version to pyproject.toml."""
@@ -354,20 +366,31 @@ def update_pyproject_toml(root: Path, new_ver: str) -> tuple[bool, str]:
         return False, "pyproject.toml not found"
     try:
         content = pp.read_text(encoding="utf-8")
-        updated = re.sub(
-            r'^(version\s*=\s*")[^"]*(")',
-            rf"\g<1>{new_ver}\2",
-            content,
-            count=1,
-            flags=re.MULTILINE,
-        )
+        block = _project_block(content)
+        if block is not None:
+            lo, hi = block
+            replaced = re.sub(
+                r'^(version\s*=\s*")[^"]*(")',
+                rf'\g<1>{new_ver}\2',
+                content[lo:hi],
+                count=1,
+                flags=re.MULTILINE,
+            )
+            updated = content[:lo] + replaced + content[hi:]
+        else:
+            updated = re.sub(
+                r'^(version\s*=\s*")[^"]*(")',
+                rf'\g<1>{new_ver}\2',
+                content,
+                count=1,
+                flags=re.MULTILINE,
+            )
         if updated == content:
             return False, "pyproject.toml: version field not found"
         pp.write_text(updated, encoding="utf-8")
         return True, f"pyproject.toml -> {new_ver}"
     except OSError as e:
         return False, f"pyproject.toml update failed: {e}"
-
 
 def update_python_versions(root: Path, new_ver: str) -> list[tuple[bool, str]]:
     """Update __version__ = '...' in all .py files under scripts/."""
@@ -388,7 +411,6 @@ def update_python_versions(root: Path, new_ver: str) -> list[tuple[bool, str]]:
             py_file.write_text(updated, encoding="utf-8")
             results.append((True, f"{py_file.relative_to(root)} -> {new_ver}"))
     return results
-
 
 def check_version_consistency(root: Path) -> tuple[bool, str]:
     """Verify all version sources match. Includes marketplace.json metadata
@@ -417,16 +439,22 @@ def check_version_consistency(root: Path) -> tuple[bool, str]:
                     if not isinstance(entry, dict):
                         continue
                     src = entry.get("source")
-                    if src == "./" or (isinstance(src, dict) and src.get("source") == "directory" and src.get("path") == "./"):
+                    if src == "./" or (
+                        isinstance(src, dict) and src.get("source") == "directory" and src.get("path") == "./"
+                    ):
                         versions["marketplace.json:self-entry"] = entry.get("version")
                         break
         except (json.JSONDecodeError, OSError):
             versions["marketplace.json"] = None
 
-    # pyproject.toml
+    # pyproject.toml — read from the [project] table body when present, else
+    # fall back to the whole-file first-match (poetry-style layouts).
     pp = root / "pyproject.toml"
     if pp.is_file():
-        m = re.search(r'^version\s*=\s*"([^"]*)"', pp.read_text(encoding="utf-8"), re.MULTILINE)
+        pp_text = pp.read_text(encoding="utf-8")
+        blk = _project_block(pp_text)
+        hay = pp_text[blk[0]:blk[1]] if blk is not None else pp_text
+        m = re.search(r'^version\s*=\s*"([^"]*)"', hay, re.MULTILINE)
         versions["pyproject.toml"] = m.group(1) if m else None
 
     found = {k: v for k, v in versions.items() if v is not None}
@@ -437,7 +465,6 @@ def check_version_consistency(root: Path) -> tuple[bool, str]:
         return True, f"All versions match: {unique.pop()}"
     details = ", ".join(f"{k}={v}" for k, v in found.items())
     return False, f"Version mismatch: {details}"
-
 
 def do_bump(root: Path, new_ver: str, dry_run: bool = False) -> bool:
     """Orchestrate all version updates. Detects Layout C (marketplace.json at repo root)
@@ -474,7 +501,6 @@ def do_bump(root: Path, new_ver: str, dry_run: bool = False) -> bool:
 
 # -- Hook installer ------------------------------------------------------------
 
-
 def install_hook(root: Path) -> int:
     """Copy git-hooks/pre-push to .git/hooks/pre-push and set core.hooksPath."""
     cprint(f"\\n{BOLD}Installing git hooks...{NC}")
@@ -493,7 +519,8 @@ def install_hook(root: Path) -> int:
     dest.chmod(dest.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     cprint(f"  {GREEN}Installed: git-hooks/pre-push -> .git/hooks/pre-push{NC}")
     # Also set core.hooksPath so git finds hooks in git-hooks/ directly
-    subprocess.run(["git", "config", "core.hooksPath", "git-hooks"], cwd=str(root), check=False)
+    subprocess.run(["git", "config", "core.hooksPath", "git-hooks"],
+                   cwd=str(root), check=False)
     cprint(f"  {GREEN}Set git config core.hooksPath = git-hooks{NC}")
     return 0
 
@@ -503,10 +530,7 @@ def _get_origin_slug(root: Path) -> str | None:
     try:
         r = subprocess.run(
             ["git", "config", "--get", "remote.origin.url"],
-            capture_output=True,
-            text=True,
-            cwd=str(root),
-            check=False,
+            capture_output=True, text=True, cwd=str(root), check=False,
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -552,7 +576,7 @@ def install_branch_rules(root: Path) -> int:
             [
                 "uvx",
                 "--from",
-                "git+https://github.com/Emasoft/claude-plugins-validation",
+                "git+https://github.com/Emasoft/claude-plugins-validation@v2.143.0",
                 "--with",
                 "pyyaml",
                 "cpv-setup-branch-rules",
@@ -573,7 +597,6 @@ def install_branch_rules(root: Path) -> int:
 
 # -- Gate mode (pre-push quality checks) --------------------------------------
 
-
 def _get_process_ancestry(max_depth: int = 30) -> list[tuple[int, str]]:
     """Walk parent processes via ps(1). Returns [(pid, cmdline), ...] closest-first.
 
@@ -592,9 +615,7 @@ def _get_process_ancestry(max_depth: int = 30) -> list[tuple[int, str]]:
         try:
             r = subprocess.run(
                 ["ps", "-p", str(pid), "-o", "ppid=,args="],
-                capture_output=True,
-                text=True,
-                timeout=5,
+                capture_output=True, text=True, timeout=5,
             )
         except (OSError, subprocess.SubprocessError):
             return []
@@ -679,10 +700,7 @@ def run_gate(root: Path) -> int:
         try:
             sym = subprocess.run(
                 ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
-                capture_output=True,
-                text=True,
-                cwd=str(root),
-                timeout=10,
+                capture_output=True, text=True, cwd=str(root), timeout=10,
             )
             if sym.returncode == 0 and sym.stdout.strip():
                 # Output looks like "refs/remotes/origin/main"
@@ -699,10 +717,7 @@ def run_gate(root: Path) -> int:
             try:
                 r = subprocess.run(
                     ["git", "show", f"{ref}:.claude-plugin/plugin.json"],
-                    capture_output=True,
-                    text=True,
-                    cwd=str(root),
-                    timeout=10,
+                    capture_output=True, text=True, cwd=str(root), timeout=10,
                 )
             except (OSError, subprocess.SubprocessError):
                 continue
@@ -730,11 +745,41 @@ def run_gate(root: Path) -> int:
     if not scripts_dir.is_dir():
         cprint(f"  {RED}BLOCKED: scripts/ directory missing — cannot lint.{NC}")
         return 1
-    lint_result = subprocess.run(["uv", "run", "ruff", "check", "scripts/"], cwd=str(root), timeout=120)
+    lint_result = subprocess.run(
+        ["uv", "run", "ruff", "check", "scripts/"],
+        cwd=str(root), timeout=120)
     if lint_result.returncode != 0:
         cprint(f"  {RED}BLOCKED: Lint issues found{NC}")
         return 1
     cprint(f"  {GREEN}Lint passed.{NC}")
+
+    # Gate 2b: Copy-paste detection (jscpd) — PARITY with ci.yml Mega-Linter COPYPASTE_JSCPD.
+    # CI's Lint job fails on jscpd duplication over the .jscpd.json threshold; surface it locally
+    # BEFORE the bump/tag/push. jscpd needs Node/npx; if it cannot be obtained, DEGRADE to a
+    # non-blocking WARNING (CI still enforces it) — a green gate then does NOT guarantee green CI
+    # for the copy-paste dimension (issue #143). NEVER false-block a push on a tool-install failure.
+    cprint(f"\n{BLUE}[G2b] Copy-paste check (jscpd, parity with CI)...{NC}")
+    jscpd_bin = shutil.which("jscpd")
+    base_cmd = [jscpd_bin] if jscpd_bin else ([shutil.which("npx"), "--yes", "jscpd"] if shutil.which("npx") else None)
+    if base_cmd is None:
+        cprint(f"  {YELLOW}WARNING: jscpd/npx not found — copy-paste check SKIPPED locally.{NC}")
+        cprint(f"  {YELLOW}CI's Mega-Linter WILL enforce it (.jscpd.json threshold). A green gate does")
+        cprint(f"  {YELLOW}NOT guarantee green CI for the copy-paste dimension (issue #143). Install")
+        cprint(f"  {YELLOW}Node/npx for full local parity.{NC}")
+    else:
+        # Probe distinguishes 'jscpd unavailable/uninstallable' (WARN) from 'jscpd ran, found dupes' (BLOCK).
+        probe = subprocess.run(base_cmd + ["--version"], cwd=str(root),
+                               capture_output=True, text=True, timeout=180)
+        if probe.returncode != 0:
+            cprint(f"  {YELLOW}WARNING: jscpd could not run (npx fetch/install failed) — SKIPPED locally.{NC}")
+            cprint(f"  {YELLOW}CI's Mega-Linter WILL enforce it; green gate != green CI for copy-paste (issue #143).{NC}")
+        else:
+            cp = subprocess.run(base_cmd + ["."], cwd=str(root), timeout=300).returncode
+            if cp != 0:
+                cprint(f"  {RED}BLOCKED: jscpd found copy-paste duplication over the .jscpd.json threshold{NC}")
+                cprint(f"  {RED}(parity with CI Mega-Linter). Reduce duplication or raise the threshold in .jscpd.json.{NC}")
+                return 1
+            cprint(f"  {GREEN}Copy-paste check passed.{NC}")
 
     # Gate 3: Validate via REMOTE CPV validator. MANDATORY — no skip, no exceptions.
     # CORNERSTONE: a plugin cannot be pushed unless validation passes with 0
@@ -744,7 +789,12 @@ def run_gate(root: Path) -> int:
     if not shutil.which("uvx"):
         cprint(f"  {RED}BLOCKED: uvx not found on PATH.{NC}")
         return 1
-    ve = subprocess.run(["uvx", "--from", "git+https://github.com/Emasoft/claude-plugins-validation", "--with", "pyyaml", "cpv-remote-validate", "plugin", ".", "--strict"], cwd=str(root), timeout=600).returncode
+    ve = subprocess.run(
+        ["uvx", "--from",
+         "git+https://github.com/Emasoft/claude-plugins-validation@v2.143.0",
+         "--with", "pyyaml",
+         "cpv-remote-validate", "plugin", ".", "--strict"],
+        cwd=str(root), timeout=600).returncode
     # Exit codes: 0=pass, 1=CRITICAL, 2=MAJOR, 3=MINOR, 4=NIT, 5+=WARNING
     if ve != 0 and ve < 5:
         labels = {1: "CRITICAL", 2: "MAJOR", 3: "MINOR", 4: "NIT"}
@@ -760,7 +810,9 @@ def run_gate(root: Path) -> int:
         cprint(f"  {RED}Every CPV plugin MUST ship tests.{NC}")
         return 1
     try:
-        te = subprocess.run(["uv", "run", "pytest", "tests/", "-x", "-q", "--tb=short"], cwd=str(root), timeout=300).returncode
+        te = subprocess.run(
+            ["uv", "run", "pytest", "tests/", "-x", "-q", "--tb=short"],
+            cwd=str(root), timeout=300).returncode
     except subprocess.TimeoutExpired:
         cprint(f"  {RED}BLOCKED: Tests timed out after 300s.{NC}")
         return 1
@@ -777,7 +829,6 @@ def run_gate(root: Path) -> int:
 
 
 # -- Pipeline stages -----------------------------------------------------------
-
 
 def stage_bypass_guard() -> None:
     """Step 0: Reject any env var that could bypass a check. No exceptions.
@@ -807,14 +858,19 @@ def stage_bypass_guard() -> None:
     exemptions = {"CPV_SKIP_GITHUB_INTEGRITY", "CPV_SKIP_GH_AUTH_CHECK"}
     forbidden_prefixes = ("PLUGIN_SKIP_", "CPV_SKIP_", "SKIP_")
     forbidden_exact = {"NO_VERIFY"}
-    attempted = [v for v in sorted(os.environ) if (v.startswith(forbidden_prefixes) or v in forbidden_exact) and v not in exemptions if os.environ.get(v)]
+    attempted = [
+        v
+        for v in sorted(os.environ)
+        if (v.startswith(forbidden_prefixes) or v in forbidden_exact) and v not in exemptions
+        if os.environ.get(v)
+    ]
     if attempted:
         cprint(f"  {RED}BLOCKED: forbidden env vars set: {', '.join(attempted)}{NC}")
-        cprint(f"  {RED}The publish pipeline enforces every check. Fix failures, do not skip them.{NC}")
+        cprint(f"  {RED}The publish pipeline enforces every check. "
+               f"Fix failures, do not skip them.{NC}")
         cprint(f"  {DIM}(infrastructure exemptions: {', '.join(sorted(exemptions))}){NC}")
         sys.exit(1)
     cprint(f"  {GREEN}No bypass vars set.{NC}")
-
 
 def stage_check_clean(root: Path) -> None:
     """Step 1: Working tree must be clean."""
@@ -825,7 +881,6 @@ def stage_check_clean(root: Path) -> None:
         cprint(r.stdout)
         sys.exit(1)
     cprint(f"  {GREEN}Clean.{NC}")
-
 
 def stage_lint(root: Path) -> None:
     """Step 2: Lint + typecheck (ruff + mypy). MANDATORY — no skip.
@@ -845,7 +900,6 @@ def stage_lint(root: Path) -> None:
     cprint(f"  {BLUE}mypy scripts/ --ignore-missing-imports{NC}")
     run(["uv", "run", "mypy", "scripts/", "--ignore-missing-imports"], cwd=root)
     cprint(f"  {GREEN}Lint + typecheck passed.{NC}")
-
 
 # Issue #31 (v2.98.0): browser-orphan cleanup signatures.
 #
@@ -873,10 +927,7 @@ def _snapshot_browser_pids() -> set:
     try:
         snap = subprocess.run(
             ["ps", "-eo", "pid,command"],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=10,
+            capture_output=True, text=True, check=False, timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return set()
@@ -972,7 +1023,7 @@ def stage_validate(root: Path) -> None:
 
     Cornerstone rule: a plugin cannot be pushed unless validation passes
     with 0 issues (WARNING allowed). The validator is ALWAYS fetched from
-    GitHub (git+https://github.com/Emasoft/claude-plugins-validation) via
+    GitHub (git+https://github.com/Emasoft/claude-plugins-validation@v2.143.0) via
     uvx so a local tampered copy cannot weaken the rules. No exceptions.
 
     Order: runs AFTER lint + tests so behavioral regressions fail fast
@@ -985,25 +1036,16 @@ def stage_validate(root: Path) -> None:
         sys.exit(1)
     # Fetch CPV from GitHub and run validate_plugin remotely. --strict blocks
     # on CRITICAL(1), MAJOR(2), MINOR(3), NIT(4); WARNING(5+) passes.
-    run(
-        [
-            "uvx",
-            "--from",
-            "git+https://github.com/Emasoft/claude-plugins-validation",
-            "--with",
-            "pyyaml",
-            "cpv-remote-validate",
-            "plugin",
-            ".",
-            "--strict",
-        ],
-        cwd=root,
-    )
+    run([
+        "uvx", "--from",
+        "git+https://github.com/Emasoft/claude-plugins-validation@v2.143.0",
+        "--with", "pyyaml",
+        "cpv-remote-validate", "plugin", ".", "--strict",
+    ], cwd=root)
     cprint(f"  {GREEN}Validation passed (0 blocking issues).{NC}")
 
 
 # ── Marketplace-registration helpers (mirror of CPV's own publish.py Gate 6) ─
-
 
 def _find_parent_marketplace(plugin_root: Path) -> Path | None:
     """Walk up looking for a parent marketplace.json (Layout B signature)."""
@@ -1049,7 +1091,8 @@ def _gh_secret_exists(plugin_root: Path, secret_name: str) -> bool:
     gh = shutil.which("gh")
     if gh is None:
         return False
-    r = subprocess.run([gh, "secret", "list"], cwd=str(plugin_root), capture_output=True, text=True, timeout=60)
+    r = subprocess.run([gh, "secret", "list"], cwd=str(plugin_root),
+                       capture_output=True, text=True, timeout=60)
     if r.returncode != 0:
         return False
     for line in r.stdout.splitlines():
@@ -1060,7 +1103,8 @@ def _gh_secret_exists(plugin_root: Path, secret_name: str) -> bool:
 
 def _current_repo_slug(plugin_root: Path) -> str | None:
     """Return owner/repo slug for current git origin, or None."""
-    r = subprocess.run(["git", "remote", "get-url", "origin"], cwd=str(plugin_root), capture_output=True, text=True, timeout=30)
+    r = subprocess.run(["git", "remote", "get-url", "origin"], cwd=str(plugin_root),
+                       capture_output=True, text=True, timeout=30)
     if r.returncode != 0:
         return None
     m = re.search(r"[:/]([^/:]+)/([^/]+?)(?:\.git)?$", r.stdout.strip())
@@ -1085,10 +1129,9 @@ def _fetch_remote_marketplace_json(owner: str, repo: str) -> dict | None:
     if gh is None:
         return None
     r = subprocess.run(
-        [gh, "api", f"repos/{owner}/{repo}/contents/.claude-plugin/marketplace.json", "-H", "Accept: application/vnd.github.raw+json"],
-        capture_output=True,
-        text=True,
-        timeout=60,
+        [gh, "api", f"repos/{owner}/{repo}/contents/.claude-plugin/marketplace.json",
+         "-H", "Accept: application/vnd.github.raw+json"],
+        capture_output=True, text=True, timeout=60,
     )
     if r.returncode != 0:
         return None
@@ -1105,9 +1148,7 @@ def _remote_has_receiver_workflow(owner: str, repo: str) -> bool:
         return False
     r = subprocess.run(
         [gh, "api", f"repos/{owner}/{repo}/contents/.github/workflows"],
-        capture_output=True,
-        text=True,
-        timeout=60,
+        capture_output=True, text=True, timeout=60,
     )
     if r.returncode != 0:
         return False
@@ -1124,10 +1165,9 @@ def _remote_has_receiver_workflow(owner: str, repo: str) -> bool:
         if not isinstance(name, str) or not name.endswith((".yml", ".yaml")):
             continue
         f = subprocess.run(
-            [gh, "api", f"repos/{owner}/{repo}/contents/.github/workflows/{name}", "-H", "Accept: application/vnd.github.raw+json"],
-            capture_output=True,
-            text=True,
-            timeout=60,
+            [gh, "api", f"repos/{owner}/{repo}/contents/.github/workflows/{name}",
+             "-H", "Accept: application/vnd.github.raw+json"],
+            capture_output=True, text=True, timeout=60,
         )
         if f.returncode == 0 and "repository_dispatch" in f.stdout:
             return True
@@ -1212,7 +1252,7 @@ def stage_marketplace_registration(root: Path) -> None:
         slug = _current_repo_slug(root)
         if not _plugin_in_remote_marketplace(mkt_json, plugin_name, slug):
             cprint(f"  {RED}BLOCKED: plugin '{plugin_name}' not registered in {mkt_owner}/{mkt_repo} marketplace.json.{NC}")
-            cprint(f'  {RED}  Add an entry: {{"name": "{plugin_name}", "source": {{"source": "github", "repo": "{slug}"}}}}{NC}')
+            cprint(f"  {RED}  Add an entry: {{\"name\": \"{plugin_name}\", \"source\": {{\"source\": \"github\", \"repo\": \"{slug}\"}}}}{NC}")
             sys.exit(1)
         cprint(f"  {GREEN}Plugin registered in remote marketplace.json{NC}")
         if not _remote_has_receiver_workflow(mkt_owner, mkt_repo):
@@ -1254,7 +1294,7 @@ def stage_marketplace_registration(root: Path) -> None:
             sys.exit(1)
         if not any(isinstance(e, dict) and e.get("name") == plugin_name for e in entries):
             cprint(f"  {RED}BLOCKED: plugin '{plugin_name}' not registered in {mp_path}.{NC}")
-            cprint(f'  {RED}  Add: {{"name": "{plugin_name}", "source": "./plugins/{plugin_name}"}}{NC}')
+            cprint(f"  {RED}  Add: {{\"name\": \"{plugin_name}\", \"source\": \"./plugins/{plugin_name}\"}}{NC}")
             sys.exit(1)
         cprint(f"  {GREEN}Plugin '{plugin_name}' registered in parent marketplace.json{NC}")
         cprint(f"  {GREEN}Layout B marketplace registration verified.{NC}")
@@ -1270,7 +1310,6 @@ def stage_consistency(root: Path) -> None:
         sys.exit(1)
     cprint(f"  {GREEN}Consistent.{NC}")
 
-
 def _read_remote_version(plugin_root: Path) -> str | None:
     """Read .claude-plugin/plugin.json's `version` from origin/master (or main).
 
@@ -1283,11 +1322,8 @@ def _read_remote_version(plugin_root: Path) -> str | None:
         try:
             r = subprocess.run(
                 ["git", "show", f"{ref}:.claude-plugin/plugin.json"],
-                capture_output=True,
-                text=True,
-                cwd=str(plugin_root),
-                check=False,
-                timeout=15,
+                capture_output=True, text=True, cwd=str(plugin_root),
+                check=False, timeout=15,
             )
         except (OSError, subprocess.SubprocessError):
             continue
@@ -1320,11 +1356,8 @@ def _git_porcelain_clean(root: Path) -> bool:
     try:
         r = subprocess.run(
             ["git", "status", "--porcelain"],
-            capture_output=True,
-            text=True,
-            cwd=str(root),
-            check=False,
-            timeout=10,
+            capture_output=True, text=True, cwd=str(root),
+            check=False, timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return False
@@ -1336,11 +1369,8 @@ def _head_commit_message(root: Path) -> str:
     try:
         r = subprocess.run(
             ["git", "log", "-1", "--pretty=%s"],
-            capture_output=True,
-            text=True,
-            cwd=str(root),
-            check=False,
-            timeout=10,
+            capture_output=True, text=True, cwd=str(root),
+            check=False, timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return ""
@@ -1352,11 +1382,8 @@ def _local_tag_exists(root: Path, tag: str) -> bool:
     try:
         r = subprocess.run(
             ["git", "rev-parse", "--verify", f"refs/tags/{tag}"],
-            capture_output=True,
-            text=True,
-            cwd=str(root),
-            check=False,
-            timeout=10,
+            capture_output=True, text=True, cwd=str(root),
+            check=False, timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
         return False
@@ -1379,10 +1406,12 @@ def stage_bump(root: Path, new_ver: str, dry_run: bool) -> None:
     current = get_current_version(root)
     remote = _read_remote_version(root)
     if remote and current and current == new_ver:
-        cprint(f"  {YELLOW}Local plugin.json is already at {new_ver} (remote at {remote}) — skipping bump (interrupted-publish recovery).{NC}")
+        cprint(f"  {YELLOW}Local plugin.json is already at {new_ver} (remote at {remote}) — "
+               f"skipping bump (interrupted-publish recovery).{NC}")
         return
     if remote and current and current != remote and current != new_ver:
-        cprint(f"  {RED}REFUSED: local plugin.json is at {current} but remote is at {remote} and target is {new_ver}. Refuse to guess what state this is.{NC}")
+        cprint(f"  {RED}REFUSED: local plugin.json is at {current} but remote is at "
+               f"{remote} and target is {new_ver}. Refuse to guess what state this is.{NC}")
         cprint(f"  {RED}Manual intervention required: align local with remote, then re-run.{NC}")
         sys.exit(1)
     if not do_bump(root, new_ver, dry_run=dry_run):
@@ -1390,9 +1419,8 @@ def stage_bump(root: Path, new_ver: str, dry_run: bool) -> None:
         sys.exit(1)
     cprint(f"  {GREEN}Version bumped to {new_ver}.{NC}")
 
-
 def stage_update_badges(root: Path, old_ver: str, new_ver: str, dry_run: bool) -> None:
-    """Step 7: Replace version badge in README.md.
+    """Step 8: Replace version badge in README.md.
 
     Strategy:
       1. Try exact-string substitution `version-<old>-blue` → `version-<new>-blue`
@@ -1433,7 +1461,6 @@ def stage_update_badges(root: Path, old_ver: str, new_ver: str, dry_run: bool) -
         return
     readme.write_text(badge_re.sub(new_badge, content, count=1), encoding="utf-8")
     cprint(f"  {GREEN}Updated README badge (was {found}, now {new_badge}){NC}")
-
 
 def detect_bump_type(root: Path) -> str:
     """Auto-detect the next bump type from conventional commits via git-cliff.
@@ -1523,7 +1550,6 @@ def stage_changelog(root: Path, new_ver: str, dry_run: bool) -> None:
     )
     cprint(f"  {GREEN}CHANGELOG.md updated with {tag}.{NC}")
 
-
 def stage_commit_and_push(root: Path, new_ver: str, dry_run: bool) -> None:
     """Step 10: Commit, tag, push. Idempotent on commit + tag.
 
@@ -1556,7 +1582,8 @@ def stage_commit_and_push(root: Path, new_ver: str, dry_run: bool) -> None:
         return
 
     if head_subject == expected_subject and tree_clean:
-        cprint(f"  {YELLOW}HEAD is already '{expected_subject}' and tree is clean — skipping commit (interrupted-publish recovery).{NC}")
+        cprint(f"  {YELLOW}HEAD is already '{expected_subject}' and tree is clean — "
+               f"skipping commit (interrupted-publish recovery).{NC}")
     else:
         run(["git", "add", "-A"], cwd=root)
         run(["git", "commit", "-m", expected_subject], cwd=root)
@@ -1579,14 +1606,12 @@ def stage_commit_and_push(root: Path, new_ver: str, dry_run: bool) -> None:
     cprint(f"  {BLUE}$ git push --atomic origin HEAD {tag}{NC}")
     git_with_retry(
         ["git", "push", "--atomic", "origin", "HEAD", tag],
-        cwd=str(root),
-        capture_output=False,
+        cwd=str(root), capture_output=False,
     )
     cprint(f"  {GREEN}Pushed {tag} atomically.{NC}")
 
-
 def stage_gh_release(root: Path, new_ver: str, dry_run: bool) -> None:
-    """Step 10: Create GitHub release via gh CLI.
+    """Step 11: Create GitHub release via gh CLI.
 
     TRDD-bbff5bc5 §5: re-runs the gh-auth precheck before `gh release
     create` so an auth state change between gates 10 and 11 (token
@@ -1619,14 +1644,28 @@ def stage_gh_release(root: Path, new_ver: str, dry_run: bool) -> None:
         cprint(result.stdout.strip())
     if result.stderr and result.stderr.strip():
         print(result.stderr.strip(), file=sys.stderr)
-    if result.returncode != 0:
-        cprint(f"  {RED}Failed to create release (exit code {result.returncode}).{NC}")
-    else:
+    if result.returncode == 0:
         cprint(f"  {GREEN}Release created.{NC}")
+        return
+    # `gh release create` returns an "already_exists" / "already exists"
+    # validation error when a release for this tag is already present. On a
+    # re-run or interrupted-publish recovery that is the idempotent-success
+    # outcome (the release IS there), so it must NOT abort — match either
+    # spelling gh emits, case-insensitively.
+    combined_err = f"{result.stdout or ''}\n{result.stderr or ''}"
+    if re.search(r"already[ _]exists", combined_err, re.IGNORECASE):
+        cprint(f"  {YELLOW}Release {tag} already exists — treating as success (idempotent re-run).{NC}")
+        return
+    # Any other non-zero exit is a genuine failure (auth revoked mid-pipeline,
+    # malformed notes file, network exhausted all retries). The tag is already
+    # pushed, but the documented final stage did NOT complete — abort so the
+    # pipeline does not falsely report success (fail-fast invariant).
+    cprint(f"  {RED}Failed to create release (exit code {result.returncode}).{NC}")
+    cprint(f"  {RED}  The tag {tag} is pushed; create the release manually or re-run after fixing the cause.{NC}")
+    sys.exit(1)
 
 
 # -- Main ----------------------------------------------------------------------
-
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -1638,12 +1677,20 @@ def main() -> int:
     # are OPTIONAL overrides for the auto-bump default. Calling publish.py with
     # no flags runs the full publish pipeline with an auto-detected bump type.
     mode_group = parser.add_mutually_exclusive_group()
-    mode_group.add_argument("--gate", action="store_true", help="Pre-push gate mode: lint + validate + tests only (no bump/push)")
-    mode_group.add_argument("--install-hook", action="store_true", help="Install pre-push hook into .git/hooks/ and set core.hooksPath")
-    mode_group.add_argument("--install-branch-rules", action="store_true", dest="install_branch_rules", help="Apply the cpv-branch-rules ruleset to the GitHub origin (enforces CI as a required status check — the server-side gate)")
-    mode_group.add_argument("--patch", action="store_const", dest="bump", const="patch", help="Force a patch bump (override auto-detection)")
-    mode_group.add_argument("--minor", action="store_const", dest="bump", const="minor", help="Force a minor bump (override auto-detection)")
-    mode_group.add_argument("--major", action="store_const", dest="bump", const="major", help="Force a major bump (override auto-detection)")
+    mode_group.add_argument("--gate", action="store_true",
+                            help="Pre-push gate mode: lint + copy-paste (jscpd) + validate + tests only (no bump/push)")
+    mode_group.add_argument("--install-hook", action="store_true",
+                            help="Install pre-push hook into .git/hooks/ and set core.hooksPath")
+    mode_group.add_argument("--install-branch-rules", action="store_true",
+                            dest="install_branch_rules",
+                            help="Apply the cpv-branch-rules ruleset to the GitHub origin "
+                                 "(enforces CI as a required status check — the server-side gate)")
+    mode_group.add_argument("--patch", action="store_const", dest="bump", const="patch",
+                            help="Force a patch bump (override auto-detection)")
+    mode_group.add_argument("--minor", action="store_const", dest="bump", const="minor",
+                            help="Force a minor bump (override auto-detection)")
+    mode_group.add_argument("--major", action="store_const", dest="bump", const="major",
+                            help="Force a major bump (override auto-detection)")
     parser.add_argument("--dry-run", action="store_true", help="Preview only, no changes")
     # NOTE: --skip-tests was intentionally removed. The cornerstone rule is that
     # every CPV plugin MUST pass validation with 0 issues (WARNING allowed) before
@@ -1690,7 +1737,8 @@ def main() -> int:
         return 1
 
     if remote and local != remote:
-        cprint(f"{YELLOW}Local plugin.json is at {local} but origin is at {remote} — using remote as bump baseline (interrupted-publish recovery).{NC}")
+        cprint(f"{YELLOW}Local plugin.json is at {local} but origin is at {remote} — "
+               f"using remote as bump baseline (interrupted-publish recovery).{NC}")
     current = baseline
 
     cprint(f"\n{BOLD}Publish pipeline: {current} -> {new_ver}{NC}")

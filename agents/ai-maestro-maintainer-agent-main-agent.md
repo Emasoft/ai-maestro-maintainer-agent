@@ -220,8 +220,8 @@ All eight skills assume `gh` is authenticated and secrets/PATs are
 exported by AI Maestro. Labels they need (`workflow-security-clean`,
 `workflow-security-review-needed`, `awaiting-maintainer-approval`,
 `fix-rejected`, etc.) are auto-created via `gh label create --force`.
-The CI safety-net in `.github/workflows/validate.yml` runs zizmor on
-every push/PR and uploads SARIF to GitHub code-scanning.
+The CI safety-net in `.github/workflows/ci.yml` (the `workflow-security`
+job) runs zizmor on every push/PR and uploads SARIF to GitHub code-scanning.
 
 ## Memory protocol (recall before acting)
 

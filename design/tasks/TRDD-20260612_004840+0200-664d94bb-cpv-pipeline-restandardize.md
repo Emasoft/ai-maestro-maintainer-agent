@@ -1,9 +1,9 @@
 ---
 trdd-id: 664d94bb-2609-4789-a0c5-e22fa1f96c93
 title: CPV canonical-pipeline re-standardization — clear RC-PIPELINE-DRIFT-001
-column: proposal
+column: planned
 created: 2026-06-12T00:48:40+0200
-updated: 2026-06-21T23:20:00+0200
+updated: 2026-06-22T03:07:45+0200
 current-owner: maintainer-agent
 assignee: maintainer-agent
 priority: 4
@@ -24,14 +24,21 @@ test-requirements: [lint, typecheck, unit]
 audit-requirements: []
 review-requirements: [human-review]
 runtime-targets: [macos, linux]
-external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/10", "github.com/Emasoft/ai-maestro-maintainer-agent/issues/17", "github.com/Emasoft/ai-maestro/issues/44", "github.com/Emasoft/claude-plugins-validation/issues/145", "github.com/Emasoft/ai-maestro-janitor/issues/19", "github.com/Emasoft/ai-maestro-janitor/issues/26"]
+external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/10", "github.com/Emasoft/ai-maestro-maintainer-agent/issues/17", "github.com/Emasoft/ai-maestro/issues/44", "github.com/Emasoft/claude-plugins-validation/issues/145", "github.com/Emasoft/ai-maestro-janitor/issues/19", "github.com/Emasoft/ai-maestro-janitor/issues/26", "github.com/Emasoft/claude-plugins-validation/issues/150"]
 ---
 
 # CPV canonical-pipeline re-standardization — clear RC-PIPELINE-DRIFT-001
 
-## ⏵ STATE — READ THIS FIRST (authoritative; supersedes the body below) — 2026-06-21 (23:10)
+## ⏵ STATE — READ THIS FIRST (authoritative; supersedes the body below) — 2026-06-22 (03:07)
 
-**UPDATE (2026-06-21 23:10): CPV #145 CLOSED → v2.140.0; dry-run done; AWAITING USER decision on scope.**
+**UPDATE (2026-06-22 03:07): USER invoked /go-on-yourself → AUTHORIZED; column → planned; EXECUTING migration to LATEST canon v2.143.0.**
+- Canon advanced to **v2.143.0** (v2.141 fixer CI-preflight; v2.142 validator spec-sync → CC 2.1.185; v2.143 plugin-creator preflight + the-skills-menu "conditional canon"). Re-verified force-templates in a fresh worktree @ v2.143.0 (report `reports/cpv-standardize/20260622_030242+0200-v2143-worktree-verify.txt`).
+- PIPELINE invariants STILL hold @ v2.143.0: `release.yml` + `notify-marketplace.yml` SKIPPED (ahead-of-canon → post-hoc gate + PAT/marketplace target PRESERVED); `.markdownlint.json` KEEPS `MD025: front_matter_title`; `ci.yml` created; `publish.py` refreshed; new files `.jscpd.json` + `git-hooks/pre-push` + `scripts/cpv_network_resilience.py`.
+- ⛔ NEW v2.143.0 REGRESSION — the-skills-menu conversion is BROKEN: force-templates (a) writes an EMPTY `skills/the-skills-menu/SKILL.md` ("this plugin has no operational skills yet" — but the plugin has 22 skills), and (b) STRIPS 11 core skills from the agent frontmatter, pointing it at that empty menu → the agent would LOSE access to maintainer-patrol/triage/fix/guardian/etc. The stub also carries `allowed-tools: Read` (violates the no-tool-frontmatter rule). Filed **CPV #150**. ⇒ EXCLUDE the-skills-menu from THIS migration (revert agent doc + rm the empty stub); adopt it PROPERLY in a separate TRDD (run `the-skills-menu-create` to populate + strip allowed-tools + verify dynamic loading & token savings).
+- SCOPE = option B (per /go-on-yourself "integrate don't delete; never relax quality"): apply pipeline canon + manually MERGE canon's SBOM/build-provenance/per-asset-checksum into `release.yml` (honors fleet #44) + bump all 3 workflows' action pins to latest (folds in dependabot #14) + EXCLUDE the-skills-menu.
+- NEXT ACTIONS (executing): (1) force-templates on main; (2) `git checkout` agent doc + `rm -rf skills/the-skills-menu`; (3) merge SBOM into release.yml; (4) bump pins checkout 6.0.3 / setup-uv 8.2.0 / codeql 4.36.2 across ci.yml+release.yml+notify; (5) cpv validate --strict clean; (6) docs/README/help; (7) commit; (8) publish.py; (9) CI watch → fleet #44, close #17, close #14. Release also carries 8631e60 + 3409c1c + 1d57d85 + uv.lock sync.
+
+**UPDATE (2026-06-21 23:10): CPV #145 CLOSED → v2.140.0; dry-run done; AWAITING USER decision on scope.** [SUPERSEDED by the 2026-06-22 entry above — canon is now v2.143.0; A/B/C resolved → option B; the-skills-menu EXCLUDED]
 - CPV #145 fixed in **v2.140.0** (ships MD025 in canon `.markdownlint.json`; profile-aware standardize; publish.py ruff/mypy clean). The unblock the USER waited for.
 - Ran `cpv-standardize . --fix --force-templates --dry-run` via uvx@v2.140.0 — report `reports/cpv-standardize/20260621_231013+0200-v2140-dryrun.txt`. Findings:
   - ✓ Profile-awareness WORKS: it SKIPS `release.yml` + `notify-marketplace.yml` ("at/AHEAD of canon — would downgrade") → my post-hoc CPV gate + PAT preflight + marketplace target PRESERVED, zero regression.
@@ -63,8 +70,8 @@ profile-aware (ship the MD025 config; skip overwriting profile-recognized
 by-design files; guarantee a templated publish.py passes ruff+mypy). **WAIT** for
 CPV to ship #145, THEN migrate to the new canon (gaining SBOM/provenance, zero
 regression) and **publish**. The committed MD018 lint fix `8631e60` rides that
-release. Fleet status posted on this repo's #17 + ai-maestro#44 (DEFERRED pending
-#145, not stalled).
+release. Fleet status posted on this repo's #17 + ai-maestro#44 (DEFERRED
+pending #145, not stalled).
 
 **SUPERSEDED — do NOT carry forward:**
 - ✗ "standardize reverts SHA-pinned `checkout` → unpinned `@v4`, removes
@@ -151,3 +158,8 @@ Both are non-blocking advisories from the same v1.5.0 CPV run:
   Migration cancelled. No v1.5.1. Revised to upstream-to-canon + file CPV bug +
   fleet warning (janitor #19). This proposal effectively becomes a do-not-migrate
   record; the upstream/CPV-bug actions are tracked in task #100.
+- 2026-06-22T03:07:45+0200 — APPROVED by USER via /go-on-yourself (tier 2; USER
+  outranks MANAGER). column proposal→planned; moved design/proposals→design/tasks.
+  Scope = option B: pipeline canon @ v2.143.0 + SBOM merge + action-pin bumps (#14),
+  EXCLUDING the broken the-skills-menu conversion (CPV #150). It is a plugin project
+  → publish via publish.py is authorized.
