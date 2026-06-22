@@ -760,7 +760,12 @@ def run_gate(root: Path) -> int:
     # for the copy-paste dimension (issue #143). NEVER false-block a push on a tool-install failure.
     cprint(f"\n{BLUE}[G2b] Copy-paste check (jscpd, parity with CI)...{NC}")
     jscpd_bin = shutil.which("jscpd")
-    base_cmd = [jscpd_bin] if jscpd_bin else ([shutil.which("npx"), "--yes", "jscpd"] if shutil.which("npx") else None)
+    # Resolve npx ONCE into a variable so mypy narrows it inside the list. Calling
+    # shutil.which("npx") twice (canon's form) leaves the first call typed
+    # str | None, so the list is list[str | None] and subprocess.run rejects it
+    # with [arg-type]. Canon's publish.py template ships this bug — reported to CPV.
+    npx_bin = shutil.which("npx")
+    base_cmd = [jscpd_bin] if jscpd_bin else ([npx_bin, "--yes", "jscpd"] if npx_bin else None)
     if base_cmd is None:
         cprint(f"  {YELLOW}WARNING: jscpd/npx not found — copy-paste check SKIPPED locally.{NC}")
         cprint(f"  {YELLOW}CI's Mega-Linter WILL enforce it (.jscpd.json threshold). A green gate does")
