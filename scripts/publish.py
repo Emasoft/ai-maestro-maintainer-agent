@@ -3,8 +3,10 @@
 
 Modes:
   --gate                  Pre-push gate: orchestrator check + lint + validate + tests
-                          only (no bump/push). Called by git-hooks/pre-push automatically.
-  --install-hook          Install git-hooks/pre-push into .git/hooks/ and set core.hooksPath.
+                          only (no bump/push). Entrypoint for the opt-in canon-compat
+                          hook git-hooks/pre-push; the default installed hook is the lean
+                          .githooks/pre-push (self-contained, does not call --gate).
+  --install-hook          Install .githooks/pre-push into .git/hooks/ and set core.hooksPath.
   --install-branch-rules  Apply the cpv-branch-rules GitHub ruleset to the origin
                           (server-side CI enforcement — run once after first push).
   (no flag)               Full release pipeline (11 stages, fail-fast). The bump type
@@ -502,11 +504,11 @@ def do_bump(root: Path, new_ver: str, dry_run: bool = False) -> bool:
 # -- Hook installer ------------------------------------------------------------
 
 def install_hook(root: Path) -> int:
-    """Copy git-hooks/pre-push to .git/hooks/pre-push and set core.hooksPath."""
+    """Copy .githooks/pre-push to .git/hooks/pre-push and set core.hooksPath = .githooks."""
     cprint(f"\\n{BOLD}Installing git hooks...{NC}")
-    source = root / "git-hooks" / "pre-push"
+    source = root / ".githooks" / "pre-push"
     if not source.is_file():
-        cprint(f"  {RED}git-hooks/pre-push not found{NC}")
+        cprint(f"  {RED}.githooks/pre-push not found{NC}")
         return 1
     git_dir = root / ".git"
     if not git_dir.is_dir():
@@ -517,11 +519,16 @@ def install_hook(root: Path) -> int:
     dest = hooks_dir / "pre-push"
     shutil.copy2(source, dest)
     dest.chmod(dest.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-    cprint(f"  {GREEN}Installed: git-hooks/pre-push -> .git/hooks/pre-push{NC}")
-    # Also set core.hooksPath so git finds hooks in git-hooks/ directly
-    subprocess.run(["git", "config", "core.hooksPath", "git-hooks"],
+    cprint(f"  {GREEN}Installed: .githooks/pre-push -> .git/hooks/pre-push{NC}")
+    # Point core.hooksPath at .githooks/ — the lean, self-contained process-ancestry
+    # guard — NOT canon's git-hooks/pre-push (which delegates to `publish.py --gate`).
+    # Both refuse a non-publish.py push equally (--gate's G0 is the same ancestry
+    # check), but the delegating hook re-runs lint/tests/CPV at push time — a wasteful
+    # full-suite + network-CPV double-run, since the orchestrator already ran them.
+    # Ancestry-only here is a cost fix, not a security relaxation (TRDD-b8f4a7c2).
+    subprocess.run(["git", "config", "core.hooksPath", ".githooks"],
                    cwd=str(root), check=False)
-    cprint(f"  {GREEN}Set git config core.hooksPath = git-hooks{NC}")
+    cprint(f"  {GREEN}Set git config core.hooksPath = .githooks{NC}")
     return 0
 
 

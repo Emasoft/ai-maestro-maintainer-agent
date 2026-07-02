@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Pre-push hook — delegates to publish.py --gate for all quality checks.
 # Follows the PSS (perfect-skill-suggester) pattern: one script, two modes.
+#
+# NOTE: this is the OPT-IN canon-compat hook, NOT installed by default.
+# `publish.py --install-hook` installs the lean .githooks/pre-push instead
+# (a self-contained process-ancestry guard that avoids re-running the full
+# lint/test/CPV suite at push time — delegating to --gate here would double-
+# run gates the release orchestrator already ran). See TRDD-b8f4a7c2.
 set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
