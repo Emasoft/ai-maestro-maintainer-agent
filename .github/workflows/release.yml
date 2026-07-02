@@ -64,3 +64,72 @@ jobs:
             echo "::error::$MSG3"
             exit $EXIT_CODE
           fi
+
+  supply-chain-artifacts:
+    name: Attach SBOM, provenance attestation, and checksums to the release
+    needs: validate-tag
+    runs-on: ubuntu-latest
+    # Same reasoning as validate-tag: hard cap, no concurrency group (tags
+    # are sequential releases, never concurrent in practice).
+    timeout-minutes: 15
+    # Job-level permissions OVERRIDE the workflow-level `contents: read`
+    # default above. Only THIS job gets write scopes — validate-tag stays
+    # read-only. Least-privilege: exactly the 3 scopes the steps use.
+    permissions:
+      contents: write      # gh release upload attaches assets to the release
+                            # publish.py already created (also covers
+                            # checkout's read access — write is a superset
+                            # of read on the same resource)
+      id-token: write       # OIDC token so Sigstore can sign the
+                            # build-provenance attestation
+      attestations: write   # publish the attestation to this repo's
+                            # GitHub-hosted attestation store
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Build reproducible source archive
+        run: |
+          mkdir -p dist
+          git archive --format=tar.gz \
+            --output "dist/ai-maestro-maintainer-agent-${GITHUB_REF_NAME}.tar.gz" \
+            HEAD
+
+      - name: Generate SBOM (SPDX JSON)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610  # v0.24.0
+        with:
+          path: .
+          format: spdx-json
+          output-file: dist/ai-maestro-maintainer-agent-${{ github.ref_name }}.spdx.json
+          upload-artifact: false   # we upload to the release ourselves below;
+                                   # don't also create a duplicate 90-day
+                                   # workflow-run artifact
+
+      - name: Compute SHA256SUMS
+        working-directory: dist
+        # Explicit filename patterns, never a bare `*` — at this point dist/
+        # holds exactly the tarball + SBOM, but a bare glob would silently
+        # re-hash whatever else ever lands in the directory (including a
+        # stale SHA256SUMS from a re-run), corrupting `sha256sum -c` for
+        # consumers. Naming exactly the two files this job produced removes
+        # the ambiguity entirely.
+        run: sha256sum -- *.tar.gz *.spdx.json > SHA256SUMS
+
+      - name: Generate build provenance attestation
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373  # v4.1.1
+        with:
+          subject-path: dist/*
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # zizmor (template-injection, pedantic persona): a `${{ }}` expression
+          # spliced directly into a `run:` block is expanded into the script
+          # TEXT before the shell ever runs. github.repository isn't
+          # attacker-controllable, but routing it through env: (like GH_TOKEN
+          # above) is the standard mitigation and removes the finding entirely.
+          RELEASE_REPO: ${{ github.repository }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" dist/* \
+            --clobber --repo "$RELEASE_REPO"

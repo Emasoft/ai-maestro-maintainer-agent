@@ -1,9 +1,9 @@
 ---
 trdd-id: 0972D92A
 title: Attach SBOM, build-provenance attestation, and SHA256SUMS to every release
-column: backburner
+column: dev
 created: 2026-07-02T16:21:00+0200
-updated: 2026-07-02T16:27:17+0200
+updated: 2026-07-02T20:16:13+0200
 current-owner: maintainer
 assignee: maintainer
 priority: 4
@@ -58,23 +58,20 @@ external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/17 — NO
 
 # Attach SBOM, build-provenance attestation, and SHA256SUMS to every release
 
-## STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-07-02T16:21+0200
+## STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-07-02T20:16+0200
 
-- **Current state:** DESIGN ONLY. Nothing implemented. `.github/workflows/release.yml`
-  is untouched. This TRDD is parked at `column: backburner` per an explicit
-  design-only sub-task; it has NOT been through ARCHITECT design-column
-  review and has NOT been approved for implementation.
-- **NEXT ACTION:** before any code lands, this TRDD must go through the
-  `design` column and be classified under
-  `~/.claude/rules/trdd-approval-tiers.md`. It touches `.github/workflows/`,
-  which is an **objective Tier-2 (MANAGER approval) floor** per that rule's
-  Part B / D3 table ("`.github/` workflows or rulesets" → Tier 2). **Do NOT
-  self-approve this into `dev` — author a proposal (`design/proposals/`,
-  `approval-tier: 2`) and route it to MANAGER before editing the workflow.**
-  This is true even though the *design* of this TRDD (this file) was itself
-  a Tier-0 TRDD-authoring operation (exempt per
-  `manager-approval-defaults.md` Category B) — parking an idea needs no
-  approval, but *applying* the `.github/` diff does.
+- **Current state:** IMPLEMENTED. `.github/workflows/release.yml` now has the
+  `supply-chain-artifacts` job (`needs: validate-tag`; SBOM + build-provenance
+  attestation + SHA256SUMS). Tier-2 gate satisfied — the user (solo-dev =
+  MANAGER) explicitly approved direct implementation this session (see
+  `## Approval log`). `column: dev`. `actionlint` clean; `zizmor` (default
+  persona — the specified gate) clean on the new job. Not pushed; no release
+  cut; `validate-tag` untouched.
+- **NEXT ACTION:** advance through `testing` — `lint` (done) + `e2e` still
+  open (push a real/throwaway tag, verify the 3 assets attach,
+  `sha256sum -c SHA256SUMS` validates, `gh attestation verify` succeeds) —
+  then `ai_review` / `human_review` (review-requirements: `human-review`,
+  `code-review`) before `complete`.
 - **Load-bearing facts (verified this session, see `## Evidence` below for
   exact commands):**
   - `scripts/publish.py::stage_gh_release` (≈line 1625-1676) creates every
@@ -111,15 +108,27 @@ external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/17 — NO
     (`0f67c3f4856b2e3261c31976d6725780e5e4c373`). SHA-pins resolved via
     `gh api repos/<o>/<r>/commits/<tag>`. **Re-resolve both at
     implementation time — pins go stale.**
-- **REVIEWER GOTCHA (found in review 2026-07-02, fix at implementation):** the
-  diff's `sha256sum -- * > SHA256SUMS` has a glob-race — the shell truncates the
-  empty `SHA256SUMS` (the `>` redirect) BEFORE expanding `*`, so `*` includes
-  that now-empty file and sha256sum hashes its own output (circular; breaks
-  `sha256sum -c`). Fix at implementation: list explicit patterns
-  (`sha256sum -- *.tar.gz *.spdx.json > SHA256SUMS`), or write to a temp name
-  outside the glob then `mv` it into place.
-- **SUPERSEDED — do NOT carry forward:** nothing yet (first version of this
-  TRDD).
+- **REVIEWER GOTCHA — FIXED at implementation (2026-07-02T20:16+0200):** the
+  diff's `sha256sum -- * > SHA256SUMS` glob-race is fixed as prescribed —
+  implemented as `sha256sum -- *.tar.gz *.spdx.json > SHA256SUMS` (explicit
+  patterns over exactly the tarball + SBOM, never a bare `*`).
+- **Second finding, fixed beyond the TRDD's own gotcha:** `zizmor
+  --persona=pedantic` (not the default gate persona, but checked anyway per
+  the recheck-rule) flagged a High-confidence `template-injection` on the
+  `Upload release assets` step's `--repo "${{ github.repository }}"` — a
+  `${{ }}` expression spliced directly into the `run:` script text. Fixed by
+  routing it through an `env: RELEASE_REPO: ${{ github.repository }}` (same
+  pattern already used for `GH_TOKEN` in that step) and referencing
+  `$RELEASE_REPO` in the shell. Two OTHER pedantic-only findings
+  (`validate-tag` missing a `name:`; the workflow has no top-level
+  `concurrency:`) are pre-existing / whole-workflow and were left untouched —
+  they predate this change and fixing them would mean editing the
+  `validate-tag` job, which is explicitly out of scope.
+- **SUPERSEDED — do NOT carry forward:** the original "NEXT ACTION" above
+  (file a Tier-2 proposal in `design/proposals/`, do not self-approve) is
+  superseded — the user (solo-dev = MANAGER) approved direct implementation
+  in this session instead of routing a written proposal (see
+  `## Approval log`); the proposal step was deliberately skipped, not missed.
 - **Durable artifacts to read before acting:** the fuller design report at
   `reports/maintainer-release-supplychain/` (see the report filename in the
   commit/session notes — same session, same timestamp prefix) has the full
@@ -343,5 +352,12 @@ gh api repos/Emasoft/ai-maestro-maintainer-agent --jq '.visibility, .private'   
 
 ## Approval log
 
-(empty — this TRDD has not yet been submitted for approval; see STATE block
-NEXT ACTION.)
+- 2026-07-02T20:16:13+0200 — Tier-2 floor (per `trdd-approval-tiers.md` Part B /
+  D3: `.github/` workflows) satisfied directly: the user (solo-dev = MANAGER
+  in this project) explicitly approved implementation this session, in lieu
+  of a written `design/proposals/` proposal — consistent with
+  `prrd-design-rules.md`'s "operating OUTSIDE AI Maestro ... the human user
+  IS the manager" carve-out. `column: backburner → dev`. Rationale: least-
+  privilege job-scoped permissions, SHA-pins re-verified unchanged, no new
+  secrets, `validate-tag` untouched. Impact: adds SBOM/provenance/checksum
+  assets to future tagged releases; reversible (job can be removed).
