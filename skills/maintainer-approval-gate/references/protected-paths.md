@@ -119,10 +119,14 @@ stale approval would silently release the gate (approval replay).
 The binding is a content fingerprint of the planned diff:
 
 ```bash
-# Same diff basis as the name-only match below (tracked changes vs HEAD),
-# but hashed over the patch CONTENT so any change to WHAT is edited — not
-# just which files — yields a different fingerprint.
-FINGERPRINT="$(git diff HEAD -- | git hash-object --stdin | cut -c1-12)"
+# Same diff basis as the name-only match below (tracked changes vs HEAD PLUS
+# untracked new files), hashed over the patch CONTENT + each untracked file's
+# path and blob hash, so any change to WHAT is edited — not just which files —
+# yields a different fingerprint. (Untracked files are folded in because the fix
+# flow has not yet staged them at gate time; see the CHECK commands below.)
+FINGERPRINT="$( { git diff HEAD --; git ls-files --others --exclude-standard \
+    | while IFS= read -r f; do printf '%s ' "$f"; git hash-object "$f"; done; } \
+  | git hash-object --stdin | cut -c1-12)"
 ```
 
 - CHECK publishes `$FINGERPRINT` in its approval-request comment and
@@ -156,12 +160,25 @@ always produces the same 12-char fingerprint on any host.
 PROTECTED_LIST="$SKILL_REFS/protected-paths.md"
 OVERRIDE_PATH=".aimaestro/protected-paths.txt"
 
-# Compute planned diff (caller is on the fix branch, not yet committed)
-PLANNED="$(git diff --name-only HEAD --)"
+# Compute the planned diff. WHY the untracked union: `git diff HEAD` shows only
+# TRACKED changes, but the fix flow stages files only at commit-time (fix-steps
+# Step 6, AFTER this gate). A fix that ADDS a brand-new protected file (e.g. a
+# new .github/workflows/evil.yml or agents/backdoor.md) is still untracked here,
+# so a names-only `git diff HEAD` would MISS it and the gate would return noop —
+# a fail-open the match-semantics section explicitly forbids ("adding a new file
+# under a protected directory counts as a match"). Union in the untracked set.
+PLANNED="$( { git diff --name-only HEAD --; git ls-files --others --exclude-standard; } | sort -u )"
 
-# D2: fingerprint the planned diff CONTENT (not just names) so the approval
-# binds to exactly what is being changed. Same diff basis as the name match.
-FINGERPRINT="$(git diff HEAD -- | git hash-object --stdin | cut -c1-12)"
+# D2: fingerprint the planned change CONTENT (not just names) so the approval
+# binds to exactly what is being changed — INCLUDING untracked new files, whose
+# path + blob-hash are folded in via a portable while-read (no `xargs -r`, which
+# is GNU-only and hangs BSD/macOS on empty input; no index mutation). CHECK and
+# VERIFY MUST use this byte-identical basis or the gate can never release. For a
+# modify-only fix (no untracked files) the while-loop emits nothing, so the
+# fingerprint is unchanged from the historical `git diff HEAD` hash.
+FINGERPRINT="$( { git diff HEAD --; git ls-files --others --exclude-standard \
+    | while IFS= read -r f; do printf '%s ' "$f"; git hash-object "$f"; done; } \
+  | git hash-object --stdin | cut -c1-12)"
 
 # Match each planned path against the glob set via a small python helper
 HITS="$(python3 - <<'PY'
@@ -178,6 +195,7 @@ if [ -n "$HITS" ]; then
   # published here and the user is asked to echo it back, binding the
   # approval to THIS diff (D2).
   gh issue comment "$ISSUE_NUM" --body-file - <<COMMENT
+<!-- maintainer:machine-comment -->
 This fix would modify the following security-sensitive path(s):
 
 \`\`\`
@@ -213,14 +231,29 @@ fi
 
 ```bash
 # D2: recompute the live planned-diff fingerprint; an approval releases the
-# gate ONLY if it carries THIS fingerprint (replay-proof). Same diff basis
-# as CHECK.
-FINGERPRINT="$(git diff HEAD -- | git hash-object --stdin | cut -c1-12)"
+# gate ONLY if it carries THIS fingerprint (replay-proof). MUST be the exact
+# same command as CHECK (untracked files folded in the identical way) or the
+# live fingerprint never matches the published one and the gate never releases.
+FINGERPRINT="$( { git diff HEAD --; git ls-files --others --exclude-standard \
+    | while IFS= read -r f; do printf '%s ' "$f"; git hash-object "$f"; done; } \
+  | git hash-object --stdin | cut -c1-12)"
 
 COMMENTS="$(gh issue view "$ISSUE_NUM" --json comments --jq '.comments')"
 
+# CRITICAL: every select EXCLUDES the gate's own machine-authored comments
+# (`contains("maintainer:machine-comment") | not`). WHY: CHECK posts its
+# approval-REQUEST comment with the same gh token that resolves $AUTHORIZED_USER
+# (gh api user), so that comment's author.login == $AUTHORIZED_USER, and its
+# body literally contains BOTH `approve-protected-edit <fp>` AND
+# `reject-protected-edit` as instructions to the human. Without this exclusion
+# the request comment self-satisfies these filters, so the gate returns a
+# verdict derived from ITS OWN comment (rejected/ok) instead of the human's —
+# a total defeat of the control (privilege/decision confusion). Genuine human
+# approvals never carry the HTML sentinel, so excluding it removes exactly the
+# machine comments and never a real approval.
 REJECTED=$(echo "$COMMENTS" | jq --arg user "$AUTHORIZED_USER" '
   [.[] | select(.author.login == $user)
+       | select(.body | contains("maintainer:machine-comment") | not)
        | select(.body | test("\\breject-protected-edit\\b"))]
   | length')
 
@@ -229,6 +262,7 @@ REJECTED=$(echo "$COMMENTS" | jq --arg user "$AUTHORIZED_USER" '
 # jq --arg trap defence. contains($fp) is a literal substring test (no regex).
 APPROVED=$(echo "$COMMENTS" | jq --arg user "$AUTHORIZED_USER" --arg fp "$FINGERPRINT" '
   [.[] | select(.author.login == $user)
+       | select(.body | contains("maintainer:machine-comment") | not)
        | select(.body | test("\\bapprove-protected-edit\\b"))
        | select(.body | contains($fp))]
   | length')
@@ -237,6 +271,7 @@ APPROVED=$(echo "$COMMENTS" | jq --arg user "$AUTHORIZED_USER" --arg fp "$FINGER
 # (the diff was re-scoped since it was approved, or the user omitted the fp).
 APPROVED_ANY=$(echo "$COMMENTS" | jq --arg user "$AUTHORIZED_USER" '
   [.[] | select(.author.login == $user)
+       | select(.body | contains("maintainer:machine-comment") | not)
        | select(.body | test("\\bapprove-protected-edit\\b"))]
   | length')
 

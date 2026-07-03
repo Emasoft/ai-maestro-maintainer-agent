@@ -32,17 +32,22 @@ user to approve on the issue; VERIFY confirms the approval landed.
 
 **CHECK** (mode=check):
 
-1. Compute the planned diff: `git diff --name-only HEAD --`.
+1. Compute the planned diff — tracked changes AND untracked new files
+   (`{ git diff --name-only HEAD --; git ls-files --others --exclude-standard; }`);
+   a new protected file is untracked at gate time and a tracked-only diff
+   would miss it. See references for the exact command.
 2. Load the canonical protected-paths list from
    [references/protected-paths.md](references/protected-paths.md)
    plus any per-repo override at .aimaestro/protected-paths.txt.
 3. If the diff intersects the list, compute the planned-diff
-   fingerprint (`git diff HEAD -- | git hash-object --stdin |
-   cut -c1-12`), then post an issue comment via `gh issue comment N
+   fingerprint over the same tracked+untracked basis (exact command in
+   references), then post an issue comment via `gh issue comment N
    --body-file -` (heredoc body) naming the protected path(s),
    PUBLISHING the fingerprint, and asking the authorized user to reply
    `approve-protected-edit <fingerprint>` (D2 binds the approval to
-   this exact diff).
+   this exact diff). The comment carries an HTML sentinel
+   (`<!-- maintainer:machine-comment -->`) so VERIFY never mistakes this
+   machine-authored request for a human approval.
 4. Add label `awaiting-maintainer-approval`.
 5. Return disposition `needs-approval`. Caller HALTS the fix.
 
@@ -51,7 +56,10 @@ user to approve on the issue; VERIFY confirms the approval landed.
 1. Recompute the live planned-diff fingerprint (same command as CHECK),
    then fetch issue comments: `gh issue view N --json comments
    --jq '.comments'`.
-2. Find a comment by `$AUTHORIZED_USER` whose body contains BOTH
+2. Find a comment by `$AUTHORIZED_USER` — EXCLUDING any
+   `<!-- maintainer:machine-comment -->` bot comment (else the gate's own
+   request comment, authored by the same gh identity and quoting both
+   phrases, self-satisfies the check) — whose body contains BOTH
    `approve-protected-edit` AND that exact current fingerprint
    (D2 replay-proof binding).
 3. Return `ok` / `pending` / `rejected`. A `reject-protected-edit`
