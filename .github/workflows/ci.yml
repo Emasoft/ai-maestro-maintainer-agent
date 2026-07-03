@@ -148,7 +148,10 @@ jobs:
           PLUGIN_SKIP_GITHUB_INTEGRITY: "1"
         run: |
           set +e
-          uvx --from git+https://github.com/Emasoft/claude-plugins-validation@v2.143.0 \
+          # WHY: pin CPV to release tag v2.152.1 (aligned with release.yml + publish.py) so the local
+          # gate, this CI validate, and the post-hoc release gate all run the SAME pinned validator —
+          # one coherent, reproducible supply-chain posture with zero version skew across callsites.
+          uvx --from git+https://github.com/Emasoft/claude-plugins-validation@v2.152.1 \
               --with pyyaml \
               cpv-remote-validate plugin . --strict
           exit_code=$?
