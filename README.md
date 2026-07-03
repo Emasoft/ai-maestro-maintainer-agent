@@ -156,10 +156,11 @@ design folders (`design/proposals|tasks|refused|archived`). Full model:
   that need cross-file analysis. Earlier Claude Code versions still work —
   both env vars degrade gracefully to the historical single-workspace,
   ambiguity-only-grep defaults — but you lose concurrency safety and
-  effort-aware triage. On **Opus 4.8** (Claude Code ≥ 2.1.154) the session
-  effort defaults to **HIGH**, so triage runs at `high` depth out of the box;
-  the agent's `model: inherit` frontmatter means it picks up Opus 4.8 (or
-  whatever AI Maestro provisions) with no per-skill change.
+  effort-aware triage. The agent's `model: inherit` frontmatter means it picks up whichever model
+  the session runs — since **Claude Code ≥ 2.1.197** that defaults to **Sonnet 5**
+  (native 1M-token context), or **Opus 4.8** / whatever AI Maestro provisions when
+  selected — with no per-skill change. On **Opus 4.8** (Claude Code ≥ 2.1.154) the
+  session effort defaults to **HIGH**, so triage runs at `high` depth out of the box.
 - `gh` CLI authenticated (`gh auth login`)
 - `git` configured with user identity
 - `uv` (for Python repos with `scripts/publish.py`, and for the
