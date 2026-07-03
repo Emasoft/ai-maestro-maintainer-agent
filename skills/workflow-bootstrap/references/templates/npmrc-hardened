@@ -27,3 +27,13 @@ frozen-lockfile=true
 
 # Refuse to install unless integrity hash matches (npm + pnpm).
 audit-level=high
+
+# Do not run dependency lifecycle scripts (postinstall etc.) — the #1
+# npm supply-chain vector (a compromised transitive dep runs arbitrary
+# code at install time). Review per-project if a dependency legitimately
+# needs a build step (e.g. a native module) and re-enable narrowly.
+ignore-scripts=true
+
+# Pin exact versions on install — no caret/tilde drift into a freshly
+# republished malicious patch.
+save-exact=true
