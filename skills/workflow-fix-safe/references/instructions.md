@@ -36,12 +36,18 @@ DIR="$MAIN_ROOT/reports/workflow-fix-safe"
 mkdir -p "$DIR"
 TS="$(date +%Y%m%d_%H%M%S%z)"
 
+# Redirect to the log (report evidence); do NOT `| tee` it — tee streams
+# zizmor's full fix output into the agent's context. The next steps need
+# only the held/fixed counts, so read an errors-only summary of the log,
+# never the whole log. (Same file-redirect pattern as workflow-scan Step.)
 uvx zizmor --gh-token "$(gh auth token)" --fix=safe \
-  .github/workflows/ 2>&1 | tee "$DIR/$TS-zizmor-fix.log"
+  .github/workflows/ > "$DIR/$TS-zizmor-fix.log" 2>&1
+grep -iE 'fixed|held back|no fixes|error|[0-9]+ finding' "$DIR/$TS-zizmor-fix.log" | tail -20
 ```
 
 Some findings will be "held back" by safe mode (they need
-`--fix=all` which this skill MUST NOT run). Record the held count.
+`--fix=all` which this skill MUST NOT run). Record the held count
+from the errors-only summary above — do not read the full log into context.
 
 ## Step 4: Hardening edits
 
