@@ -1,9 +1,12 @@
 ---
 trdd-id: XZFG3RZP
 title: Guardian Mode Phase A supply-chain hardening
-column: complete
+column: published
 created: 2026-07-03T02:41:33+0200
-updated: 2026-07-03T02:43:00+0200
+updated: 2026-07-03T02:44:30+0200
+published-version: 1.7.5
+published-at: 2026-07-03T02:44:00+0200
+implementation-commits: [0800d6a]
 current-owner: amama
 task-type: security
 release-via: publish
@@ -41,9 +44,10 @@ relevant-rules: []
     `workflow-fix-safe` `SKILL.md` (description + Step 3) and
     `references/instructions.md` (Step 4 "jq command-substitution audit"), with
     worked vulnerable/hardened examples and the detection regex. No edit.
-- **NEXT ACTION.** None left for Phase A — the single code change (npmrc) is
-  applied. Ship it bundled with the already-committed token-efficiency fix
-  (`1726642`) as v1.7.5 via `uv run python scripts/publish.py --patch`.
+- **NEXT ACTION.** DONE — shipped as v1.7.5 (publish.py, 11/11 gates green;
+  release <https://github.com/Emasoft/ai-maestro-maintainer-agent/releases/tag/v1.7.5>).
+  Bundled the token-efficiency fix `1726642` + this Phase-A npmrc change. Phases
+  B/C/D remain out of scope / not started.
 - **Load-bearing facts / gotchas.** publish.py is the ONLY push path (pre-push
   ancestry hook refuses all other pushes). CPV `--strict` + zizmor gate the
   release. `.markdownlint.json` already sets `front_matter_title: ""`, so this
