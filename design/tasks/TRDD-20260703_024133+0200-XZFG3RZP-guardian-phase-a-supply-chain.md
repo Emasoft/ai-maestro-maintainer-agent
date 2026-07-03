@@ -1,9 +1,9 @@
 ---
 trdd-id: XZFG3RZP
 title: Guardian Mode Phase A supply-chain hardening
-column: dev
+column: complete
 created: 2026-07-03T02:41:33+0200
-updated: 2026-07-03T02:41:33+0200
+updated: 2026-07-03T02:43:00+0200
 current-owner: amama
 task-type: security
 release-via: publish
