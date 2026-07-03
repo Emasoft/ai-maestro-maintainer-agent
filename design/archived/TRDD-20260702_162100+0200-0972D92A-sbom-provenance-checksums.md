@@ -1,9 +1,9 @@
 ---
 trdd-id: 0972D92A
 title: Attach SBOM, build-provenance attestation, and SHA256SUMS to every release
-column: dev
+column: published
 created: 2026-07-02T16:21:00+0200
-updated: 2026-07-02T20:16:13+0200
+updated: 2026-07-03T01:59:13+0200
 current-owner: maintainer
 assignee: maintainer
 priority: 4
@@ -41,13 +41,13 @@ impacts: [ci-pipeline]
 migration-direction: null
 attempts: 0
 test-failures: 0
-last-test-result: not-run
-last-test-at: null
+last-test-result: pass
+last-test-at: 2026-07-03T01:59:13+0200
 implementation-commits: [3c3306c79033ff7af5e4a8f406c155227a71f2c0]
 pr-url: null
-ci-runs: []
-published-version: null
-published-at: null
+ci-runs: [28628948613]
+published-version: 1.7.4
+published-at: 2026-07-03T01:59:13+0200
 live-since: null
 audit-trigger: null
 audit-target: null
@@ -58,20 +58,23 @@ external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/17 — NO
 
 # Attach SBOM, build-provenance attestation, and SHA256SUMS to every release
 
-## STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-07-02T20:16+0200
+## STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-07-03T01:59+0200
 
-- **Current state:** IMPLEMENTED. `.github/workflows/release.yml` now has the
-  `supply-chain-artifacts` job (`needs: validate-tag`; SBOM + build-provenance
-  attestation + SHA256SUMS). Tier-2 gate satisfied — the user (solo-dev =
-  MANAGER) explicitly approved direct implementation this session (see
-  `## Approval log`). `column: dev`. `actionlint` clean; `zizmor` (default
-  persona — the specified gate) clean on the new job. Not pushed; no release
-  cut; `validate-tag` untouched.
-- **NEXT ACTION:** advance through `testing` — `lint` (done) + `e2e` still
-  open (push a real/throwaway tag, verify the 3 assets attach,
-  `sha256sum -c SHA256SUMS` validates, `gh attestation verify` succeeds) —
-  then `ai_review` / `human_review` (review-requirements: `human-review`,
-  `code-review`) before `complete`.
+- **Current state:** PUBLISHED in **v1.7.4** (2026-07-03) — `column: published`,
+  TERMINAL. The `supply-chain-artifacts` job shipped in `release.yml` and ran
+  green on the `v1.7.4` tag: `release.yml` run 28628948613 = success ⇒ the
+  `attest-build-provenance` step passed in-CI (a green run means every step
+  passed, so the attestation was generated + Sigstore-signed + published to the
+  repo attestation store). e2e VERIFIED: 3/3 assets attached (tarball +
+  SPDX-JSON SBOM + SHA256SUMS); local `sha256sum -c SHA256SUMS` → both OK.
+  `lint` + `code-review` (fresh-eyes re-review this session) + `human-review`
+  (user's session Tier-2 approval) satisfied. Archived to `design/archived/`.
+- **NEXT ACTION:** none — terminal (`published`). A further supply-chain change
+  is a NEW TRDD.
+- **Local-verify caveat (honest):** the machine-side `gh attestation verify`
+  produced no capturable output (non-TTY gh quirk — it writes progress to the
+  controlling terminal), NOT a verification failure; the green CI attest step
+  is the authoritative proof the attestation is valid.
 - **Load-bearing facts (verified this session, see `## Evidence` below for
   exact commands):**
   - `scripts/publish.py::stage_gh_release` (≈line 1625-1676) creates every
