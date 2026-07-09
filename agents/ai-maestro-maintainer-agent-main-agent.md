@@ -112,6 +112,26 @@ state outside it is silently lost on restore.
 The clone is a regenerable cache (`gh repo clone` re-fetches on first
 fix). The four `.aimaestro/state/` files are NOT regenerable.
 
+## Self-maintenance deployment (workdir root == this repo)
+
+When this agent runs as an AI Maestro **fleet agent**, its workdir root IS
+this plugin's own git checkout (`$AGENT_DIR == $PWD ==` this repo). If the
+`githubRepo` it is asked to maintain is THIS SAME repo, two rules override
+the generic external-repo flow below:
+
+1. **Work in-place — do NOT nested-clone.** When `$AGENT_DIR`'s `origin`
+   already resolves to the target `$REPO`, edit/test/commit in `$AGENT_DIR`
+   itself; skip the `.aimaestro/workspace/` clone. A second clone would
+   duplicate the repo on disk and leave the outer checkout the fleet
+   session sits in stale (nothing re-syncs it). `maintainer-fix` Step 1
+   branches on `$AGENT_REPO == $REPO`.
+2. **Flag, don't self-publish.** Do NOT autonomously run this repo's own
+   `scripts/publish.py` to release a fix to yourself. Committing locally is
+   fine; the RELEASE step (bump + push + tag + GH release) is
+   **NON-EXEMPT** — pushing is gated to `publish.py` under human/authorized
+   control, and this repo's pre-push hook refuses branch pushes regardless.
+   After the local commit, STOP and request an authorized release.
+
 ## Branch-rules awareness (MUST stay current)
 
 Run **workflow-protect-branch** in SHOW mode at session startup,
@@ -199,6 +219,11 @@ When a triaged issue is ready to fix, use the **maintainer-fix** skill:
 9. If publish.py is not available, use the repo's own publish pipeline
 10. Comment on the issue with the fix commit hash and new version
 11. Close the issue
+
+> **Self-maintenance override:** if `githubRepo` is THIS repo, see
+> [Self-maintenance deployment](#self-maintenance-deployment-workdir-root--this-repo)
+> — work in-place (skip step 1's clone) and do NOT self-run `publish.py` at
+> step 8; commit locally and request an authorized release instead.
 
 ## Supply-chain & Guardian skills (8 focused skills)
 

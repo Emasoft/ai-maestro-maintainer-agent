@@ -17,7 +17,9 @@
 
 ## Step 1: Prepare the Workspace
 
-If the repo is not already cloned locally:
+Resolve the workspace — **in-place** when this agent's own workdir already
+IS the target repo (fleet self-maintenance), else an isolated per-session
+clone:
 
 ```bash
 REPO="<githubRepo>"
@@ -32,20 +34,31 @@ REPO="<githubRepo>"
 #   3. $PWD                 — last-resort fallback
 AGENT_DIR="${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
 
-# Per-session workspace isolation. CLAUDE_CODE_SESSION_ID is exported by
-# Claude Code >= 2.1.132 to every Bash subprocess. When two MAINTAINER
-# sessions race on the same repo without this suffix, both write to the
-# same checkout and corrupt each other's index. When the env var is
-# absent (older CC), fall back to the historical single-workspace path.
-SESSION_SUFFIX=""
-[ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && SESSION_SUFFIX="-${CLAUDE_CODE_SESSION_ID:0:8}"
-WORKSPACE="$AGENT_DIR/.aimaestro/workspace$SESSION_SUFFIX"
+# Self-maintenance detection: does $AGENT_DIR's origin already point at
+# $REPO? As a fleet agent the workdir root can BE this plugin's own
+# checkout; if the repo we're asked to maintain is that same repo, we work
+# IN-PLACE. Cloning a second copy into .aimaestro/workspace/ would waste
+# disk AND leave the outer checkout the fleet session sits in stale (nothing
+# re-syncs it afterward). See the persona's "Self-maintenance deployment".
+AGENT_REPO="$(git -C "$AGENT_DIR" remote get-url origin 2>/dev/null \
+  | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')"
 
-mkdir -p "$WORKSPACE"
-cd "$WORKSPACE"
-if [ ! -d ".git" ]; then
-  gh repo clone "$REPO" . -- --depth=50
+if [ "$AGENT_REPO" = "$REPO" ]; then
+  # In-place: the workdir IS the target repo. No nested clone.
+  cd "$AGENT_DIR"
+else
+  # External target: isolated per-session clone. CLAUDE_CODE_SESSION_ID is
+  # exported by Claude Code >= 2.1.132 to every Bash subprocess; the suffix
+  # stops two MAINTAINER sessions racing on the same repo from corrupting
+  # each other's index. Absent (older CC) → historical single-workspace path.
+  SESSION_SUFFIX=""
+  [ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && SESSION_SUFFIX="-${CLAUDE_CODE_SESSION_ID:0:8}"
+  WORKSPACE="$AGENT_DIR/.aimaestro/workspace$SESSION_SUFFIX"
+  mkdir -p "$WORKSPACE"
+  cd "$WORKSPACE"
+  [ -d ".git" ] || gh repo clone "$REPO" . -- --depth=50
 fi
+
 git fetch origin
 git checkout main
 git pull origin main
@@ -179,6 +192,13 @@ For feature implementations: `feat: <description> (closes #$ISSUE_NUM)`
 ---
 
 ## Step 7: Publish
+
+> **Self-maintenance exception (`$AGENT_REPO == $REPO`):** if the target IS
+> this maintainer's OWN repo, do NOT run `publish.py` yourself. Releasing
+> (bump + push + tag + GH release) is NON-EXEMPT, and this repo's pre-push
+> hook refuses branch pushes anyway. Commit locally, then STOP and
+> request an authorized release (label the issue `awaiting-release`). See
+> the persona's "Self-maintenance deployment" section.
 
 Use the strict publish pipeline if available:
 
