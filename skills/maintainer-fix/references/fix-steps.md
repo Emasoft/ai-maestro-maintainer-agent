@@ -182,12 +182,23 @@ pattern BEFORE it lands.
 
 ## Step 6: Commit
 
+Stage ONLY the files you changed (never `git add -A`). Write a conventional
+subject, a WHY body paragraph (what was wrong, why this change is correct,
+which alternative you rejected), and the `Agent:` trailer identifying the
+authoring plugin — PRRD G1.1 recommends the trailer, and the WHY paragraph
+satisfies the `maintainer-commit-msg-why` hook when it is installed:
+
 ```bash
 git add <specific files>
-git commit -m "fix: <description> (closes #$ISSUE_NUM)"
+git commit -m "fix: <description> (closes #$ISSUE_NUM)" \
+           -m "<WHY: what was broken, why this fix is correct, alternative rejected.>" \
+           -m "Agent: ai-maestro-maintainer-agent"
 ```
 
-For feature implementations: `feat: <description> (closes #$ISSUE_NUM)`
+For feature implementations use `feat:` instead of `fix:` in the subject.
+The `Agent:` trailer carries the plugin's stable package slug — greppable
+ecosystem-wide (`git log --grep "Agent: ai-maestro-maintainer-agent"`) and
+rename-surviving.
 
 ---
 
