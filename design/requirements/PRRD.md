@@ -1,6 +1,6 @@
 ---
-prrd-version: 1.1
-updated: 2026-06-11T11:25:00+0200
+prrd-version: 2.0
+updated: "2026-07-09T15:16:02+0200"
 project: ai-maestro-maintainer-agent
 project-id: ai-maestro-maintainer-agent
 canonical-source: design/requirements/PRRD.md
@@ -27,7 +27,7 @@ spec: `~/.claude/rules/prrd-design-rules.md`.
 
 ## 🥇 GOLDEN — set by the USER (immutable to MANAGER)
 
-- **G1.1** — Every agent that writes to GitHub (issue, issue comment, PR, PR comment, PR review, discussion, release note) MUST begin the body with a one-line self-identification of which agent/role/plugin authored it, because all AI Maestro agents share the single human-owner GitHub identity (the owner's gh CLI auth). Recommended leading line: _Posted by the Claude developing **<plugin-or-role>** (via the shared @owner gh auth)._ Commit messages SHOULD carry an `Agent: <role>` trailer.
+- **G1.2** — Every agent that writes to GitHub (issue, issue comment, PR, PR comment, PR review, discussion, release note) MUST begin the body with a one-line self-identification of which agent/role/plugin authored it, because all AI Maestro agents share the single human-owner GitHub identity (the shared @owner gh CLI auth). The canonical leading line — mandated by the USER on 2026-06-09, superseding the earlier italic _Posted by the Claude developing …_ style — is: This is the Claude responsible for the <project> project. Commit messages SHOULD carry an `Agent: <plugin-slug>` trailer (the stable package slug, e.g. `Agent: ai-maestro-maintainer-agent`), greppable ecosystem-wide and rename-surviving.
 
 ## 🥈 SILVER — MANAGER-mutable (agents propose via COS)
 
@@ -39,3 +39,4 @@ spec: `~/.claude/rules/prrd-design-rules.md`.
 - **S7.1** — No skill or agent frontmatter declares `allowed-tools`, `disallowed-tools`, or `tools:` (ADR-0002); the tool surface is managed dynamically by AI Maestro at dispatch time.
 - **S8.1** — TRDDs use the v2 `column:` kanban schema (no v1 `status:` field) and the 4-zone design folders (`design/proposals|tasks|refused|archived`); the MAINTAINER, being a governance-layer peer, files Tier-2 proposals DIRECTLY to MANAGER (no CHIEF-OF-STAFF hop).
 - **S9.1** — The MAINTAINER is the single authoritative writer of the **ruleset-config domain** (branch/tag protection rulesets) on every repo it is entrusted with; INTEGRATOR coordinates ruleset changes via MANAGER rather than writing them directly, and on a repo where both the janitor and the maintainer would apply the baseline the janitor's auto-enforcement yields to the maintainer's explicit `workflow-protect-branch` apply (both emit the byte-identical ratified set, so the result is identical regardless of who wins).
+
