@@ -169,9 +169,11 @@ design folders (`design/proposals|tasks|refused|archived`). Full model:
 - SERENA MCP (optional, improves code search)
 - **`ai-maestro-plugin`** (declared in `plugin.json` `dependencies`) — install
   it from the `Emasoft/ai-maestro-plugins` marketplace alongside this plugin.
-  It provides the PRRD/TRDD/kanban governance scripts the
-  `maintainer-prrd-trdd-kanban` skill invokes (`get-prrd.py`, `prrd-edit.py`,
-  `findprrd.py`, `findtrdd.py`, `kanban.py` under `scripts/prrd-trdd/`).
+  It provides the granular `ama-*` PRRD/TRDD/kanban governance skills
+  (`ama-kanban-render`, `ama-trdd-*`, `ama-prrd-*`, `ama-proposal-approvals`)
+  that the `maintainer-prrd-trdd-kanban` wrapper builds on — they own the
+  `scripts/prrd-trdd/` governance scripts (`get-prrd.py`, `prrd-edit.py`,
+  `findprrd.py`, `findtrdd.py`, `kanban.py`).
   Without it those commands fail silently at runtime. As of Claude Code
   ≥ 2.1.143 this declared dependency is **enforced**: `claude plugin enable`
   force-enables it (and its transitive deps), and
