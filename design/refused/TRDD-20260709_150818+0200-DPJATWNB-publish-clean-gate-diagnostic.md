@@ -1,26 +1,26 @@
 ---
 trdd-id: DPJATWNB
 title: Diagnose stray runtime artifacts in the publish.py clean-tree gate
-column: proposal
+column: refused
 approval-tier: 2
 created: 2026-07-09T15:08:18+0200
-updated: 2026-07-09T15:08:18+0200
+updated: 2026-07-09T15:24:00+0200
 current-owner: ai-maestro-maintainer-agent
 task-type: infra
 priority: 5
 severity: LOW
 effort: S
 labels: [publish, fleet-readiness, diagnostics]
-release-via: publish
+release-via: none
 delivery: direct-push
 target-branch: main
-test-requirements: [lint, typecheck]
+test-requirements: []
 audit-requirements: []
 review-requirements: []
 relevant-rules: []
 parent-trdd: null
 supersedes: []
-impacts: [ci-pipeline]
+impacts: []
 implementation-commits: []
 published-version: null
 published-at: null
@@ -29,24 +29,21 @@ external-refs: ["github.com/Emasoft/ai-maestro-maintainer-agent/issues/26"]
 
 # TRDD-DPJATWNB — Diagnose stray runtime artifacts in the publish.py clean-tree gate
 
-## STATE — READ THIS FIRST ON RESUME (authoritative) — 2026-07-09T15:08:18+0200
+## STATE — READ THIS FIRST ON RESUME (authoritative) — 2026-07-09T15:24:00+0200
 
-**Current state: PROPOSAL, awaiting Tier-2 (MANAGER/USER) approval. Nothing implemented.
-NEXT ACTION: approver decides; on approval `git mv` this file to `design/tasks/`, set
-`column: planned`, then implement the diagnostic in `scripts/publish.py::stage_check_clean`.**
+**Current state: REFUSED. Never approved, never implemented. Its premise was FALSE.
+NEXT ACTION: none. This file is an audit record only. Do NOT resurrect it without first
+re-reading `scripts/publish.py::stage_check_clean` — the behaviour it complains about does
+not exist.**
 
-- This is a **latent** risk, not an active bug. Verified 2026-07-09: today's `.gitignore`
-  covers every path the persona/skills declare they write, so the gate does not misfire.
-- `scripts/publish.py` is a **protected path** (`maintainer-approval-gate`
-  `references/protected-paths.md`), which is why this is `approval-tier: 2` and lives in
-  `design/proposals/` rather than being edited directly.
-- **Do NOT weaken the gate.** The fail-fast behaviour is correct and must be preserved.
-  This proposal only makes the failure *diagnosable*. See "Non-goals".
+- **SUPERSEDED — do NOT carry forward:** the claims "the gate prints no paths", "the
+  operator sees only `Working tree is dirty` with no clue which file caused it", and "would
+  silently block every future publish". All three are false. See "Why this was refused".
+- `scripts/publish.py` was NOT modified. No protected-path edit was made.
 
-## Problem
+## Why this was refused (post-mortem)
 
-`scripts/publish.py::stage_check_clean` (lines 887-895) is step `[1/11]` of the publish
-pipeline:
+The proposal was authored from the #26 B2 audit report, which quoted `stage_check_clean` as:
 
 ```python
 def stage_check_clean(root: Path) -> None:
@@ -57,87 +54,70 @@ def stage_check_clean(root: Path) -> None:
         sys.exit(1)
 ```
 
-It is an unconditional hard-fail on ANY non-ignored dirty or untracked path, with **no
-distinction and no diagnostic** between:
+That quote is **truncated**. The actual function (`scripts/publish.py:887-895`) is:
 
-1. a stray tracked-file edit the developer forgot to commit (the intended catch), and
-2. an **AI-Maestro runtime artifact that landed outside every ignored path**.
+```python
+def stage_check_clean(root: Path) -> None:
+    """Step 1: Working tree must be clean."""
+    cprint(f"\n{BOLD}[1/11] Checking working tree...{NC}")
+    r = run(["git", "status", "--porcelain"], cwd=root, capture=True)
+    if r.stdout.strip():
+        cprint(f"  {RED}Working tree is dirty. Commit or stash changes first.{NC}")
+        cprint(r.stdout)          # <-- prints EVERY offending path, in porcelain form
+        sys.exit(1)
+    cprint(f"  {GREEN}Clean.{NC}")
+```
 
-The message prints no paths, so the operator sees only `Working tree is dirty` with no clue
-which file caused it.
+`cprint(r.stdout)` emits the full `git status --porcelain` listing, so an un-ignored
+AI-Maestro runtime artifact surfaces by name (`?? .claude/some-new-artifact`). The failure is
+**loud and self-describing**, not silent. The operator's next step (gitignore it, in a
+deliberate reviewed edit) is obvious from the output.
 
-## Why it matters (the fleet-self-maintenance angle)
+What remained after the correction was only a cosmetic nicety: an extra hint line
+classifying the path as "probably an AI-Maestro runtime artifact". That does not justify
+editing `scripts/publish.py`, which is (a) a **protected path** and (b) the **only** push
+path in this repo — a regression there bricks every future release. Weighed against a
+cosmetic hint, the change is over-engineering and net-negative risk. Refused on the merits.
 
-Issue #26 imports this repo as a **fleet agent** whose workdir root IS this repo's own git
-root. On import and on every wake, AI Maestro seeds runtime files into the workdir
-(`.claude/settings.local.json`, `.claude/rules/aimaestro-*.md`, plus `.janitor/`,
-`reports*/`, `*_dev/`). Today all of those are ignored (`.gitignore` verified path-by-path,
-plus a managed `.git/info/exclude` block on import), so `git status --porcelain` stays empty
-and the gate passes.
+## Lessons
 
-But this repo's own `publish.py` is exactly what the agent (or a human) invokes to release
-this plugin. If **any future** AI-Maestro runtime artifact is ever written to a path not
-covered by the ignore set — a session marker, a lock file, tmux state — then
-`stage_check_clean` will **silently block every future publish of this repo**, self-publish
-included, with a message that names no file. The failure mode is high-friction and the
-diagnosis is manual.
+1. **Verify a quoted snippet against the source before building on it.** The audit was an
+   agent-produced report; its `stage_check_clean` quote silently dropped two lines
+   (`cprint(r.stdout)` and the `[1/11]` banner). Everything downstream — this TRDD's Problem
+   statement, its "silently bricks publish" framing, its acceptance criteria — inherited the
+   error. A single `Read` of the real function would have (and finally did) catch it.
+2. **A report is evidence, not truth.** Reports get promoted into decisions; a wrong line in
+   a report becomes a wrong line in a spec, then a wrong edit to a protected file. Re-read
+   the primary source at the moment of the decision, not just at the moment of the audit.
+3. **A refused proposal is a success of the gate, not a waste.** The proposal → verify →
+   refuse loop cost one file and zero risk. Had it been a direct edit to `publish.py` under
+   "fix everything", it would have modified the sole push path for no benefit.
 
-## Evidence / provenance
+## Original problem statement (RETAINED FOR THE RECORD — factually WRONG, see above)
 
-- Surfaced by the #26 B2 fleet-readiness audit, ITEM 2 (verdict **PASS**, with this recorded
-  as the single residual CONCERN). Audit report:
-  `reports/maintainer-fleet-readiness/20260709_015409+0200-b2-audit.md` (gitignored).
-- Related shipped work: commit `56de645` (#26 G1/G2 — in-place self-maintenance topology +
-  flag-don't-self-publish). That commit is what makes this repo self-maintaining, and hence
-  what makes this latent risk worth tracking.
-- Packaging itself was audited clean: publish is git-native (`gh release create` on the
-  pushed tag, no filesystem-walking bundler), so there is **no** exclusion list to fix — the
-  single source of truth is `.gitignore`. Only the *gate's diagnostic* is at issue.
+> `stage_check_clean` is an unconditional hard-fail on ANY non-ignored dirty or untracked
+> path, with no distinction and no diagnostic. The message prints no paths, so the operator
+> sees only `Working tree is dirty` with no clue which file caused it. Because #26 makes this
+> repo self-maintaining, a future AI-Maestro runtime artifact landing outside the ignore set
+> would silently brick every publish of this repo — including self-publish — with a message
+> naming no file.
 
-## Proposed change
+Both italicised claims are false. The gate prints every offending path and exits non-zero.
 
-In `stage_check_clean`, keep the hard-fail, but make it explain itself:
+## What IS still true (and needs no change)
 
-1. Capture the porcelain output and **print the offending paths** (capped, e.g. first 20)
-   instead of a bare message.
-2. Classify each offending path against a known **AI-Maestro runtime-artifact prefix list**
-   (`.claude/`, `.aimaestro/`, `.janitor/`, `reports/`, `reports_dev/`, `*_dev/`,
-   `.trashcan/`, `.serena/`, `.rechecker/`, `llm_externalizer_output/`).
-3. When a path matches a runtime prefix but is **not** ignored, emit an explicit,
-   actionable hint: this is an un-ignored AI-Maestro runtime artifact — add it to
-   `.gitignore` (a deliberate, reviewed edit) — rather than leaving the operator to guess.
-4. When a path does not match, keep today's message ("commit or stash").
-5. Exit non-zero in **both** cases. Unchanged.
-
-## Non-goals (explicit — do not do these)
-
-- **Never auto-add anything to `.gitignore`.** `.gitignore` is a protected path; widening
-  the ignore set is a reviewed human decision, never a publish-time side effect.
-- **Never auto-stash, auto-commit, auto-clean, or `--force` past the gate.** No workaround,
-  no bypass, no fallback. The gate either passes or the publish exits non-zero.
-- **Never downgrade the exit code** or make the gate skippable via an env var.
-- Do not touch the packaging step; it is already git-native and correct.
-
-## Acceptance criteria
-
-- [ ] `stage_check_clean` prints every offending path (capped) on failure.
-- [ ] A path under a known runtime prefix that is not ignored produces the distinct
-      "un-ignored AI-Maestro runtime artifact" hint naming that path.
-- [ ] Any other dirty path produces the existing "commit or stash" message.
-- [ ] Exit code is `1` in both cases (unchanged); a clean tree still exits `0` and proceeds
-      to step `[2/11]`.
-- [ ] No change to `.gitignore`, to the packaging step, or to any other pipeline stage.
-- [ ] `ruff` + `mypy` clean; CPV validate gate green.
-
-## Verification
-
-1. Clean tree → `publish.py` proceeds past `[1/11]` (regression check).
-2. `touch .claude/UNIGNORED_MARKER` after temporarily un-ignoring it → gate exits `1` and
-   the output names `.claude/UNIGNORED_MARKER` with the runtime-artifact hint.
-3. Edit a tracked source file → gate exits `1` with the "commit or stash" message naming
-   that file.
-4. Confirm exit codes with `echo $?` in all three cases.
+- The clean-tree gate is a correct fail-fast: it exits `1` on any non-ignored dirty path and
+  names the paths. Preserved as-is.
+- Packaging is git-native (`gh release create` on the pushed tag; no filesystem-walking
+  bundler), so there is no exclusion list to maintain — `.gitignore` is the single source of
+  truth. Audited PASS under #26 ITEM 2.
+- `.gitignore` today covers every path the persona/skills declare they write. Verified
+  path-by-path on 2026-07-09.
 
 ## Approval log
 
-<!-- Approver appends: "- <ISO> — APPROVED|REFUSED by <approver> (tier 2). <rationale>." -->
+- 2026-07-09T15:24:00+0200 — REFUSED by ai-maestro-maintainer-agent (self-withdrawn before
+  any approver acted; tier 2 never exercised). Rationale: the proposal's core factual premise
+  was wrong — `stage_check_clean` already prints every offending path via `cprint(r.stdout)`.
+  The residual change was a cosmetic hint on a protected, release-critical file. Refused on
+  the merits; `scripts/publish.py` left untouched.
