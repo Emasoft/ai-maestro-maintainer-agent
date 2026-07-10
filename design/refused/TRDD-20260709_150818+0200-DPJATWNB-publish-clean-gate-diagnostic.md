@@ -48,10 +48,10 @@ The proposal was authored from the #26 B2 audit report. That report quoted
 status, a red "Working tree is dirty. Commit or stash changes first." message, and a
 non-zero exit.
 
-**The quote was truncated.** The real function (`scripts/publish.py:887-895`) carries two
-further statements the report silently dropped: a `[1/11] Checking working tree...` banner,
-and — decisively — a second print at **line 893**, `cprint(r.stdout)`, which emits the
-captured porcelain listing verbatim before the exit.
+**The quote was truncated.** The real function (`scripts/publish.py`, lines 887-895) carries
+two further statements the report silently dropped: a step banner, and — decisively — a
+second print at **line 893** which emits the captured porcelain listing verbatim before the
+exit.
 
 Because of that one dropped line, an un-ignored AI-Maestro runtime artifact surfaces **by
 name** (`?? .claude/some-new-artifact`) whenever the gate trips. The failure is loud and
@@ -72,7 +72,7 @@ cosmetic hint, the change is over-engineering and net-negative risk. Refused on 
 
 1. **Verify a quoted snippet against the source before building on it.** The audit was an
    agent-produced report; its `stage_check_clean` quote silently dropped two lines
-   (`cprint(r.stdout)` and the `[1/11]` banner). Everything downstream — this TRDD's Problem
+   (the porcelain-listing print and the step banner). Everything downstream — this TRDD's Problem
    statement, its "silently bricks publish" framing, its acceptance criteria — inherited the
    error. A single `Read` of the real function would have (and finally did) catch it.
 2. **A report is evidence, not truth.** Reports get promoted into decisions; a wrong line in
@@ -97,7 +97,7 @@ Both italicised claims are false. The gate prints every offending path and exits
 
 - The clean-tree gate is a correct fail-fast: it exits `1` on any non-ignored dirty path and
   names the paths. Preserved as-is.
-- Packaging is git-native (`gh release create` on the pushed tag; no filesystem-walking
+- Packaging is git-native (the GitHub release is cut from the pushed tag; no filesystem-walking
   bundler), so there is no exclusion list to maintain — `.gitignore` is the single source of
   truth. Audited PASS under #26 ITEM 2.
 - `.gitignore` today covers every path the persona/skills declare they write. Verified
@@ -107,6 +107,6 @@ Both italicised claims are false. The gate prints every offending path and exits
 
 - 2026-07-09T15:24:00+0200 — REFUSED by ai-maestro-maintainer-agent (self-withdrawn before
   any approver acted; tier 2 never exercised). Rationale: the proposal's core factual premise
-  was wrong — `stage_check_clean` already prints every offending path via `cprint(r.stdout)`.
+  was wrong — `stage_check_clean` already prints every offending path (at line 893).
   The residual change was a cosmetic hint on a protected, release-critical file. Refused on
   the merits; `scripts/publish.py` left untouched.
