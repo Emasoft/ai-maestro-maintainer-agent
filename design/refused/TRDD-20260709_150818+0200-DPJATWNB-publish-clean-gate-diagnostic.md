@@ -48,7 +48,7 @@ The proposal was authored from the #26 B2 audit report. That report quoted
 status, a red "Working tree is dirty. Commit or stash changes first." message, and a
 non-zero exit.
 
-**The quote was truncated.** The real function (`scripts/publish.py`, lines 887-895) carries
+**The quote was truncated.** The real function — defined in `scripts/publish.py` at lines 887-895 — carries
 two further statements the report silently dropped: a step banner, and — decisively — a
 second print at **line 893** which emits the captured porcelain listing verbatim before the
 exit.
