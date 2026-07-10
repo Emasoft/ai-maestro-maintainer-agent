@@ -43,35 +43,24 @@ not exist.**
 
 ## Why this was refused (post-mortem)
 
-The proposal was authored from the #26 B2 audit report, which quoted `stage_check_clean` as:
+The proposal was authored from the #26 B2 audit report. That report quoted
+`stage_check_clean` as a four-statement function: a docstring, a capture of the porcelain
+status, a red "Working tree is dirty. Commit or stash changes first." message, and a
+non-zero exit.
 
-```python
-def stage_check_clean(root: Path) -> None:
-    """Step 1: Working tree must be clean."""
-    r = run(["git", "status", "--porcelain"], cwd=root, capture=True)
-    if r.stdout.strip():
-        cprint(f"  {RED}Working tree is dirty. Commit or stash changes first.{NC}")
-        sys.exit(1)
-```
+**The quote was truncated.** The real function (`scripts/publish.py:887-895`) carries two
+further statements the report silently dropped: a `[1/11] Checking working tree...` banner,
+and — decisively — a second print at **line 893**, `cprint(r.stdout)`, which emits the
+captured porcelain listing verbatim before the exit.
 
-That quote is **truncated**. The actual function (`scripts/publish.py:887-895`) is:
+Because of that one dropped line, an un-ignored AI-Maestro runtime artifact surfaces **by
+name** (`?? .claude/some-new-artifact`) whenever the gate trips. The failure is loud and
+self-describing, not silent. The operator's next step — gitignore it, in a deliberate
+reviewed edit — is obvious from the output.
 
-```python
-def stage_check_clean(root: Path) -> None:
-    """Step 1: Working tree must be clean."""
-    cprint(f"\n{BOLD}[1/11] Checking working tree...{NC}")
-    r = run(["git", "status", "--porcelain"], cwd=root, capture=True)
-    if r.stdout.strip():
-        cprint(f"  {RED}Working tree is dirty. Commit or stash changes first.{NC}")
-        cprint(r.stdout)          # <-- prints EVERY offending path, in porcelain form
-        sys.exit(1)
-    cprint(f"  {GREEN}Clean.{NC}")
-```
-
-`cprint(r.stdout)` emits the full `git status --porcelain` listing, so an un-ignored
-AI-Maestro runtime artifact surfaces by name (`?? .claude/some-new-artifact`). The failure is
-**loud and self-describing**, not silent. The operator's next step (gitignore it, in a
-deliberate reviewed edit) is obvious from the output.
+(Read the function in `scripts/publish.py` for the exact code; it is deliberately not
+reproduced here, so this design document stays inert prose rather than executable-looking
+source.)
 
 What remained after the correction was only a cosmetic nicety: an extra hint line
 classifying the path as "probably an AI-Maestro runtime artifact". That does not justify
