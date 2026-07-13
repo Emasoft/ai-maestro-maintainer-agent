@@ -81,7 +81,13 @@ def tmp_git_repo(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Clear AIMAESTRO_AGENT_DIR + CLAUDE_PROJECT_DIR so state-path tests start clean."""
+    """Clear AGENT_WORK_DIR + CLAUDE_PROJECT_DIR so state-path tests start clean.
+
+    AIMAESTRO_AGENT_DIR is cleared too — not because the resolver reads it (it
+    does not), but so a stray value in the ambient environment can never make a
+    test look like it passed for the wrong reason.
+    """
+    monkeypatch.delenv("AGENT_WORK_DIR", raising=False)
     monkeypatch.delenv("AIMAESTRO_AGENT_DIR", raising=False)
     monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
 

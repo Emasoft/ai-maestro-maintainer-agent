@@ -45,16 +45,45 @@ working directory**, not `$HOME`. The agent working directory is
 resolved with this priority:
 
 ```bash
-AGENT_DIR="${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+AGENT_DIR="${AGENT_WORK_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
 ```
 
-1. **`$AIMAESTRO_AGENT_DIR`** — the canonical AI Maestro env var.
-   When AI Maestro exports it (proposed in
-   <https://github.com/Emasoft/ai-maestro/issues/32>), every skill
-   uses it as the root.
-2. **`$CLAUDE_PROJECT_DIR`** — Claude Code's standard project dir
-   env var. Current actual production value.
-3. **`$PWD`** — last-resort fallback for unmanaged runs.
+1. **`$AGENT_WORK_DIR`** — the authoritative AI Maestro env var. It is
+   baked into the pane's environment at `tmux new-session -e` time and is
+   what the directory-guard hook enforces as the sandbox boundary, so it
+   is definitionally the agent's working directory. It is set identically
+   whether the workdir is `~/agents/<name>` or an adopted project folder
+   such as `~/Code/<project>`.
+2. **`$CLAUDE_PROJECT_DIR`** — Claude Code's own project-dir env var.
+   Covers a plain, non-fleet session.
+3. **`$PWD`** — last-resort fallback for unmanaged runs. Never depend on
+   it alone: it equals the workdir at startup and then diverges silently
+   the moment the agent, or any subagent, changes directory.
+
+### Correction (2026-07-13) — the chain named a variable that does not exist
+
+This ADR originally led the chain with **`$AIMAESTRO_AGENT_DIR`**, described
+as "the canonical AI Maestro env var … when AI Maestro exports it (proposed
+in ai-maestro#32)". It was never implemented, and **AI Maestro sets it
+nowhere** — confirmed against the server source in
+<https://github.com/Emasoft/ai-maestro/issues/57>.
+
+The consequence was invisible rather than loud: the chain simply fell
+through to `$PWD` on every fleet host. `$PWD` *happens* to equal the workdir
+at session start, so the agent behaved correctly right up until anything
+`cd`-ed, at which point state silently landed in the wrong directory. A test
+suite (`tests/test_state_path.py`) asserted the phantom variable won and
+passed for weeks, proving only that the resolver implemented the fiction
+faithfully.
+
+The decision this ADR records — *state lives in the agent working directory,
+never `$HOME`* — was and remains correct. Only the resolution mechanism was
+wrong, and it is corrected above.
+
+**Lesson: a variable name is a hypothesis until you have seen the code that
+exports it.** The original text even said "proposed", and every downstream
+consumer still read it as fact. `tests/test_state_path.py` now carries a
+regression guard that sets `$AIMAESTRO_AGENT_DIR` and asserts it is ignored.
 
 State paths (per the main agent's frontmatter section "State paths"):
 
@@ -83,11 +112,15 @@ git.
 
 **More difficult:**
 
-- An agent whose `$AIMAESTRO_AGENT_DIR` / `$CLAUDE_PROJECT_DIR` is
+- An agent whose `$AGENT_WORK_DIR` / `$CLAUDE_PROJECT_DIR` is
   unset (truly unmanaged) writes to `$PWD/.aimaestro/state/` —
   which migrates with the working dir but may surprise an
   operator who expected `$HOME`. Mitigated by the main-agent
   frontmatter explicitly documenting the resolution priority.
+  Note this fallback is *load-bearing but dangerous*: because it is
+  silent, a broken first link in the chain looks exactly like a
+  working one until the process changes directory — which is precisely
+  how the 2026-07-13 correction above went unnoticed for weeks.
 - The repo's own `.gitignore` must list `.aimaestro/`. Confirmed
   present at the time of this ADR.
 

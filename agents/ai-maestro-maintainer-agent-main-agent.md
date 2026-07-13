@@ -97,9 +97,20 @@ of the repo**. Concretely:
 
 Every persistent file the maintainer writes lives inside the AGENT
 WORKING DIRECTORY (never `$HOME`). Resolution order:
-`${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}`. AI Maestro
+`${AGENT_WORK_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}`. AI Maestro
 backups + host-to-host migration both ship the workdir, not `$HOME` —
 state outside it is silently lost on restore.
+
+`AGENT_WORK_DIR` is **the** authoritative variable: AI Maestro bakes it
+into the pane's env at `tmux new-session -e` time, and the directory-guard
+hook treats it as the sandbox boundary — so it is definitionally the
+agent's workdir. It is set identically whether the workdir is
+`~/agents/<name>` or an adopted project folder such as `~/Code/<project>`;
+adoption is an authorization change, not a different code path, so the
+self-maintenance branch below keys off the same variable in both shapes.
+`CLAUDE_PROJECT_DIR` is Claude Code's own variable (it covers a plain
+non-fleet session); `$PWD` is the last resort. Never rely on `$PWD` alone —
+it silently diverges the moment the agent or a subagent changes directory.
 
 | File | Path |
 |---|---|

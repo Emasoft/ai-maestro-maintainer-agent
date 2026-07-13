@@ -28,11 +28,22 @@ REPO="<githubRepo>"
 # AI Maestro backups only snapshot the agent workdir, and agent
 # migration between hosts only ships the workdir. State outside
 # the workdir is silently lost on both. Resolution order:
-#   1. $AIMAESTRO_AGENT_DIR — proposed AI Maestro env var
-#      (https://github.com/Emasoft/ai-maestro/issues/32)
-#   2. $CLAUDE_PROJECT_DIR  — Claude Code project dir
-#   3. $PWD                 — last-resort fallback
-AGENT_DIR="${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+#   1. $AGENT_WORK_DIR      — THE authoritative AI Maestro variable.
+#      Baked into the pane env at `tmux new-session -e` time, and used by
+#      the directory-guard hook as the sandbox boundary, so it is
+#      definitionally the agent's workdir. Set identically whether the
+#      workdir is ~/agents/<name> or an adopted ~/Code/<project>.
+#   2. $CLAUDE_PROJECT_DIR  — Claude Code's own var (plain non-fleet session)
+#   3. $PWD                 — last-resort fallback ONLY
+#
+# Do NOT key off $PWD alone: it happens to equal the workdir at startup and
+# then silently diverges the moment the agent — or any subagent — cd's, so
+# the bug reads as "works on my machine" and corrupts state elsewhere.
+# (This previously named a *proposed* var, $AIMAESTRO_AGENT_DIR, that AI
+# Maestro never sets; the chain therefore always fell through to $PWD.
+# Confirmed against the server source: ai-maestro#57. Verify a variable is
+# actually exported before depending on it — a name is a hypothesis.)
+AGENT_DIR="${AGENT_WORK_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
 
 # Self-maintenance detection: does $AGENT_DIR's origin already point at
 # $REPO? As a fleet agent the workdir root can BE this plugin's own

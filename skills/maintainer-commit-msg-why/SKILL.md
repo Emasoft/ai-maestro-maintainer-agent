@@ -90,7 +90,9 @@ HOOK_DST="$(git rev-parse --git-path hooks/commit-msg)"
 3. Emit JSON `{mode:"uninstall", removed:bool, restored:path|null}`.
 
 The `$AGENT_DIR` resolution mirrors maintainer-fix (Step 1):
-`${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}`.
+`${AGENT_WORK_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}`. `AGENT_WORK_DIR` is the
+one AI Maestro actually sets (baked into the pane env at session creation);
+never key off `$PWD` alone, which diverges as soon as anything `cd`s.
 
 ## Output
 

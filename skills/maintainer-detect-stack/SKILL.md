@@ -55,7 +55,7 @@ Copy this checklist and track your progress:
 1. Resolve target + state dirs:
    ```bash
    TARGET_REPO="${TARGET_REPO:-$PWD}"
-   AGENT_DIR="${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+   AGENT_DIR="${AGENT_WORK_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
    STATE_DIR="$AGENT_DIR/.aimaestro/state"
    mkdir -p "$STATE_DIR"
    cd "$TARGET_REPO"

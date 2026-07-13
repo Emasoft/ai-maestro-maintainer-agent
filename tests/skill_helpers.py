@@ -26,22 +26,34 @@ from pathlib import Path, PurePath
 # Implements the cascade documented in
 # skills/maintainer-guardian/references/threat-classes.md (Atomic write
 # pattern section):
-#     AGENT_DIR="${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+#     AGENT_DIR="${AGENT_WORK_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+#
+# AGENT_WORK_DIR is the variable AI Maestro actually exports: it is baked into
+# the pane's environment at `tmux new-session -e` time and is what the
+# directory-guard hook treats as the sandbox boundary, so it is definitionally
+# the agent's workdir. It is set identically whether the workdir is
+# ~/agents/<name> or an adopted project folder such as ~/Code/<project>.
+#
+# This cascade previously led with $AIMAESTRO_AGENT_DIR — a name that was
+# *proposed* and never implemented, so the chain always fell through to $PWD.
+# $PWD equals the workdir at startup and then silently diverges the moment the
+# agent (or a subagent) changes directory, which is why the bug never surfaced
+# in these tests. Confirmed against the ai-maestro server source: ai-maestro#57.
 # ---------------------------------------------------------------------------
 def resolve_agent_dir(env: dict | None = None, cwd: Path | str | None = None) -> Path:
     """Return the agent working directory per the cascade rule.
 
-    Priority order, exactly as documented in threat-classes.md:
-      1. $AIMAESTRO_AGENT_DIR (AI Maestro preferred env var)
-      2. $CLAUDE_PROJECT_DIR  (Claude Code project dir)
+    Priority order:
+      1. $AGENT_WORK_DIR      (the authoritative AI Maestro variable)
+      2. $CLAUDE_PROJECT_DIR  (Claude Code's own var; plain non-fleet session)
       3. The caller's cwd (last-resort fallback; defaults to os.getcwd()).
     """
     # Use a fresh local (not the annotated `env` param) so the type checker
     # infers the dict|os._Environ union freely; both expose .get().
     resolved = env if env is not None else os.environ
-    aimaestro = resolved.get("AIMAESTRO_AGENT_DIR")
-    if aimaestro:
-        return Path(aimaestro)
+    agent_work_dir = resolved.get("AGENT_WORK_DIR")
+    if agent_work_dir:
+        return Path(agent_work_dir)
     claude = resolved.get("CLAUDE_PROJECT_DIR")
     if claude:
         return Path(claude)
