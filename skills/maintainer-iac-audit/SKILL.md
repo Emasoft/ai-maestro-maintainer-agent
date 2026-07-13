@@ -119,7 +119,14 @@ skill calls `command -v` before invoking any tool.
 6. **Read the finding catalogue** — [tf-audit-checks](references/tf-audit-checks.md)
    — and map every scanner hit to its entry (shape, why, safe fix).
    A finding the catalogue does not cover is reported verbatim with
-   the scanner's own remediation URL; never invent a fix.
+   the scanner's own remediation URL; never invent a fix. For
+   per-resource depth (RDS, ElastiCache, Lambda, ECS/EKS, require-MFA,
+   state-bucket MFA-delete) use
+   [resource-audit-checklists](references/resource-audit-checklists.md).
+   For newer language surfaces a scanner may not score yet —
+   ephemeral / write-only secrets, the destructive `removed` block,
+   Actions blocks, the `query` audit command — use
+   [modern-tf-features](references/modern-tf-features.md).
 
 7. **Terragrunt repos** — additionally follow
    [terragrunt-audit](references/terragrunt-audit.md): `root.hcl` naming, the 0.93+ CLI
@@ -248,6 +255,7 @@ User: "has anyone changed prod outside terraform?"
   - tflint
   - Checkov
   - Trivy
+  - Scanner version regressions — a crash is not a pass
   - Scanning the plan JSON instead of the HCL
   - Documented suppression — the only permitted escape hatch
   - Exit codes
@@ -264,12 +272,32 @@ User: "has anyone changed prod outside terraform?"
   - IAM least privilege
   - Logging and tagging
   - Check-ID mapping (indicative — always confirm against the run)
+- [references/resource-audit-checklists.md](references/resource-audit-checklists.md):
+  - How to use these
+  - RDS and Aurora
+  - ElastiCache
+  - Lambda
+  - ECS and EKS
+  - Other encrypted stores
+  - IAM: require MFA
+  - MFA-delete on the state bucket
+  - Fast detection greps
+- [references/modern-tf-features.md](references/modern-tf-features.md):
+  - Why this file exists
+  - Ephemeral values and write-only arguments
+  - State-management blocks: import, moved, removed
+  - Actions blocks
+  - The query command and list resources
 - [references/terragrunt-audit.md](references/terragrunt-audit.md):
   - root.hcl vs terragrunt.hcl
   - CLI migration (Terragrunt 0.93+)
   - Deprecated attributes
   - The remote_state block
   - generate blocks
+  - The errors block
+  - The engine block
+  - Hooks run arbitrary commands
+  - Terragrunt stacks
   - dependency and mock_outputs
   - Hardcoded values in inputs
   - Pinning, in the Terragrunt layer

@@ -80,6 +80,12 @@ inapplicable policy (`HEALTHCHECK`) with the reason written into BOTH
    *source*, Checkov and Trivy assert *policy*. Run both; a clean hadolint
    run says nothing about whether the image runs as root.
 
+   For a SHIPPED image, add a fifth dimension the four above never cover:
+   scan the BUILT image for known CVEs and baked secrets (`trivy image`,
+   `docker scout cves`) and inspect its layers with `docker history`. A
+   Dockerfile can pass every policy and still ship an unpatched base. See
+   [image-scanning-and-runtime](references/image-scanning-and-runtime.md).
+
 4. **Classify every finding** against
    [audit-checklist](references/audit-checklist.md), which is organised as
    *what to check → what is wrong → how to fix*:
@@ -268,7 +274,8 @@ you can jump straight to the part you need.
   - 9. Obsolete patterns — remove on sight
 - [remediation-templates](references/remediation-templates.md) —
   copy-paste fixes: multi-stage per language, non-root user creation,
-  build secrets, `.dockerignore`, HEALTHCHECK forms, PID-1 init.
+  build secrets, `.dockerignore`, HEALTHCHECK forms, PID-1 init, scratch /
+  distroless specifics, BuildKit ssh/cache mounts, advanced multi-stage.
   - Non-root user
   - Pinned base image
   - HEALTHCHECK (services only)
@@ -282,6 +289,9 @@ you can jump straight to the part you need.
   - `.dockerignore`
   - Instruction hygiene
   - Hardening a shipped image further
+  - Scratch and distroless runtimes
+  - BuildKit mounts beyond secrets
+  - Multi-stage advanced patterns
 - [suppression-policy](references/suppression-policy.md) — when a finding
   is genuinely inapplicable, how to document it, and this repo's worked
   example.
@@ -292,13 +302,25 @@ you can jump straight to the part you need.
   - Prove the suppression actually works
   - Review a suppression when the image changes
 - [false-positives](references/false-positives.md) — verified scanner
-  artefacts: heredoc parse breakage, ARG-interpolated version pins, and
-  the Trivy check-ID prefix change.
+  artefacts: heredoc parse breakage, ARG-interpolated version pins, the
+  DL3006 registry misfire, and the Trivy check-ID prefix change.
   - Heredoc breaks BOTH hadolint and Checkov parsers
   - hadolint DL3013 misfires on an ARG-interpolated version pin
+  - hadolint DL3006 misfires on a fully-qualified registry image
   - Trivy check-ID prefix changed — and the old one still works
   - `trivy config` has no `--no-progress` flag
   - The general rule
+- [image-scanning-and-runtime](references/image-scanning-and-runtime.md) —
+  the audit dimensions the four-tool matrix does not cover: image CVE +
+  secret scanning, `docker history` layer forensics, base-image sizing and
+  per-base tradeoffs, and runtime hardening the Dockerfile cannot enforce.
+  - Config scan vs image scan — two different questions
+  - Image vulnerability and secret scanning
+  - `docker history` — layer sizes and baked-in secrets
+  - Base-image size and attack surface
+  - Per-base tradeoffs — alpine, distroless, scratch
+  - Runtime hardening the Dockerfile cannot enforce
+  - Compliance anchors
 - Companion skills: `maintainer-sandbox` (owns the Docker harness and
   these Dockerfiles), `maintainer-config-lint` (broad multi-format config
   lint), `maintainer-secrets-scan` (secrets in history),

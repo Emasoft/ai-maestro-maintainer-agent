@@ -14,6 +14,7 @@ inline-script checks. Each check is *what to look for → why → the fix*.
 - [4. Agents and container images](#4-agents-and-container-images)
 - [5. Runtime-macro script injection](#5-runtime-macro-script-injection)
 - [6. `resources: repositories` and template trust](#6-resources-repositories-and-template-trust)
+- [7. Checkout credential persistence and `System.AccessToken`](#7-checkout-credential-persistence-and-systemaccesstoken)
 - [Static-scan cues](#static-scan-cues)
 
 ## Live validation — the preview API
@@ -151,6 +152,19 @@ resources:
       image: node:20.11-alpine3.19@sha256:<digest>   # never :latest
 ```
 
+**Pin task versions too.** A `task: Foo@*` (or a missing version)
+lets the task *code* that runs change under you; pin the major version
+(`task: Foo@2`) so a reviewer knows which task implementation executes.
+Flag `@*`/unpinned tasks as `unpinned-task-version` (MEDIUM) — the task
+analog of an unpinned image.
+
+**Cache restore keys can cross refs.** A `Cache@2` `restoreKeys:`
+fallback can restore a cache written by a *different* branch when the
+exact key misses. If a trusted job restores a cache an untrusted branch
+could have populated, that is a cache-poisoning path — key the cache on
+a per-ref token and keep `restoreKeys:` from widening to shared refs
+(LOW→MEDIUM by what consumes the cache).
+
 ## 5. Runtime-macro script injection
 
 **Look for** an inline `script:`/`bash:`/`pwsh:` step that embeds a
@@ -182,6 +196,19 @@ This mirrors the GitHub-Actions "don't interpolate `${{ }}` into `run:`"
 rule; here the dangerous form is inline `$(...)`. Report an unmapped
 untrusted `$(...)` in a script as HIGH.
 
+**Know the three expansion syntaxes — two of them are textual.** Azure
+has `$(var)` (macro, expanded at runtime by *textual substitution*
+before the shell parses), `$[ ... ]` (runtime expression, evaluated by
+the agent — not pasted into script text), and `${{ ... }}` (compile-time
+template expression, expanded on the server *before the run exists*).
+Both `$(...)` and `${{ ... }}` land in the file as text, so a
+`${{ parameters.someInput }}` pasted straight into a `script:` body is
+*also* injectable when that parameter can carry untrusted text — it is
+substituted into the command string just like a macro. The safe rule is
+the same for both: never let untrusted text reach a script body as
+inlined characters; bind it through `env:` and reference it as a shell
+variable. `$[ ... ]` does not have this textual-paste problem.
+
 ## 6. `resources: repositories` and template trust
 
 **Look for** a `resources: repositories:` entry or an `extends:` /
@@ -206,6 +233,38 @@ resources:
       ref: refs/tags/v3.2.0        # immutable, not refs/heads/main
 ```
 
+## 7. Checkout credential persistence and `System.AccessToken`
+
+**Look for** a `checkout:` step with `persistCredentials: true`, and any
+script that reads `$(System.AccessToken)` and then hands it to an
+untrusted step (an echo, or a downloaded script).
+
+**Why** `System.AccessToken` is the pipeline's built-in OAuth credential
+— it can call the Azure DevOps REST API and, depending on the job
+authorization scope, reach the repo and other project resources. When
+`persistCredentials: true`, checkout writes that token into the on-disk
+git config of the workspace, where *every later step on that agent* —
+including a compromised dependency's post-install, or an untrusted
+template's step — can read and reuse it. The token then outlives the one
+step that legitimately needed it.
+
+**Fix** leave `persistCredentials: false` (the default) unless a
+specific later step genuinely needs to push with the pipeline identity;
+when it does, isolate that step and run no untrusted code after it in the
+same job. Never echo `$(System.AccessToken)` and never pass it into a
+downloaded script. Also set `clean: true` so a persisted credential from
+a prior run does not linger in a reused workspace.
+
+```yaml
+- checkout: self
+  persistCredentials: false   # the token is NOT written to the on-disk git config
+  clean: true
+```
+
+Report `persistCredentials: true` on a checkout in a job that also runs
+untrusted or third-party steps as HIGH; report a logged/forwarded
+`System.AccessToken` as HIGH.
+
 ## Static-scan cues
 
 | Finding | Cue | Severity |
@@ -216,6 +275,9 @@ resources:
 | `:latest` container | `container:`/`image:` ending `:latest` or untagged | MEDIUM |
 | Macro injection | inline `$(…PullRequest…\|…SourceVersionMessage…)` in a script | HIGH |
 | Unpinned template repo | `resources.repositories[].ref` = `refs/heads/*` | MEDIUM |
+| Unpinned task version | `task:` with `@*` or no `@<major>` | MEDIUM |
+| Persisted checkout token | `checkout:` with `persistCredentials: true` | HIGH |
+| Access-token exposure | `$(System.AccessToken)` echoed or piped to a script | HIGH |
 | Checkout not clean | `checkout:` with `clean: false` | LOW |
 
 Read the surrounding YAML before classifying — a cue is a hint, not a

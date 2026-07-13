@@ -13,6 +13,7 @@ unpinned.
 
 - [Dependency-review PR gate](#dependency-review-pr-gate)
 - [Build attestation via OIDC (keyless)](#build-attestation-via-oidc-keyless)
+  - [OIDC token claims and the trust-policy condition](#oidc-token-claims-and-the-trust-policy-condition)
 - [When NOT to add these](#when-not-to-add-these)
 
 ## Dependency-review PR gate
@@ -83,6 +84,44 @@ The cloud side trusts `token.actions.githubusercontent.com` scoped to
 `repo:<org>/<repo>:ref:refs/heads/main` (a `sub` claim condition), so a
 fork or a non-main ref cannot assume the role. No secret is stored, so
 none can leak.
+
+### OIDC token claims and the trust-policy condition
+
+The whole security of keyless auth rests on the cloud side pinning the
+right claims — a role that trusts the GitHub issuer but does NOT constrain
+`sub` is assumable by ANY repository's workflow. The token GitHub mints
+carries these claims (the ones a trust policy pins are load-bearing):
+
+| Claim | Meaning |
+|---|---|
+| `sub` | the subject — e.g. `repo:<org>/<repo>:ref:refs/heads/main` — THE claim to constrain |
+| `aud` | audience — the intended recipient (e.g. the cloud STS audience) |
+| `repository` | `owner/repo` |
+| `repository_owner` | the owner |
+| `ref` | the git ref (`refs/heads/main`, `refs/tags/v1.0.0`) |
+| `sha` | the commit SHA |
+| `workflow` / `job_workflow_ref` | which workflow minted it |
+| `run_id` / `run_attempt` | the run and attempt |
+| `actor` | who triggered the run |
+| `environment` | the deployment environment, when the job declares one |
+
+The trust policy is a condition on those claims — pin at least `sub` and
+`aud`:
+
+```json
+{
+  "Condition": {
+    "StringEquals": {
+      "token.actions.githubusercontent.com:aud": "<cloud-audience>",
+      "token.actions.githubusercontent.com:sub": "repo:<org>/<repo>:ref:refs/heads/main"
+    }
+  }
+}
+```
+
+Tighten `sub` to the exact ref (or `environment`) that should be able to
+assume the role. A wildcard `sub` such as `repo:<org>/<repo>:*` trusts
+every branch, tag, and PR of the repo — a common over-grant to flag.
 
 **SBOM + build provenance.** For a published image, generate an SBOM and
 attach signed provenance:

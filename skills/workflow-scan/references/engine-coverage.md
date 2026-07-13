@@ -4,6 +4,8 @@
 
 - [Division of labour](#division-of-labour)
 - [What actionlint alone catches](#what-actionlint-alone-catches)
+- [actionlint rule kinds — the `kind` field](#actionlint-rule-kinds--the-kind-field)
+- [Beyond the workflows directory: composite actions](#beyond-the-workflows-directory-composite-actions)
 - [Machine-readable actionlint output](#machine-readable-actionlint-output)
 - [actionlint exit codes](#actionlint-exit-codes)
 - [actionlint config — `.github/actionlint.yaml`](#actionlint-config--githubactionlintyaml)
@@ -45,6 +47,47 @@ Enable the shell layer — it is the highest-yield of the set. actionlint
 shells out to `shellcheck` for every `run:` block when `shellcheck` is
 on PATH (Homebrew formula `shellcheck`), and to `pyflakes` for
 `shell: python` blocks.
+
+## actionlint rule kinds — the `kind` field
+
+Each JSON finding carries a `kind` — the name of the actionlint rule that
+fired — and that is the field to group the report on (the analogue of
+zizmor's `audit`). The rule names actionlint reports include:
+
+| `kind` | What it flags |
+|---|---|
+| `syntax-check` | YAML schema errors — unexpected/missing keys, bad nesting, wrong types |
+| `expression` | `${{ }}` type errors, unknown context access, bad function calls |
+| `events` | trigger/`on:` mistakes, invalid cron |
+| `glob` | malformed `paths:` / `paths-ignore:` patterns |
+| `runner-label` | unknown `runs-on:` label (typo or unrecognised) |
+| `job-needs` | undefined `needs:` target, cyclic `needs:` graph |
+| `action` | unknown action input, missing required `with:` key |
+| `shellcheck` | shell bugs in `run:` blocks (delegated to shellcheck) |
+| `pyflakes` | Python bugs in `shell: python` blocks |
+| `credentials` | hardcoded credentials in `container`/`services` blocks |
+| `permissions` | invalid `permissions:` scope name or value |
+| `workflow-call` | reusable-workflow input/secret/output mismatches |
+| `deprecated-commands` | deprecated workflow commands (e.g. `set-output`) |
+
+This is not the exhaustive set — actionlint's Checks page is the
+authoritative list — but these are the kinds a workflow audit meets most.
+Group the report on `kind` and cite it in each finding, never line-scrape
+the human-readable format.
+
+## Beyond the workflows directory: composite actions
+
+`workflow-scan` scopes to `.github/workflows/`, but a repo's own
+**composite actions** (`.github/actions/<name>/action.yml` with
+`runs.using: composite`) carry `run:` steps that have the *same*
+expression-injection exposure as a workflow — and they live OUTSIDE the
+scanned directory, so a workflows-only scan is blind to them. zizmor and
+actionlint can both audit an `action.yml` when pointed at it directly.
+When a repo defines local composite (or Docker/JS) actions, note in the
+report that they are an un-scanned injection + supply-chain surface and,
+if the caller wants them covered, run the engines against
+`.github/actions/**/action.yml` as a follow-up. Do not silently imply the
+`.github/workflows/`-only scan cleared the whole repo.
 
 ## Machine-readable actionlint output
 

@@ -37,7 +37,15 @@ kubectl get pods -n NS --show-labels                   # compare against the Ser
 kubectl auth can-i --list --as=system:serviceaccount:NS:SA   # what an SA is actually allowed
 kubectl run tmp --rm -it --image nicolaka/netshoot -- /bin/bash   # ephemeral net-debug pod
 kubectl exec POD -n NS -- nslookup kubernetes.default  # DNS from inside the pod
+kubectl exec POD -n NS -- cat /etc/resolv.conf         # the pod's resolver config
+kubectl get --raw /apis/metrics.k8s.io/v1beta1/namespaces/NS/pods/POD  # metrics fallback when top/metrics-server is down
 ```
+
+Read-only accelerators worth having on top of raw `kubectl`: `stern` tails
+logs across many pods at once (one command in place of N `kubectl logs`),
+`k9s` is a terminal UI over the same read verbs, and `kubectx`/`kubens`
+switch context/namespace without editing kubeconfig by hand. All are
+conveniences over the read verbs above — none mutate anything.
 
 **MUTATING — never run in triage; each is a human's call with the
 diagnosis in hand:** `kubectl apply`, `delete`, `scale`, `patch`,
@@ -57,6 +65,12 @@ kubectl get pods → read the STATUS column
 ├─ Running, not working → endpoints / probe / NetworkPolicy / DNS            (Service runbook)
 └─ Evicted / Error    → node pressure                                        (Node runbook)
 ```
+
+When the STATUS alone is ambiguous, cross-cut it with a problem-LAYER axis:
+classify the symptom as Application, Pod, Service, Node, Cluster, Storage or
+Configuration before drilling. The status column says WHERE a pod is stuck;
+the layer says WHICH subsystem to read first (e.g. a `Running`-but-broken
+pod is a Service-layer or Configuration-layer problem, not a Pod-layer one).
 
 ## Pod startup failures — CrashLoopBackOff, ImagePullBackOff, OOMKilled, Pending
 
@@ -163,7 +177,9 @@ kubectl get pods → read the STATUS column
   `kubectl get pods --show-labels` vs the Service `selector`,
   `kubectl get networkpolicies -n NS`, DNS from a debug pod
   (`nslookup SVC.NS.svc.cluster.local`), CoreDNS health
-  (`kubectl get pods -n kube-system -l k8s-app=kube-dns`).
+  (`kubectl get pods -n kube-system -l k8s-app=kube-dns`, plus
+  `kubectl get endpoints kube-dns -n kube-system`), and the pod's own
+  `/etc/resolv.conf`.
 - **Ranked causes:** the Service `selector` does not match the pod
   labels → `targetPort` ≠ the container port → a NetworkPolicy blocks
   the traffic (or blocks DNS on port 53) → the pods are not Ready.
@@ -176,8 +192,9 @@ kubectl get pods → read the STATUS column
   under node pressure.
 - **Commands:** `kubectl describe pvc PVC -n NS`, `kubectl get pv`,
   `kubectl get storageclass`; for nodes `kubectl describe node NODE`
-  (look for `MemoryPressure`, `DiskPressure`, `PIDPressure`), `kubectl
-  top node`.
+  (look for the `MemoryPressure`, `DiskPressure`, `PIDPressure`
+  conditions, and the node's `Allocated resources` block — what is
+  actually holding its capacity), `kubectl top node`.
 - **Ranked causes (PVC):** no matching PV / no dynamic provisioner →
   wrong `storageClassName` → capacity exhausted. **(node):**
   DiskPressure evicting pods → over-committed requests.

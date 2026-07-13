@@ -38,7 +38,7 @@ groups:
 | AR-03 | HIGH | Alert `expr` has no comparison operator | `expr: rate(errors[5m])` returns a value for every series, always. The alert fires forever, and the team mutes it. Alert exprs must reduce to a boolean via `>`, `<`, `==`, `!=`, `>=`, `<=`, `absent()`, or `absent_over_time()` |
 | AR-04 | HIGH | `rate()` or `increase()` applied to a gauge | Defined only for counters. On a gauge, a value that goes down reads as a counter reset and the result is garbage — a silently wrong alert |
 | AR-05 | MED | Counter used raw (no `rate`/`increase`) in an alert expr | A counter's absolute value is "everything since process start". Comparing it to a threshold alerts on uptime, not on behaviour |
-| AR-06 | MED | Averaging a pre-computed quantile | `avg(http_request_duration_seconds{quantile="0.95"})` is not the p95 of anything. Quantiles do not average. Compute from histogram buckets via `histogram_quantile` over `rate(..._bucket[5m])` |
+| AR-06 | MED | Aggregating a pre-computed quantile | `avg(http_request_duration_seconds{quantile="0.95"})` is not the p95 of anything — and `sum`/`min`/`max`/`stddev`/`stdvar` over a `{quantile="…"}` series are equally invalid (quantiles are non-additive; `max` looks like "worst instance" but is read as "global p95"). Compute from histogram buckets via `histogram_quantile` over `rate(..._bucket[5m])`, or switch the instrument from a summary to a histogram when you need to aggregate |
 | AR-07 | LOW | `irate()` over a range longer than ~5m | `irate` only looks at the last two samples in the range; the rest of the window is scanned and discarded. Either shrink the range or use `rate()` |
 | AR-08 | LOW | Recording rule name breaks the `level:metric:operations` convention | The convention encodes the aggregation level, the source metric, and the operations applied (`job:http_requests:rate5m`). A recording rule named like a raw metric is indistinguishable from one, and the next person double-rates it |
 | AR-09 | MED | Duplicate `alert:`/`record:` name inside one group | Both evaluate; the recording rule's later write wins non-deterministically. `promtool check rules --lint=all` also catches this |
@@ -56,12 +56,16 @@ can overrule it.
 | `_total`, `_count`, `_sum` | counter | `rate(m[5m])`, `increase(m[1h])` | raw value in a threshold |
 | `_bucket` (with `le`) | histogram | `histogram_quantile(0.95, sum by (le) (rate(m_bucket[5m])))` | `avg(m_bucket)` |
 | `{quantile="…"}` | summary | compare the quantile series directly, per-instance | `avg()` / `sum()` across the quantile |
-| `_bytes`, `_ratio`, `_seconds` (no `_total`), `..._info`, everything else | gauge | raw value, `avg_over_time`, `max_over_time`, `delta` | `rate()`, `increase()` |
+| `_bytes`, `_ratio`, `_usage`, `_percent`, `_celsius`, `_size`, `_current`, `_free`, `_used`, `_utilization`, `_capacity`, `_level`, `_seconds` (no `_total`), `..._info`, everything else | gauge | raw value, `avg_over_time`, `max_over_time`, `delta` | `rate()`, `increase()` |
 
 The inference is a heuristic and the corpus it came from says so. A
 custom counter named `requests_handled` (no `_total`) will be read as a
 gauge. When the metric type is not deducible, do **not** raise AR-04 —
-raise `manual-review` and name the ambiguity.
+raise `manual-review` and name the ambiguity. The **full** gauge-suffix
+list, the native-histogram rules (Prometheus 2.40+/3.0, where `_bucket`
+and `le` do *not* apply), and the deeper PromQL correctness/deprecation/
+syntax checks (AR-12+) live in
+[promql-rule-checks](promql-rule-checks.md).
 
 ## Loki rule files (LogQL `expr`)
 

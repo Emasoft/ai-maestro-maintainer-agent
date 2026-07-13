@@ -111,6 +111,7 @@ skill aborts without committing — regression guard.
   - The fix — env-var indirection
   - Why `env:` works and quoting does not
   - What env-var indirection does NOT fix
+  - Workflow-command injection — a second channel
   - The rewrite procedure
 - [Full step-by-step instructions](references/instructions.md):
   - Step 1: Protected-branch guard

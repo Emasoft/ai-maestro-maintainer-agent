@@ -28,6 +28,13 @@ hadolint passing says nothing about policy. Checkov passing says nothing
 about image size. Run all four; treat them as complementary, never as
 substitutes.
 
+All four inspect the Dockerfile SOURCE or a built image's LAYERS for
+style/policy/waste. None of them tell you whether the built image ships a
+**known-vulnerable package** — that is a fifth dimension (image CVE + secret
+scanning via `trivy image` / `docker scout` / `grype`) plus layer forensics
+via `docker history`. Both live in
+[image-scanning-and-runtime](image-scanning-and-runtime.md).
+
 ## Prefer the container form
 
 Every scanner ships an official image, so the audit needs no host installs
@@ -155,6 +162,8 @@ spellings work; do not "fix" a working `AVD-` entry.
 
 | ID | Rule |
 |---|---|
+| `DL3006` | Tag the version of an image explicitly |
+| `DL3007` | Do not use `:latest`; pin an explicit version |
 | `DL3008` | Pin versions in `apt-get install` |
 | `DL3013` | Pin versions in `pip install` |
 | `DL3016` | Pin versions in `npm install` |
@@ -162,8 +171,15 @@ spellings work; do not "fix" a working `AVD-` entry.
 | `DL3059` | Consecutive `RUN` instructions should be merged |
 | `DL4006` | Set `SHELL` with `-o pipefail` before a `RUN` with a pipe |
 
-`DL3013` misfires on version pins supplied through an `ARG` — see
-[false-positives](false-positives.md).
+`DL3013` misfires on version pins supplied through an `ARG`, and `DL3006`
+misfires on a fully-qualified non-Docker-Hub registry image that IS tagged —
+both are in [false-positives](false-positives.md).
+
+hadolint takes three suppression forms: the `--ignore RULECODE` CLI flag, an
+`ignored:` list in `.hadolint.yaml`, and an in-file `# hadolint ignore=RULECODE`
+comment placed on the line ABOVE the flagged instruction. The in-file comment
+is the right tool for a single genuine false positive (see DL3006 above);
+never blanket-ignore a rule to clear a real finding.
 
 ## CI wiring in this repo
 

@@ -35,15 +35,13 @@ report or any log — report the file, the line and the *shape*
 (`password: <redacted>`), and chain to `maintainer-secrets-scan` /
 `maintainer-redact` for the leak itself.
 
-**Alignment with the existing gate.** `.mega-linter.yml` already enables
-`REPOSITORY_CHECKOV` and `REPOSITORY_TRIVY`, so any manifest added to a
-repo on this pipeline is already scanned in CI. This skill runs the same
-two scanners locally — so the agent sees the finding before CI does — and
-adds the Kubernetes-specific scorers CI does not run (`kube-score`,
-`kubesec`, `polaris`, `kube-linter`). It never proposes a parallel
-scanner stack and never relaxes the gate: an inapplicable check is
-suppressed only with a documented, ID-scoped suppression carrying a WHY
-comment — never by disabling a linter or lowering a severity threshold.
+**Alignment with the existing gate.** `.mega-linter.yml` already runs
+`REPOSITORY_CHECKOV` and `REPOSITORY_TRIVY` in CI; this skill runs those
+same two locally (so the agent sees a finding before CI) and adds the
+Kubernetes scorers CI does not (`kube-score`, `kubesec`, `polaris`,
+`kube-linter`). It never relaxes the gate — an inapplicable check is
+suppressed only with a documented, ID-scoped WHY comment, never by
+disabling a linter or lowering a threshold.
 
 Also triggers on "kube-score findings", "lint the ansible playbooks" and
 "check our RBAC".
@@ -91,15 +89,13 @@ skill calls `command -v` before invoking any tool.
 3. **Tracked-file triage — do this FIRST, before any tool runs.** Some
    states are a finding even when every scanner is green: a committed
    `kind: Secret` with populated `data:`/`stringData:`, a
-   credential-shaped default in `values.yaml`, an unencrypted Ansible
-   vars file holding a credential, or a committed `kubeconfig` are each
-   CRITICAL; a missing `Chart.lock` while `Chart.yaml` declares
+   credential-shaped `values.yaml` default, an unencrypted Ansible vars
+   file with a credential, or a committed `kubeconfig` are each CRITICAL
+   and stop the file (chain to `maintainer-secrets-scan` — rotate first,
+   a `git rm` does not un-leak it); a missing `Chart.lock` with declared
    dependencies (or an unpinned `requirements.yml` entry) is HIGH; a
-   missing `.helmignore` is MEDIUM. A CRITICAL here stops the audit for
-   that file and chains to `maintainer-secrets-scan` — treat every value
-   in it as leaked (rotate first, then purge from history; removing the
-   file is not enough). The full table, with the WHY per row, is in the
-   operations reference at references/operations-and-examples.md.
+   missing `.helmignore` is MEDIUM. The full table with the WHY per row
+   is in references/operations-and-examples.md.
 
 4. **YAML hygiene, on every YAML file.** `yamllint -f parsable` catches
    what every downstream tool then mis-parses: tabs, duplicate keys,
@@ -109,9 +105,8 @@ skill calls `command -v` before invoking any tool.
    is not the hardening that gets applied.
 
 5. **Helm charts — render, then audit the rendering.** `helm lint`
-   checks chart *structure* and template *syntax*; it does not know what
-   a Deployment should contain. The real audit is on the rendered
-   output:
+   checks chart *structure* and template *syntax* only; the real audit is
+   on the rendered output:
 
    ```bash
    helm lint ./chart --strict --with-subcharts
@@ -119,70 +114,69 @@ skill calls `command -v` before invoking any tool.
      --include-crds --output-dir "$TMP/rendered"
    ```
 
-   Then run step 6 over `$TMP/rendered`. Render ONCE PER VALUES FILE the
-   repo ships (`values-prod.yaml`, `values-staging.yaml`): a chart that
-   is hardened under the default values and wide open under the
-   production overlay is a chart that is wide open. Chart-specific
-   checks (`values.schema.json`, dependency pinning, `nindent` bugs,
-   hooks, CRD handling) are in references/helm-chart-audit.md.
+   Then run step 6 over `$TMP/rendered`, ONCE PER VALUES FILE the repo
+   ships (`values-prod.yaml`, `values-staging.yaml`) — a chart hardened
+   under defaults but wide open under the prod overlay is wide open.
+   Chart-specific checks (`values.schema.json`, dependency pinning,
+   `nindent` bugs, hooks, CRDs) are in references/helm-chart-audit.md.
 
 6. **Kubernetes manifests — schema, then policy, then security, IN THAT
    ORDER** (a schema failure makes every later finding unreliable): run
-   `kubeconform -strict` (with the `default` schema plus the datreeio
-   CRD-catalog `-schema-location`), then `kube-score score`,
-   `kubesec scan`, `polaris audit --set-exit-code-on-danger`, and
-   `kube-linter lint`. `-strict` rejects unknown fields, which is how a
-   typo like `readOnlyRootFileSystem` (wrong capital S — silently
-   ignored by the API server) is caught. The exact invocations, flag
-   semantics, exit codes and the documented-suppression rules are in
-   references/scanner-toolchain.md.
+   `kubeconform -strict` (`default` schema + the datreeio CRD-catalog
+   `-schema-location`), then `kube-score score`, `kubesec scan`,
+   `polaris audit --set-exit-code-on-danger` and `kube-linter lint`.
+   `-strict` rejects unknown fields — how a typo like
+   `readOnlyRootFileSystem` (wrong capital S, silently ignored by the API
+   server) is caught. Exact invocations, flag semantics, exit codes and
+   suppression rules are in references/scanner-toolchain.md. With a
+   cluster context, add the read-only server-side dry-run in
+   references/validation-and-dry-run.md — it catches the admission,
+   policy-engine, quota and missing-reference failures no static scanner
+   sees.
 
 7. **Map every hit to the catalogue.** Read
    references/k8s-manifest-checks.md and map each scanner finding to its
-   entry — shape, why it is dangerous, and the remediation snippet. It
-   covers securityContext, resources, probes, image pinning by digest,
-   secrets, RBAC least privilege, NetworkPolicy, PodSecurity admission,
-   ServiceAccount token automounting, host namespaces and the API
-   deprecations. A finding the catalogue does not cover is reported
-   VERBATIM with the scanner's own remediation URL — never invent a fix.
+   entry — shape, why it is dangerous, and the remediation snippet (it
+   covers securityContext, resources, probes, digest pinning, secrets,
+   RBAC, NetworkPolicy, PodSecurity, ServiceAccount tokens, host
+   namespaces and API deprecations). Controller-level correctness and
+   reliability are in references/workload-controllers.md. A finding the
+   catalogue does not cover is reported VERBATIM with the scanner's own
+   remediation URL — never invent a fix.
 
 8. **Ansible.** Follow references/ansible-audit.md:
    `ansible-playbook --syntax-check`, `ansible-lint --profile production`,
    `checkov --framework ansible`, the secrets-and-`no_log` audit, and the
-   idempotency proof (a playbook that reports `changed` on its second
-   consecutive run is broken, whatever it claims). Note that ansible-lint
-   has no `security` profile — the security-adjacent rules live in
-   `safety`, which `production` includes.
+   idempotency proof (a playbook reporting `changed` on its second run is
+   broken). ansible-lint has no `security` profile — those rules live in
+   `safety`, which `production` includes. When a run fails,
+   references/ansible-errors-and-modules.md maps the exact output
+   signature to cause and fix and carries the module-migration table.
 
 9. **Mode.**
 
    - `scan` (default) — read-only. Emit the report. Exit `0` if no
      CRITICAL/HIGH finding, `1` otherwise. Mutates nothing.
-   - `harden` — apply ONLY the reversible, DEPLOY-NEUTRAL fixes that
-     cannot change what the cluster does: `yamllint` formatting and
-     de-duplication of an identical duplicate key; `ansible-lint --fix`
-     auto-fixes (FQCN, key order, Jinja spacing, re-verified by
-     `--syntax-check`); `no_log: true` on a flagged task; adding or
-     repairing `.helmignore`; pinning a `Chart.yaml`/`requirements.yml`
-     entry to the version ALREADY resolved in `Chart.lock`; the advisory
-     PodSecurity `warn`+`audit` namespace labels; and a
-     `values.schema.json` only after `helm lint` passes with every
-     values file. Everything that changes cluster behaviour —
-     `securityContext`, `resources`, probes, digest pinning,
-     NetworkPolicy, RBAC narrowing, PodSecurity `enforce`, file `mode:`,
-     `changed_when` — is NOT auto-applied; each becomes a remediation
-     patch with its diff and blast radius, for human approval. The
-     per-fix-class rationale is in references/operations-and-examples.md.
+   - `harden` — apply ONLY reversible, DEPLOY-NEUTRAL fixes (`yamllint`
+     formatting, duplicate-key de-duplication, `ansible-lint --fix`,
+     `no_log: true`, `.helmignore` repair, pinning to the version already
+     in `Chart.lock`, advisory PodSecurity `warn`/`audit` labels, a
+     `values.schema.json` once `helm lint` passes). Everything that
+     changes cluster behaviour — `securityContext`, `resources`, probes,
+     digest pinning, NetworkPolicy, RBAC narrowing, PodSecurity
+     `enforce`, file `mode:`, `changed_when` — is NEVER auto-applied;
+     each becomes a remediation patch with its diff and blast radius, for
+     human approval. The full fix-class list and rationale is in
+     references/operations-and-examples.md.
    - `gate` — pre-merge / pre-release. Runs `scan`, exits non-zero on
      any CRITICAL/HIGH, and refuses to pass on a suppression that
      carries no WHY comment.
    - `triage` — a workload from this repo is misbehaving on a live
-     cluster. Follow references/cluster-triage.md: the read-only runbooks
-     for CrashLoopBackOff, ImagePullBackOff, OOMKilled, Pending, probe
-     failures, empty endpoints and PVC binding, plus the table that maps
-     each runtime symptom back to the manifest field that is actually
-     wrong. Triage is READ-ONLY: it ends in a diagnosis and a proposed
-     manifest change, never in a `kubectl apply`.
+     cluster. Follow references/cluster-triage.md: read-only runbooks for
+     CrashLoopBackOff, ImagePullBackOff, OOMKilled, Pending, probe and
+     endpoint failures and PVC binding, plus the symptom → manifest-field
+     map. READ-ONLY — it ends in a diagnosis and a proposed manifest
+     change, never a `kubectl apply`.
 
 10. **Emit the report** — summary table
     (`| Severity | Check | File:line | Fix class |`), then one section
@@ -209,16 +203,15 @@ skill calls `command -v` before invoking any tool.
 
 ## Error Handling
 
-The full error-handling table — a missing scanner, `no schema found`
-for a CRD, `helm template` failing where `helm lint` passed, a duplicate
-YAML key, a committed `Secret`, no cluster context in `triage`, a
-read-only filesystem in `harden` — is in the operations reference at
-references/operations-and-examples.md. The load-bearing invariants: a
-missing `checkov`/`trivy` is a HARD FAIL in `gate` only; a committed
-Secret or a `values.yaml` credential is CRITICAL, stops the file, and
-chains to `maintainer-secrets-scan` (rotate first — a `git rm` does not
-un-leak it); a duplicate YAML key is always HIGH, because the visible
-config is not the applied config.
+The full error-handling table — a missing scanner, `no schema found` for
+a CRD, `helm template` failing where `helm lint` passed, a duplicate YAML
+key, a committed `Secret`, no cluster context in `triage`, a read-only
+filesystem in `harden` — is in references/operations-and-examples.md. The
+load-bearing invariants: a missing `checkov`/`trivy` is a HARD FAIL in
+`gate` only; a committed Secret or `values.yaml` credential is CRITICAL,
+stops the file, chains to `maintainer-secrets-scan` (rotate first — a
+`git rm` does not un-leak it); a duplicate YAML key is always HIGH (the
+visible config is not the applied config).
 
 ## Examples
 
@@ -253,8 +246,11 @@ embedded verbatim for progressive discovery.
 
 - [scanner-toolchain.md](references/scanner-toolchain.md) — Tool status — what is alive, what is archived; kubeconform — schema validation; Workload scorers — kube-score, kubesec, polaris, kube-linter; Rendering a chart before scanning it; Documented suppression — the only permitted escape hatch; Exit codes.
 - [k8s-manifest-checks.md](references/k8s-manifest-checks.md) — Severity model; Workload security — securityContext, resources, probes; Image references — tags, digests, pull policy; Secrets in manifests; Cluster access — RBAC, NetworkPolicy, PodSecurity, ServiceAccount; API deprecations and remediation templates.
-- [helm-chart-audit.md](references/helm-chart-audit.md) — The render-then-scan contract; Chart structure and dependency pinning; values.yaml and values.schema.json; Template pitfalls, hooks and checklist.
+- [helm-chart-audit.md](references/helm-chart-audit.md) — The render-then-scan contract; Chart structure and dependency pinning; values.yaml and values.schema.json; Templates, hooks, operators and checklist.
 - [ansible-audit.md](references/ansible-audit.md) — The tool chain and the real profiles; Secrets, Vault and no_log; Shell, modules and idempotency; Privilege, file modes, pinning and remediation.
 - [cluster-triage.md](references/cluster-triage.md) — The read-only command toolkit; The triage decision tree; Pod startup failures — CrashLoopBackOff, ImagePullBackOff, OOMKilled, Pending; Runtime failures — probes, endpoints, storage; Exit codes, symptom map and gotchas.
 - [operations-and-examples.md](references/operations-and-examples.md) — Prerequisites — the tool table; Tracked-file triage; Harden mode — deploy-neutral fix classes; Error handling; Worked examples.
+- [validation-and-dry-run.md](references/validation-and-dry-run.md) — Server-side dry-run — the admission and policy gate; Client dry-run, kubectl diff and cluster-unreachable handling; The dry-run failure taxonomy; Helm dry-run and change detection; kubeconform chart rubric and CRD schema introspection.
+- [workload-controllers.md](references/workload-controllers.md) — Immutable fields — flag every edit; Deployment, StatefulSet and DaemonSet; Job, CronJob and HorizontalPodAutoscaler; PodDisruptionBudget and PersistentVolumeClaim; Ingress and controller API deprecations.
+- [ansible-errors-and-modules.md](references/ansible-errors-and-modules.md) — Error signatures — output → cause → fix; Deprecated modules — collection moves and removal timeline; Scanner IDs, tool floors, molecule and inventory; Additional security findings and remediations.
 - Companion skills: `maintainer-secrets-scan` (the leaked-credential half of a Secret/values finding), `maintainer-dockerfile-audit` (the image the manifest references), `maintainer-iac-audit` (the Terraform that builds the cluster), `maintainer-config-lint` (the YAML/JSON around them), `maintainer-fix` (drives the remediation PR).

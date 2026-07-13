@@ -16,6 +16,7 @@ there is no safe YAML parser to lean on.
 - [4. Credentials — never inline, always bound](#4-credentials--never-inline-always-bound)
 - [5. Agent trust and privileged docker](#5-agent-trust-and-privileged-docker)
 - [6. Input / approval gates and reliability guards](#6-input--approval-gates-and-reliability-guards)
+- [7. Groovy interpolation into `sh` — the injection vector](#7-groovy-interpolation-into-sh--the-injection-vector)
 - [Static-scan cues (line-oriented)](#static-scan-cues-line-oriented)
 
 ## Live validation — `declarative-linter` (declarative only)
@@ -84,6 +85,15 @@ steps inside a `node`/`agent` block via `sh`/`bat`, never by scripting
 controller objects. Never recommend blanket script approval; each
 approval is a standing grant a reviewer must justify. Flag controller
 object access as HIGH and route the sign-off to a human.
+
+**`@NonCPS` and raw constructors.** A `@NonCPS`-annotated method runs
+outside the pipeline's CPS transform as ordinary Groovy — it is where a
+pipeline reaches for `new SomeClass(...)`, reflection, and JVM APIs that
+the sandbox would otherwise intercept, and it is exactly the code that
+tends to accumulate script-approval grants. Treat a `@NonCPS` method
+that constructs arbitrary classes, reads controller files, or touches
+`System`/reflection as a §2 sandbox finding, not a mere style choice —
+read its body, do not wave it through because it is "just a helper".
 
 ## 3. Shared-library trust — the biggest Jenkins trust hazard
 
@@ -194,6 +204,80 @@ stage('Deploy') {
 not pin an agent (and its credentials). Report a missing production
 approval as LOW→MEDIUM depending on blast radius.
 
+**Restrict who may approve — `submitter:`.** An `input` step with no
+`submitter:` can be approved by *anyone with Build permission*, not just
+the release owners, so an "approval gate" that anyone can click is not a
+gate. Recommend naming the authorized approvers explicitly:
+
+```groovy
+input message: 'Deploy to production?', submitter: 'ops,release-admins'
+```
+
+Report a production `input` without a `submitter:` as MEDIUM.
+
+**Single-flight the deploy.** Two concurrent prod deploys can race and
+interleave. Serialize with `disableConcurrentBuilds()` in `options`, or
+wrap the deploy in a `lock(resource: 'prod-deploy')` so only one build
+holds it at a time — the Jenkins analog of GitLab `resource_group:` and
+Azure exclusive-lock environments. Absence on a production deploy is LOW.
+
+## 7. Groovy interpolation into `sh` — the injection vector
+
+**Background.** A double-quoted Groovy string interpolates `${...}`
+*before* the `sh` step ever hands text to the shell. So
+`sh "deploy ${params.TARGET}"` builds the command by pasting the raw
+value of `params.TARGET` into the command text — and `params.*`,
+`env.CHANGE_TITLE`, `env.BRANCH_NAME`, and any value derived from a PR
+or a build parameter are attacker-influenceable. This is the Jenkins
+twin of the Azure `$(...)`-in-a-script and GitLab `eval`-on-a-variable
+findings: untrusted text substituted into a command string before the
+shell parses it.
+
+**Look for** a double-quoted `sh`/`bat` argument that interpolates a
+`${params.…}`, `${env.CHANGE_…}`, `${env.BRANCH_NAME}`, or any value
+that traces back to a build parameter or SCM metadata. The vulnerable
+shape:
+
+```groovy
+// VULNERABLE — Groovy pastes the raw value into the command text
+sh "git checkout ${params.BRANCH}"
+```
+
+**Why** a value carrying shell metacharacters (a semicolon, backticks,
+`$(...)`, a newline) breaks out of the intended `git checkout` and runs
+attacker-chosen commands on the agent, with whatever credentials that
+stage bound.
+
+**Fix** — three layered defences, best first:
+
+- **Constrain the input** with a `choice` parameter so only an allowlist
+  of values is ever possible:
+
+  ```groovy
+  parameters { choice(name: 'BRANCH', choices: ['main', 'develop', 'release']) }
+  ```
+
+- **Validate** a free-form value against a strict pattern before use, and
+  `error` out otherwise:
+
+  ```groovy
+  if (!params.BRANCH.matches(/^[A-Za-z0-9._\/-]+$/)) { error "rejected branch name" }
+  ```
+
+- **Never interpolate — pass through the environment.** Single-quote the
+  `sh` body so the *shell* (not Groovy) expands the variable, and inject
+  the value via `withEnv`/`env` where it is an ordinary string the shell
+  does not re-parse as code:
+
+  ```groovy
+  withEnv(["TARGET_BRANCH=${params.BRANCH}"]) {
+    sh 'git checkout "$TARGET_BRANCH"'   // single quotes: shell expands, Groovy does not
+  }
+  ```
+
+Report an unvalidated interpolation of untrusted input into `sh`/`bat`
+as HIGH.
+
 ## Static-scan cues (line-oriented)
 
 | Finding | Cue on a line | Severity |
@@ -204,7 +288,9 @@ approval as LOW→MEDIUM depending on blast radius.
 | Unpinned library | `@Library\('[^@']+@(master\|main\|latest)'` | MEDIUM |
 | Privileged docker | `args\s+'[^']*--privileged` or docker-socket mount | HIGH |
 | Controller object access | `Jenkins\.`, `hudson\.`, `System\.`, reflection | HIGH |
+| Interpolation into shell | `sh\s+"[^"]*\$\{(params\|env)\.` (double-quoted, untrusted) | HIGH |
 | Missing production approval | prod `deploy` stage with no `input` | MEDIUM |
+| Unrestricted approval | `input` step with no `submitter:` on a prod gate | MEDIUM |
 
 Every regex above is a *hint*, not a verdict — read the surrounding
 Groovy before classifying, exactly as an image kind changes a

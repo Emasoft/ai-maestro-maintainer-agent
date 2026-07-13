@@ -16,6 +16,8 @@ multiplicatively.
 - [CARD-01 — the unbounded label names](#card-01--the-unbounded-label-names)
 - [CARD-02 — aggregation without grouping](#card-02--aggregation-without-grouping)
 - [Loki limits that must be present](#loki-limits-that-must-be-present)
+- [Loki limits_config — the exact defaults](#loki-limits_config--the-exact-defaults)
+- [The retention two-key gotcha](#the-retention-two-key-gotcha)
 - [Fluent Bit backpressure and restart re-ingest](#fluent-bit-backpressure-and-restart-re-ingest)
 - [Proving a cardinality finding](#proving-a-cardinality-finding)
 
@@ -104,6 +106,54 @@ Do **not** audit Loki's deployment topology, storage backend,
 replication factor, memcached, or resource requests. Those are
 operator decisions about a running system, not repo hygiene, and the
 maintainer has no basis to second-guess them.
+
+## Loki limits_config — the exact defaults
+
+An absent key means Loki's built-in default, which is often *not* what
+the repo's traffic needs. Cite the default when you flag an absent key
+so the reader sees the delta. Verified against the Loki config schema:
+
+| Key | Default | Audit note |
+|-----|---------|------------|
+| `ingestion_rate_mb` | `4` | Low; a busy stream trips the per-tenant rate limit and drops lines (CARD-04) |
+| `ingestion_burst_size_mb` | — | Pair with the rate, ~2× |
+| `max_line_size` | `256KB` | With `max_line_size_truncate: false` an over-size line is *dropped*, not cut |
+| `max_line_size_truncate` | `false` | Set `true` to keep truncated lines instead of losing them |
+| `max_streams_per_user` | `10000` | Per-tenant stream cap; `0` = unlimited (CARD-03) |
+| `max_global_streams_per_user` | `5000` | Global cap — note it can read *lower* than the per-tenant one |
+| `max_label_names_per_series` | `15` | A stream with more labels is rejected — a cardinality guardrail |
+| `max_label_name_length` | `1024` | — |
+| `max_label_value_length` | `2048` | — |
+| `max_entries_limit_per_query` | `5000` | — |
+| `max_query_length` | `721h` | — |
+| `max_query_series` | `500` | — |
+| `retention_period` | `0` | **`0` = keep forever** (SEC-10). See the gotcha below |
+
+## The retention two-key gotcha
+
+Setting `limits_config.retention_period` **alone changes nothing** —
+Loki only deletes when the compactor is *also* told to enforce
+retention, and that is off by default:
+
+```yaml
+compactor:
+  retention_enabled: true      # default false — WITHOUT this, nothing ages out
+  retention_delete_delay: 2h
+limits_config:
+  retention_period: 30d        # default 0 (forever); ignored unless the compactor enforces
+```
+
+So a repo that "has a retention period" but left `retention_enabled`
+absent/`false` is retaining forever regardless — a SEC-10 finding even
+though `retention_period` is set. Check both keys together, not either
+alone. (Do not audit the compactor's topology beyond these two keys.)
+
+The **OTLP index-label rule** (Loki 3.0+ native ingestion) is the same
+CARD-01 principle at the ingestion layer: promote only low-cardinality
+resource attributes to index labels. High-cardinality ones such as the
+pod name or the service-instance id belong in **structured metadata**
+(unindexed), never in `index_label` — indexing them is a stream-per-value
+bomb identical to a `user_id` label.
 
 ## Fluent Bit backpressure and restart re-ingest
 

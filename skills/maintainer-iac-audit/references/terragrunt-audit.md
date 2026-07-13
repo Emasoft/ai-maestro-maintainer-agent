@@ -7,6 +7,10 @@
 - [Deprecated attributes](#deprecated-attributes)
 - [The remote_state block](#the-remote_state-block)
 - [generate blocks](#generate-blocks)
+- [The errors block](#the-errors-block)
+- [The engine block](#the-engine-block)
+- [Hooks run arbitrary commands](#hooks-run-arbitrary-commands)
+- [Terragrunt stacks](#terragrunt-stacks)
 - [dependency and mock_outputs](#dependency-and-mock_outputs)
 - [Hardcoded values in inputs](#hardcoded-values-in-inputs)
 - [Pinning, in the Terragrunt layer](#pinning-in-the-terragrunt-layer)
@@ -59,6 +63,8 @@ strict mode is enabled.
 | `render-json` | `render --json -w` |
 | `terragrunt-info` | `info print` |
 | `--terragrunt-*` flags | the unprefixed flag |
+| `--terragrunt-parallelism=N` | `--parallelism N` |
+| `--terragrunt-non-interactive` | removed — no longer needed or supported |
 | `TERRAGRUNT_*` env vars | `TG_*` env vars |
 
 Grep the entrusted repo for the left column:
@@ -126,6 +132,72 @@ audit points:
 - **`if_exists`.** `overwrite_terragrunt` only replaces files
   Terragrunt itself generated; `overwrite` clobbers a hand-written
   file. Prefer `overwrite_terragrunt`.
+
+## The `errors` block
+
+The `errors` block replaces the deprecated `retryable_errors`
+attribute. It carries a `retry` rule (which is fine) and an `ignore`
+rule — and the `ignore` rule is the audit-relevant one:
+
+```hcl
+errors {
+  retry "transient_api" {
+    retryable_errors = [".*RequestLimitExceeded.*"]
+    max_attempts     = 3
+    sleep_interval_sec = 5
+  }
+
+  ignore "known_benign" {
+    signals          = [".*specific benign message.*"]
+    message          = "documented reason this class is safe to ignore"
+  }
+}
+```
+
+An `ignore` rule whose pattern is broad (`.*`, or a catch-all) silently
+swallows real failures — the run reports success while the underlying
+operation failed. Flag any `ignore` that is not narrowly scoped to a
+named, documented benign error class. A broad `ignore` is the
+Terragrunt equivalent of a scanner `--soft-fail`: a gate that can no
+longer fail.
+
+## The `engine` block
+
+Terragrunt can run through a pluggable execution `engine` (used, e.g.,
+to run OpenTofu). The engine is CODE that Terragrunt downloads and
+executes, so its `source` is a supply-chain surface exactly like a
+module or a provider:
+
+- An `engine` sourced from a git repo with no pinned ref, or from an
+  arbitrary HTTPS URL, is a HIGH finding — unreviewed code runs on
+  every plan and apply.
+- Pin the engine to an immutable version/ref, prefer a first-party or
+  vendored source, and treat an engine pointing at an unknown host the
+  way you would treat an unpinned third-party Action.
+
+## Hooks run arbitrary commands
+
+`before_hook`, `after_hook`, and `error_hook` blocks (and any
+`run_cmd()` in a config) execute host commands during a Terragrunt run.
+Audit them as a code-execution surface: what command runs, whether its
+arguments are attacker-influenceable, and whether it reaches the
+network or a credential. A hook that curls a remote script and runs it,
+or that shells out to an unpinned tool, is a finding — the same
+supply-chain reasoning as the engine block. Report the command shape
+and the risk; never reproduce a runnable exploit line in the report.
+
+## Terragrunt stacks
+
+Repos may use `terragrunt.stack.hcl` (stacks, GA around v0.78.0+) to
+generate many units from one definition. Two audit points:
+
+- The generated `.terragrunt-stack/` directory is build output, like
+  `.terragrunt-cache/` — it MUST be gitignored. A tracked
+  `.terragrunt-stack/` is a MEDIUM finding (vendored generated code,
+  and it can drift from its source-of-truth stack file).
+- Each unit's `source` in the stack file is pinned to an immutable
+  version/ref, for the same reason a module source is — a git-based
+  unit source on a mutable branch is a HIGH finding.
 
 ## `dependency` and `mock_outputs`
 
@@ -198,12 +270,26 @@ CLI change on a PR, not during an incident.
 
 ```bash
 terragrunt info strict                 # list the available controls
-TG_STRICT_MODE=true terragrunt run --all plan
+terragrunt --strict-mode run --all plan            # flag form
+TG_STRICT_MODE=true terragrunt run --all plan      # env-var form (CI)
 TG_STRICT_CONTROL='cli-redesign,deprecated-commands' terragrunt run --all plan
 ```
 
+The `--strict-mode` flag and the `TG_STRICT_MODE` env var are
+equivalent; the env var is the usual CI form. The named controls a gate
+can turn on one at a time:
+
+| Control | Errors on |
+|---|---|
+| `cli-redesign` | deprecated CLI syntax (the redesigned-CLI shapes) |
+| `deprecated-commands` | deprecated commands (`run-all`, `hclfmt`, `hclvalidate`, …) |
+| `root-terragrunt-hcl` | a root file still named `terragrunt.hcl` (use `root.hcl`) |
+| `bare-include` | a bare `include {}` block (use a named include) |
+| `skip-dependencies-inputs` | not a safety control — a performance opt-in that stops reading dependency inputs |
+
 Recommend enabling it in CI once the deprecation findings above are
-cleared — not before, or the gate is red on day one.
+cleared — not before, or the gate is red on day one. Turn the controls
+on incrementally so each deprecation is fixed as its control lights up.
 
 ## The audit command sequence
 
@@ -233,4 +319,8 @@ cache and can contain vendored module code and provider binaries.
 - [ ] No hardcoded account id / region / environment / secret in `inputs`
 - [ ] `terraform.source` pinned to a version or an immutable ref
 - [ ] `terragrunt_version_constraint` + `terraform_version_constraint` set
+- [ ] No broad `ignore` rule in an `errors` block (it masks real failures)
+- [ ] `engine` block, if present, pinned to an immutable, trusted source
+- [ ] Hooks / `run_cmd` run no unpinned or network-fetched command
 - [ ] `.terragrunt-cache/` gitignored
+- [ ] `.terragrunt-stack/` gitignored; every stack unit `source` pinned

@@ -96,7 +96,11 @@ failure (only `--require-tools` makes absence an error).
    invocations, the `PrometheusRule` CRD extraction recipe (promtool
    cannot read a CRD directly — feed it `.spec`), and the degrade
    matrix. Any validator exit-non-zero is a **HIGH** finding, quoted
-   verbatim from the tool's own stderr.
+   verbatim from the tool's own stderr. For Fluent Bit, the static
+   structural/plugin/tag-routing checks that run when `--dry-run` is
+   unavailable — plus the dead-route check `--dry-run` does *not* do —
+   are the `FB-xx` catalogue in
+   [fluentbit-config-audit](references/fluentbit-config-audit.md).
 
 4. **Gate 2 — are the rules correct?** Parse every rule group and
    apply the `AR-xx` checks in [alert-rule-audit](references/alert-rule-audit.md):
@@ -104,7 +108,12 @@ failure (only `--require-tools` makes absence an error).
    comparison operator, `rate()` on a non-counter, `irate()` over a
    long range, averaging a pre-computed quantile, a recording rule
    that breaks the `level:metric:operation` naming convention,
-   duplicate rule names inside one group.
+   duplicate rule names inside one group. The deeper PromQL
+   correctness checks (AR-12+) — `absent()` that silently never fires,
+   vector-matching errors, native-histogram vs classic `_bucket`/`le`,
+   deprecations like `holt_winters()`, and load-blocking syntax — are
+   in [promql-rule-checks](references/promql-rule-checks.md); prefer
+   `pint`'s parser over the heuristics when it is installed.
 
 5. **Gate 3 — is the log pipeline leaking?** Apply the `SEC-xx` checks
    in [log-pipeline-secrets](references/log-pipeline-secrets.md) to every shipper and
@@ -229,10 +238,30 @@ User: "audit monitoring config"
   - Fluent Bit
   - Degrade matrix
 - [references/alert-rule-audit.md](references/alert-rule-audit.md):
-  - Findings catalogue
+  - Findings catalogue (AR-01..AR-11)
   - Metric-type semantics — the table AR-04/AR-05/AR-06 are built on
   - Loki rule files (LogQL `expr`)
   - What is NOT a finding
+- [references/promql-rule-checks.md](references/promql-rule-checks.md):
+  - Findings catalogue
+  - Gauge-suffix inference — the full list
+  - Native histograms (Prometheus 2.40+/3.0)
+  - absent() — the silent-absence trap
+  - Vector matching mistakes
+  - Range-window thresholds
+  - Deprecations and version gates
+  - PromQL syntax errors that block load
+  - What is NOT one of these findings
+- [references/fluentbit-config-audit.md](references/fluentbit-config-audit.md):
+  - Findings catalogue
+  - Structure and loading
+  - Required-parameter matrix
+  - Valid plugin names
+  - Tag routing — the dead-route check
+  - Service and resource thresholds
+  - Plugin-level security
+  - OpenTelemetry output (2.x+)
+  - Kubernetes tail specifics
 - [references/log-pipeline-secrets.md](references/log-pipeline-secrets.md):
   - Findings catalogue
   - SEC-04 — over-broad tail paths, concretely
@@ -245,6 +274,8 @@ User: "audit monitoring config"
   - CARD-01 — the unbounded label names
   - CARD-02 — aggregation without grouping
   - Loki limits that must be present
+  - Loki limits_config — the exact defaults
+  - The retention two-key gotcha
   - Fluent Bit backpressure and restart re-ingest
   - Proving a cardinality finding
 - Companion skills: `maintainer-secrets-scan` (rotation + history purge

@@ -18,6 +18,7 @@ this host.
 - [8. Injection sinks — the CRITICAL class](#8-injection-sinks--the-critical-class)
 - [9. Exit codes](#9-exit-codes)
 - [10. Portability](#10-portability)
+- [11. Useless constructs and wrong-operator comparisons](#11-useless-constructs-and-wrong-operator-comparisons)
 
 ## 1. Shebang and dialect
 
@@ -100,6 +101,7 @@ path, a `test`, or an `rm` argument, that is the difference between
 |---|---|---|---|
 | Every expansion quoted | `$var` unquoted → word-split + glob | `SC2086` | `"$var"` |
 | Command substitution quoted | `$(cmd)` unquoted | `SC2046` | `"$(cmd)"` |
+| Modern command substitution | Legacy backticks (poor nesting, awkward escaping) | `SC2006` | `"$(cmd)"` |
 | Array expansion quoted | `$@` / `${arr[@]}` unquoted | `SC2068` | `"$@"`, `"${arr[@]}"` |
 | `rm`/`cp` path guarded | `rm -rf "$dir"/` where `$dir` may be empty → operates on `/` | `SC2115` | `rm -rf "${dir:?dir is empty}"/` |
 | `printf` format is a literal | `printf "$fmt"` — a `%` or `\` in the data is interpreted | `SC2059` | `printf '%s\n' "$fmt"` |
@@ -215,6 +217,12 @@ working example would itself be an exploit:
 | Command-position expansion | Is `$cmd` quoted / an array? | `"${cmd[@]}"` |
 | Nested shell (`sh -c`, `ssh`) | Is data interpolated into the code string? | Pass as a positional arg, reference `"$1"` inside |
 
+The single most common "legitimate" reason a script reaches for the
+`eval` builtin is a dynamic variable NAME (look up the variable whose name
+is held in another variable). That does NOT need `eval`: bash's indirect
+expansion `"${!name}"` reads the variable named by `$name` without ever
+re-parsing a string as code. Removing the `eval` removes the sink.
+
 Never install tools by fetching a script over the network and piping it
 into an interpreter — that is untrusted-code execution, and it is the
 exact defect this class audits. Install from the platform package manager
@@ -258,3 +266,29 @@ macOS is BSD userland: `sed -i` needs a backup-suffix argument, `readlink
 macOS and Linux either detects the platform or restricts itself to
 portable flags. This repo's hooks run on the maintainer's machines, so
 macOS portability is a real constraint, not a hypothetical.
+
+The full bashism-to-POSIX catalogue, the GNU-vs-BSD flag table, POSIX
+parameter expansion, the array-free rewrite, and the bashism detectors
+(`shellcheck -s sh`, `checkbashisms`, running under `dash`) live in the
+[portability](portability.md) reference.
+
+## 11. Useless constructs and wrong-operator comparisons
+
+Low-severity but high-frequency. None is a security bug; each is a signal
+the author reached for the wrong tool, and clearing them makes the real
+findings easier to see.
+
+| Check | Defect | Code | Fix |
+|---|---|---|---|
+| No echo wrapping a command substitution | `x=$(echo "$val")` / `cmd $(echo foo)` | `SC2116` | Drop the echo: `x=$val` / `cmd foo` |
+| No echo piping into a filter | `echo "$x" \| grep p` spawns a needless process | `SC2005` | Here-string: `grep p <<< "$x"` (bash) or `printf '%s\n' "$x" \| grep p` |
+| No useless cat before a filter | `cat f \| grep p` | `SC2002` (OPTIONAL — the `useless-use-of-cat` check, off by default) | `grep p f` or `< f grep p` |
+| Test membership with `grep -q` | `[ "$(grep p f)" ]` reads the whole file into a test | — | `if grep -q p f` — exits on the first match |
+| Right test operator for the type | `[ "$ver" -gt "2.0" ]` uses a numeric operator on a version string | — | String `=`, or `sort -V` for real version ordering |
+
+`SC2116`/`SC2005` are `note` (info) severity and `SC2002` is off by
+default; they are report-and-fix-if-cheap, never a release gate. But an
+`echo`-wrapped
+command substitution sometimes HIDES a real quoting bug (the echo
+re-splits the inner output), so read the surrounding line before deleting
+the echo, not after.

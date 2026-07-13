@@ -194,6 +194,39 @@ it. If you cannot determine which job needs the scope from the workflow
 alone, STOP — do not guess; route to human review. Never widen
 permissions to make a step pass.
 
+**Permission scope catalogue.** The `permissions:` block accepts these
+scopes, each set to `read`, `write`, or `none`:
+
+| Scope | Grants |
+|---|---|
+| `contents` | repo contents — read to checkout, write to push/tag/release |
+| `pull-requests` | comment on / label / edit PRs |
+| `issues` | comment on / label / edit issues |
+| `packages` | read/write GitHub Packages (GHCR) |
+| `statuses` | write commit statuses |
+| `checks` | write check runs |
+| `deployments` | write deployment statuses |
+| `security-events` | upload SARIF / code-scanning results |
+| `id-token` | mint an OIDC token (keyless cloud auth, attestation) |
+| `attestations` | write build-provenance / SBOM attestations |
+| `actions` | manage workflow runs / artifacts via the API |
+| `pages` | deploy GitHub Pages |
+
+**What common actions actually need** — use this to right-size a job's
+grant instead of leaving a broad default:
+
+| Action | Minimal scope on its job |
+|---|---|
+| `actions/checkout` | `contents: read` |
+| `actions/dependency-review-action` | `contents: read` |
+| `github/codeql-action` (analyze) | `security-events: write` |
+| `actions/attest-build-provenance` / `attest-sbom` | `id-token: write` + `attestations: write` |
+| a job that pushes to GHCR | `packages: write` |
+| a job that comments on / labels a PR | `pull-requests: write` |
+
+Grant the write scope on the JOB that uses it; the top-level default
+stays `contents: read`.
+
 ### Derived-secret masking
 
 GitHub auto-masks registered secrets in logs, but NOT values DERIVED

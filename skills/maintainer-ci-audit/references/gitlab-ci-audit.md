@@ -16,6 +16,7 @@ dangerous → the safe fix*.
 - [5. Images — pin the tag, prefer a digest](#5-images--pin-the-tag-prefer-a-digest)
 - [6. Artifacts and cache poisoning](#6-artifacts-and-cache-poisoning)
 - [7. Script hygiene and remote `include:` trust](#7-script-hygiene-and-remote-include-trust)
+- [8. Built-in security scanning and `CI_JOB_TOKEN` scope](#8-built-in-security-scanning-and-ci_job_token-scope)
 - [Remediation templates (paste, then adapt)](#remediation-templates-paste-then-adapt)
 
 ## Live validation — the CI Lint API
@@ -38,6 +39,14 @@ The response carries `valid` (bool), `errors[]`, `warnings[]`, and
 (current dir) or `glab ci lint --dry-run` for a pipeline-creation
 simulation. If no token or server is reachable, note the gap and rely on
 the static checks below — never report PASS from a skipped lint.
+
+**Offline alternative — `gitlab-ci-local`.** When no server/token is
+reachable, the `gitlab-ci-local` npm package runs the pipeline (or just
+validates it) on the local machine, resolving `extends`/`!reference` the
+way the server does. It is a convenience for local reproduction only —
+it does NOT resolve project-scoped `include:` from other projects or
+server-side variables, so treat a green `gitlab-ci-local` as weaker than
+the CI Lint API, not a substitute for it.
 
 ## 1. Secrets — masked, protected, never hardcoded
 
@@ -75,6 +84,17 @@ A masked variable still leaks if a script echoes it — flag any
 (`secret-in-logs`, MEDIUM), and flag `CI_DEBUG_TRACE: "true"` on any job
 that can reach a protected variable (`debug-trace-exposes-secrets`,
 HIGH) — debug trace prints the full expanded environment.
+`CI_DEBUG_SERVICES: "true"` is the same hazard for service containers
+(it logs service startup, which can include credentials passed to a
+`services:` image) — flag it identically.
+
+**False friend — `::add-mask::` is not GitLab.** A line like
+`echo "::add-mask::$SECRET"` is a *GitHub Actions* workflow command and
+does NOTHING in GitLab; it neither masks nor errors. If an audited
+GitLab pipeline relies on it for masking, the value is UNmasked in
+reality — flag it as `ineffective-masking` (MEDIUM) and move the value
+to a Masked CI/CD variable. GitLab masking is a variable *setting*, not
+a runtime log directive.
 
 ## 2. Protected branches and tags — the ref gate
 
@@ -124,6 +144,24 @@ including fork pipelines.
 most-specific-first; make the production path explicit and manual. State
 the intended trigger set in a comment so the next reader can verify it.
 
+**Three concrete footguns to grep for:**
+
+- **`rules:` and `only:`/`except:` in the SAME job** — GitLab rejects
+  this outright (they are mutually exclusive); a config carrying both
+  will not load. Report as `rules-and-only-mixed` (the job is unrunnable
+  until fixed) and migrate everything to `rules:`.
+- **Conflicting first-match clauses** — a job whose first clause is
+  `if: <cond>` `when: always` followed by a later `if: <same cond>`
+  `when: never` never reaches the `never` (first match wins), so the job
+  runs when the author expected it suppressed. Read the clause order,
+  not just the presence of a `never`.
+- **`changes:` with no `if:` guard** — a bare `changes:` clause silently
+  evaluates to *true* on a branch pipeline where the diff base is
+  undefined, so a deploy meant to fire "only when `src/**` changed" fires
+  on every push. Pair every `changes:` with an
+  `if: '$CI_PIPELINE_SOURCE == "merge_request_event"'` (or a default-branch
+  `if:`) so the change-detection has a defined base.
+
 ## 4. Runner trust and privileged docker
 
 **Look for** a sensitive job with no `tags:` (so it lands on any shared
@@ -148,6 +186,15 @@ For image builds prefer a rootless, unprivileged builder (`buildah`,
 `kaniko`, or BuildKit rootless) over privileged dind. If privileged dind
 is genuinely required, that is a HIGH finding written up for human
 sign-off — never auto-"fixed", because removing it can break the build.
+
+**dind over an unauthenticated daemon.** A dind service reached over the
+plain-TCP daemon port (2375) exposes an *unauthenticated*,
+root-equivalent Docker API to anything that can reach it on the runner
+network — flag `DOCKER_HOST` pointing at a `:2375` endpoint, or
+`DOCKER_TLS_CERTDIR: ""` (which disables TLS), as HIGH. The hardened
+form leaves `DOCKER_TLS_CERTDIR` set to its non-empty default so the
+daemon speaks TLS on 2376 with client-cert auth. Do not auto-flip this
+either — TLS-vs-plain changes how every build talks to the daemon.
 
 ## 5. Images — pin the tag, prefer a digest
 
@@ -223,6 +270,40 @@ every multi-line `script:`.
 your pipeline's trust context. Pin `project:` includes to a `ref:` that
 is a commit SHA (not a moving branch), and treat an unpinned or
 third-party `remote:` include as a MEDIUM supply-chain finding.
+
+## 8. Built-in security scanning and `CI_JOB_TOKEN` scope
+
+**Look for** a project handling production credentials that includes
+NONE of GitLab's stock security-scan templates, and a job that uses
+`$CI_JOB_TOKEN` to reach *other* projects' APIs.
+
+**Why** GitLab ships maintained scanning templates that catch the exact
+classes this audit worries about, and `CI_JOB_TOKEN` is an automatic
+per-job credential whose default cross-project reach is a lateral-movement
+surface.
+
+**Fix (recommend, do not auto-add)** propose the stock templates as a
+hardening step — each is an `include:` of a GitLab-maintained file:
+
+```yaml
+include:
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Container-Scanning.gitlab-ci.yml
+```
+
+Including a scanner is only half the control — a scan job that cannot
+fail the pipeline is not a gate (see
+[ci-gate-integrity](ci-gate-integrity.md)).
+
+**`CI_JOB_TOKEN` scope.** `CI_JOB_TOKEN` is minted per job and, unless
+restricted, can call the API of other projects the pipeline identity can
+reach. Recommend narrowing *Settings → CI/CD → Token Access* to an
+explicit allowlist of the projects that legitimately need inbound
+`CI_JOB_TOKEN` access, and never echo `$CI_JOB_TOKEN` into a log or pass
+it to a downloaded script. Report a broad/default token-access scope on a
+credential-bearing project as `job-token-scope-too-broad` (MEDIUM).
 
 ## Remediation templates (paste, then adapt)
 

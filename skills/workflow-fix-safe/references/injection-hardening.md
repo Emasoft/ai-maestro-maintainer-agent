@@ -12,6 +12,7 @@ actionlint's script-injection warning. Detection lives in
 - [The fix — env-var indirection](#the-fix--env-var-indirection)
 - [Why `env:` works and quoting does not](#why-env-works-and-quoting-does-not)
 - [What env-var indirection does NOT fix](#what-env-var-indirection-does-not-fix)
+- [Workflow-command injection — a second channel](#workflow-command-injection--a-second-channel)
 - [The rewrite procedure](#the-rewrite-procedure)
 
 ## The defect, in one sentence
@@ -54,9 +55,33 @@ when it lands in a `run:` block:
 | `github.event.client_payload.*` (`repository_dispatch`) | the API caller |
 
 GitHub-generated fields are safe: `github.sha`, `github.ref`,
-`github.run_id`, `github.run_number`, `github.actor`,
+`github.run_id`, `github.run_number`, `github.run_attempt`,
+`github.actor`, `github.triggering_actor`, `github.job`,
 `github.repository`, `github.event_name`. They cannot carry
-attacker-authored shell.
+attacker-authored shell (`actor` / `triggering_actor` are usernames,
+restricted to GitHub-legal characters).
+
+**Watch the whole-context dump.** `${{ toJSON(github) }}` (or
+`toJSON(github.event)`) spliced inline into a `run:` block is the same
+defect wearing a debug hat — the serialized object contains every
+attacker-controllable field above, so an inline dump is injectable even
+though it looks like harmless diagnostics:
+
+```yaml
+# VULNERABLE SHAPE — documentation only, never ship
+- run: echo '${{ toJSON(github) }}'
+```
+
+The fix is the same env-var indirection: bind the dump to an `env:` entry
+and echo the shell variable.
+
+```yaml
+# HARDENED SHAPE
+- name: Dump context
+  env:
+    GITHUB_CONTEXT: ${{ toJSON(github) }}
+  run: echo "$GITHUB_CONTEXT"
+```
 
 ## The fix — env-var indirection
 
@@ -112,6 +137,47 @@ is then re-evaluated (`eval`, a `jq` filter built by concatenation, a
 [instructions.md](instructions.md) is exactly this second-stage case,
 and its rule generalises: every untrusted value enters each tool
 through that tool's own data channel, never by string-splicing.
+
+## Workflow-command injection — a second channel
+
+Even with env-var indirection closing the shell channel, there is a
+SECOND, independent injection channel: the Actions **runner** parses every
+line a step writes to stdout for workflow commands of the form
+`::name::value` (`::error::`, `::add-mask::`, `::set-output::`,
+`::stop-commands::`, …). So a step that echoes untrusted text — a PR
+title, an issue body — hands the *runner* whatever `::...::` lines that
+text contains. The attacker is no longer writing shell; they are writing
+workflow commands: forging an output another step trusts, hiding a real
+value from the masking, or emitting `::stop-commands::` to switch command
+parsing off entirely.
+
+This bites precisely when a step must legitimately print untrusted
+content (echo a PR title into a log, `cat` an untrusted file into
+`$GITHUB_STEP_SUMMARY`). Env-var indirection does not help here — the
+danger is the *printing itself*, not the interpolation.
+
+The fix is a `stop-commands` fence with an unguessable token around the
+untrusted echo, so any `::...::` in the content is treated as literal
+text, then re-enable command processing:
+
+```yaml
+# HARDENED SHAPE — fence untrusted output so :: lines are inert
+- name: Echo untrusted title
+  env:
+    PR_TITLE: ${{ github.event.pull_request.title }}
+  run: |
+    TOKEN="$(uuidgen)"
+    echo "::stop-commands::$TOKEN"   # command parsing OFF
+    echo "$PR_TITLE"                  # any ::...:: inside is now literal
+    echo "::$TOKEN::"                 # command parsing back ON
+```
+
+Prefer, where possible, NOT echoing untrusted data at all — write it to a
+file and reference the path. Flag any step that prints an
+attacker-controllable value to stdout or to `$GITHUB_STEP_SUMMARY`
+without a fence; route the rewrite the same way as a shell-injection
+rewrite (perform it, but STOP and escalate if the fence would change the
+step's meaning).
 
 ## The rewrite procedure
 

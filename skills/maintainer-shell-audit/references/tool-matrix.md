@@ -10,7 +10,9 @@ documented from their upstream projects and marked as such.
 - [shellcheck](#shellcheck)
 - [shfmt](#shfmt)
 - [checkmake](#checkmake)
+- [mbake](#mbake)
 - [bashate](#bashate)
+- [checkbashisms](#checkbashisms)
 - [Error handling — when a tool is missing or misbehaves](#error-handling--when-a-tool-is-missing-or-misbehaves)
 
 | Tool | Job | Hard requirement | Verified |
@@ -18,7 +20,9 @@ documented from their upstream projects and marked as such.
 | shellcheck | Correctness — the defect catalogue | YES | 0.11.0 |
 | shfmt | Formatting only — never semantics | no | 3.13.1 |
 | checkmake | Makefile structure lint | no | upstream docs |
+| mbake | Makefile formatter + syntax validator | no | upstream docs |
 | bashate | OpenStack shell style rules | no | upstream docs |
+| checkbashisms | POSIX bashism detector for `#!/bin/sh` | no | upstream docs |
 
 They do not overlap by accident. shellcheck asserts *correctness*, shfmt
 asserts *shape*. A shfmt-clean script can still delete your home
@@ -223,7 +227,8 @@ for them (one file, every tool).
 ## checkmake
 
 Not installed here. Upstream: `checkmake/checkmake`. Install from the
-platform package manager or the project's pinned Go toolchain — never by
+platform package manager or the project's pinned Go toolchain (`go install
+github.com/checkmake/checkmake/cmd/checkmake@latest`, Go 1.16+) — never by
 fetching a script from the network into a shell.
 
 ```bash
@@ -253,6 +258,36 @@ make -p --dry-run                            # dump the full rule database
 audit: a typo'd variable in Make expands to the empty string in silence,
 and this is the only thing that speaks up.
 
+## mbake
+
+Not installed here. Upstream: `EbodShojaei/bake` (a Python tool,
+`pip install mbake`, Python 3.9+). It is the Makefile analogue of shfmt —
+a formatter — PLUS a thin syntax validator; the first real Makefile
+formatter, so it fills a gap `checkmake` (a structure linter) does not.
+Documented from upstream, not verified on this host.
+
+| Command | What it does | Audit use |
+|---|---|---|
+| `mbake format --check <f>` | Reports whether the file is formatted; does NOT modify | The non-mutating audit pass (exit 0 formatted, 1 needs formatting) |
+| `mbake format --diff <f>` | Shows the changes it WOULD make | Review before applying |
+| `mbake format <f>` | Rewrites in place (add `--backup` for a `.bak`) | The fix, never in the same commit as a semantic change |
+| `mbake validate <f>` | Syntax check via `make --dry-run` | Parse audit; the same ground as §7 of makefile-findings |
+| `mbake init` / `mbake config` | Create / show `~/.bake.toml` (or per-project `.bake.toml`) | Configure formatting policy |
+
+Its formatter fixes exactly the mechanical §1 findings: converting
+space-indented recipes to tabs (`fix_missing_recipe_tabs`), normalising
+assignment/colon spacing, trailing-whitespace, line continuations, and it
+can auto-insert and group `.PHONY` declarations
+(`auto_insert_phony_declarations`, `group_phony_declarations`). A
+`# bake-format off` / `# bake-format on` pair exempts a section.
+
+Two limitations to respect (from upstream): mbake targets GNU Make, so it
+may misread POSIX-make syntax, and it does NOT understand `.SUFFIXES:` —
+do not let it "fix" a file that relies on either. As with shfmt on a guard,
+run the formatter only in a commit that changes nothing else, and treat
+`mbake` and `checkmake` as complementary (formatter + structure linter),
+not substitutes.
+
 ## bashate
 
 Not installed here. Upstream: the OpenStack project. Rules are `E0xx`
@@ -260,6 +295,17 @@ Not installed here. Upstream: the OpenStack project. Rules are `E0xx`
 and adds mostly style. Run it ONLY when the entrusted repo already has it
 wired — adding a second, overlapping style linter to a repo that did not
 ask for one produces churn, not safety.
+
+## checkbashisms
+
+Not installed here. Upstream: the Debian `devscripts` package
+(`apt-get install devscripts`). It scans a `#!/bin/sh` script for
+bash-only constructs — the `SC30xx` ground plus a few Debian-maintainer
+rules. `shellcheck -s sh <file>` already reports the whole `SC30xx`
+family, so reach for `checkbashisms` only when the entrusted repo targets
+POSIX `sh` and wants an independent second opinion; the deep bashism
+catalogue and the cross-shell (`dash`) test are in the
+[portability](portability.md) reference.
 
 ## Error handling — when a tool is missing or misbehaves
 
@@ -270,6 +316,7 @@ ask for one produces churn, not safety.
 | A code fires only under `-S style` | It is real but LOW. Record it; do not gate the release on it. |
 | shfmt wants to reformat a git hook | Formatting a security guard is a diff that hides semantics. Format it only in a commit that changes nothing else, and re-exercise the guard afterwards. |
 | `checkmake` not installed | Skip it, note it, and fall back to `make --dry-run` + `make --warn-undefined-variables` plus the catalogue. |
+| `mbake` not installed | Skip it, note it; `make --dry-run` covers parse-validation and the catalogue covers structure. Never make the audit depend on it. Do NOT let its formatter touch a `.SUFFIXES:`-reliant or POSIX-make file. |
 | `make` reports `*** missing separator` | A recipe line begins with spaces, not a tab. Check with `grep -nP '^ +[^[:space:]]' Makefile` before touching anything else — nothing else in the file parses until this is fixed. |
 | A finding fires inside a fixture / intentionally-bad example | Fixtures are excluded from lint by design. Confirm the path is fixture-scoped, then leave it alone. |
 | Fixing a finding changes a guard's accept/reject set | STOP. This is rule 3. Report it, propose the semantics-preserving alternative, and never land it silently. |

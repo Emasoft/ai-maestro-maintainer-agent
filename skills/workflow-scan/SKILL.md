@@ -121,6 +121,8 @@ is mutated.
 - [Engine coverage](references/engine-coverage.md):
   - Division of labour
   - What actionlint alone catches
+  - actionlint rule kinds — the `kind` field
+  - Beyond the workflows directory: composite actions
   - Machine-readable actionlint output
   - actionlint exit codes
   - actionlint config — `.github/actionlint.yaml`
@@ -131,6 +133,12 @@ is mutated.
   - Trigger hazards
   - Secret exposure
   - Over-broad permissions
+- [Runner labels](references/runner-labels.md):
+  - Why this matters to an audit
+  - Valid GitHub-hosted labels (dated snapshot)
+  - Retired and deprecated runners
+  - The gap: a retired label passes lint but fails the run
+  - Self-hosted labels and false positives
 - [Report layout](references/report-layout.md):
   - File header
   - Severity summary

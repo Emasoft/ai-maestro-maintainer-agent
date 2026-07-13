@@ -10,6 +10,7 @@ Every entry below was reproduced against this repo's own Dockerfiles.
 
 - [Heredoc breaks BOTH hadolint and Checkov parsers](#heredoc-breaks-both-hadolint-and-checkov-parsers)
 - [hadolint DL3013 misfires on an ARG-interpolated version pin](#hadolint-dl3013-misfires-on-an-arg-interpolated-version-pin)
+- [hadolint DL3006 misfires on a fully-qualified registry image](#hadolint-dl3006-misfires-on-a-fully-qualified-registry-image)
 - [Trivy check-ID prefix changed — and the old one still works](#trivy-check-id-prefix-changed--and-the-old-one-still-works)
 - [trivy config has no --no-progress flag](#trivy-config-has-no---no-progress-flag)
 - [The general rule](#the-general-rule)
@@ -99,6 +100,39 @@ indirection to satisfy a parser limitation.
 
 The same blindness affects `DL3016`/`DL3008` when the version arrives via
 `ARG`. Verify whether a pin exists before believing the finding.
+
+## hadolint DL3006 misfires on a fully-qualified registry image
+
+**Symptom.** DL3006 — *"Always tag the version of an image explicitly"* —
+fires on a base image that IS explicitly tagged, when the image comes from a
+non-Docker-Hub registry:
+
+```dockerfile
+FROM gcr.io/distroless/static-debian12
+```
+
+**Cause.** `static-debian12` IS the version tag, but hadolint's DL3006
+heuristic does not reliably recognise the tag on a fully-qualified registry
+reference (`gcr.io/...`, `public.ecr.aws/...`). It reads the whole path as an
+untagged image.
+
+**Verdict.** FALSE POSITIVE when the image is genuinely tagged. Confirm the
+reference carries a real tag before believing it — if it truly is untagged,
+DL3006 is correct and you must add a tag.
+
+**What to do.** Suppress it in-place with an inline directive scoped to that
+one line — never a blanket ignore:
+
+```dockerfile
+# hadolint ignore=DL3006
+FROM gcr.io/distroless/static-debian12
+```
+
+The `# hadolint ignore=<RULE[,RULE]>` comment is hadolint's file-local
+suppression mechanism (distinct from the `--ignore` CLI flag and a
+`.hadolint.yaml` config). Like every suppression, it must name ONE rule and
+carry a one-line reason — the same discipline as
+[suppression-policy](suppression-policy.md).
 
 ## Trivy check-ID prefix changed — and the old one still works
 

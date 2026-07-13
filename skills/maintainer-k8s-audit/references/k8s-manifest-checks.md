@@ -6,6 +6,13 @@ something the audit applies on its own — anything that changes cluster
 behaviour is a patch for human approval (see the deploy-neutrality rule
 in SKILL.md).
 
+This file covers pod SECURITY. Controller correctness and reliability —
+Deployment / StatefulSet / DaemonSet / Job / CronJob / HPA / PDB / PVC
+immutability, scheduling and their deprecations — are in
+[workload-controllers.md](workload-controllers.md). The server-side
+dry-run that catches admission / policy / quota failures a static scan
+cannot is in [validation-and-dry-run.md](validation-and-dry-run.md).
+
 ## Table of Contents
 
 - [Severity model](#severity-model)
@@ -42,6 +49,10 @@ conflict.
 | `capabilities.drop` does not include `ALL` | HIGH | the container keeps the ~14 default Linux capabilities (`NET_RAW`, `CHOWN`, `SETUID`, …) it almost never needs |
 | `privileged: true` | CRITICAL | full access to every device on the node — effectively root on the host |
 | `seccompProfile` unset | MEDIUM | no syscall filtering; `RuntimeDefault` blocks a large class of exploits at near-zero cost |
+| `seccompProfile.type: Unconfined` set explicitly | HIGH | actively disables syscall filtering — worse than unset against a hardened baseline |
+| `procMount: Unmasked` | HIGH | exposes the full host `/proc` to the container — a container-escape aid; only a genuine sandbox runtime should ever set it |
+| `runAsNonRoot: true` but the image's effective UID is 0 | HIGH | the kubelet REJECTS the pod at container start ("image will run as root") — the setting is right but the image `USER` (or `runAsUser`) must be non-zero for it to schedule |
+| pod writes to a mounted volume but `fsGroup` is unset | MEDIUM | the volume is root-owned and the non-root process cannot write it; set `fsGroup`, plus `fsGroupChangePolicy: OnRootMismatch` to skip a slow recursive chown on a large volume |
 
 Hardened pair (pod + container):
 
@@ -145,6 +156,11 @@ finding. Rotate first (it is already leaked), then remove from history —
 secrets operator, or a Secret created by the deploy pipeline, over any
 Secret value in git.
 
+`stringData` is write-only: the API server always reads it back base64-encoded
+under `data`, so a `stringData` value in the repo and the applied Secret look
+different in a diff even when nothing changed — do not mistake that encoding
+round-trip for a real change when auditing an update.
+
 ## Cluster access — RBAC, NetworkPolicy, PodSecurity, ServiceAccount
 
 ### RBAC least privilege
@@ -157,6 +173,7 @@ Secret value in git.
 | `verbs` include `escalate` or `bind` | CRITICAL | the subject can grant itself any permission — an RBAC bypass |
 | `verbs` include `impersonate` | CRITICAL | the subject can act as any user or group |
 | a Role granting `get`/`list`/`watch` on `secrets` cluster-wide | HIGH | one compromised pod reads every Secret in the cluster |
+| a ClusterRole carrying an `rbac.authorization.k8s.io/aggregate-to-{view,edit,admin}: "true"` label | MEDIUM | it is silently merged into the built-in view/edit/admin role — a privilege grant that inspecting bindings to THIS role will not reveal; audit exactly what it adds to the aggregate |
 
 ```yaml
 kind: Role                          # namespaced, not ClusterRole, unless truly cluster-scoped
@@ -250,6 +267,7 @@ apps and batch jobs.
 | `networking.k8s.io/v1beta1` Ingress | HIGH | removed since 1.22 |
 | `policy/v1beta1` PodDisruptionBudget | MEDIUM | removed since 1.25 — use `policy/v1` |
 | `batch/v1beta1` CronJob | MEDIUM | removed since 1.25 — use `batch/v1` |
+| `policy/v1beta1` PodSecurityPolicy | HIGH | PodSecurityPolicy was REMOVED in 1.25 with NO `policy/v1` replacement — migrate to Pod Security admission (the namespace labels above) or a policy engine |
 
 `kube-score`'s `stable-version` check and `kubeconform
 -kubernetes-version` (pinned to the target cluster) both catch these.

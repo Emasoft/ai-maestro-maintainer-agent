@@ -10,7 +10,7 @@ only the first half.
 - [The render-then-scan contract](#the-render-then-scan-contract)
 - [Chart structure and dependency pinning](#chart-structure-and-dependency-pinning)
 - [values.yaml and values.schema.json](#valuesyaml-and-valuesschemajson)
-- [Template pitfalls, hooks and checklist](#template-pitfalls-hooks-and-checklist)
+- [Templates, hooks, operators and checklist](#templates-hooks-operators-and-checklist)
 
 ## The render-then-scan contract
 
@@ -35,6 +35,16 @@ helm template audit ./chart -f ./chart/values.yaml --include-crds \
 - `helm template` fails while `helm lint` passed → the chart is broken
   along a path lint did not render. HIGH `chart-does-not-render`; name
   the values file that triggered it.
+- The server-side dry-run, the extra `helm template` audit flags
+  (`--validate`, `--kube-version`, `--show-only`, `--is-upgrade`) and
+  `helm diff upgrade` are in
+  [validation-and-dry-run.md](validation-and-dry-run.md) — run them when a
+  cluster context is available for the checks a static render cannot make.
+- **macOS gotcha:** `helm` reporting `Chart.yaml file is missing` when the
+  file plainly exists is usually extended attributes
+  (`com.apple.provenance` / `com.apple.quarantine`) on the chart files —
+  diagnose with `xattr <file>` and clear with `xattr -cr <chart>`. It is an
+  environment artefact, not a chart defect; do not report it as a finding.
 
 ## Chart structure and dependency pinning
 
@@ -109,7 +119,7 @@ EVERY values file the repo ships — a schema that rejects an existing
 overlay breaks the next release, so re-lint each overlay before shipping
 it.
 
-## Template pitfalls, hooks and checklist
+## Templates, hooks, operators and checklist
 
 ### Template pitfalls that become security bugs
 
@@ -120,7 +130,13 @@ it.
 | `{{ .Values.x \| nindent 4 }}` where `indent` was meant (or vice versa) | HIGH | `nindent` prepends a newline, `indent` does not; the wrong one corrupts the block — a mis-indented `securityContext` renders as a sibling, not a child, and applies nothing |
 | an unquoted string value (`port: {{ .Values.port }}`) | MEDIUM | a numeric-looking value is emitted as an int where a string was required, or a `y`/`no` becomes a bool — YAML's type coercion bites at deploy time |
 | `{{ toYaml .Values.resources }}` without `nindent` | HIGH | the block lands at column 0 and breaks the document |
-| `lookup` used at template time | MEDIUM | reads live cluster state during render — the chart is not reproducible and behaves differently in `--dry-run` |
+| `lookup` used at template time | MEDIUM | it returns **nil** under `helm template` (it only resolves during a live install/upgrade), so an offline render is wrong; a chart that does `lookup` an existing Secret with a `randAlphaNum` fallback REGENERATES the credential on every apply — non-reproducible and churning |
+| a non-deterministic generator — `randAlphaNum`, `uuidv4`, `now`, `randAscii` — inside a persisted Secret / ConfigMap / annotation | HIGH | the value changes on every render and upgrade — spurious diffs, credential churn, a Secret that never stabilises. Generate once and store, or delegate to an external-secrets operator |
+| `tpl` applied to a caller-supplied value | HIGH | `tpl` renders its string argument AS a template, so an untrusted value flowing through it is a template-injection vector |
+| `{{ if .Values.x \| quote }}` — a formatter piped inside an `if` | MEDIUM | `quote` yields a non-empty string that is ALWAYS truthy, so the condition never tests the real value; test the raw `.Values.x`, never pipe it through a formatter in a boolean context |
+| `set` / `unset` used inside a template | MEDIUM | they mutate `.Values` IN PLACE — a hidden cross-template side effect that makes render order significant |
+| a resource name from `{{ .Release.Name }}-{{ .Chart.Name }}-…` with no truncation | MEDIUM | a name over 63 chars fails DNS-1123 validation at apply time; truncate with `… \| trunc 63 \| trimSuffix "-"` |
+| a rolling/version label (`app.kubernetes.io/version`) inside a Deployment `selector.matchLabels` | HIGH | the selector is immutable, so a version bump can never update it and rolling updates are blocked; keep `version` in `metadata.labels`, never the selector (see [workload-controllers.md](workload-controllers.md)) |
 
 Quote string values, use `nindent` for injected blocks, and default the
 image to a digest-or-nothing, never to `latest`:
@@ -135,7 +151,23 @@ image to a digest-or-nothing, never to `latest`:
 
 `required "msg" .Values.x` turns a missing critical value into a clear
 render-time failure instead of an empty string. Prefer it over
-`| default ""` for anything security-relevant.
+`| default ""` for anything security-relevant. Two more render-time traps:
+`{{ if .Values.optional }}` errors when the key is absent (guard with
+`| default ""`), and comparing an integer value against a string with `eq`
+silently never matches (coerce with `| toString` first).
+
+**Config change that never rolls the pods.** A `ConfigMap`/`Secret` edit
+does NOT restart the workloads that consume it — they keep the old mounted
+copy until an unrelated rollout. The audit flags a security-relevant config
+with no roll trigger; the remediation is a checksum annotation on the pod
+template so any config change forces a rollout:
+
+```yaml
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+```
 
 ### Hooks, CRDs and .helmignore
 
@@ -178,3 +210,31 @@ consequence, let the human choose.
 - [ ] hooks carry a `hook-delete-policy`; no privileged hook Jobs
 - [ ] CRDs in the directory that matches the intended lifecycle
 - [ ] `.helmignore` excludes `.git/`, secrets, CI, tests
+- [ ] resource names truncated (`trunc 63 | trimSuffix "-"`); no random/time function inside a persisted Secret/ConfigMap
+- [ ] operator CustomResources (ArgoCD/Istio/VPA/KEDA/Gateway) audited for wildcard grants and stale apiVersions
+
+### Operator custom resources a chart ships
+
+Many charts render more than built-in kinds — they ship Custom Resources
+for operators the cluster runs. `kubeconform` has no schema for most of
+these (a WARNING, not a pass — see
+[validation-and-dry-run.md](validation-and-dry-run.md)), so their security
+posture must be audited by hand. The recurring findings:
+
+| Custom resource | Finding | Sev | Why |
+|---|---|---|---|
+| ArgoCD `AppProject` | `sourceRepos: ['*']` + `destinations` namespace `'*'` + a `clusterResourceWhitelist` of `{group: '*', kind: '*'}` | HIGH | cluster-wide blast radius — the wildcard-RBAC anti-pattern one layer up; scope the repos, destinations and resource kinds |
+| ArgoCD `Application` | `finalizers: [resources-finalizer.argocd.argoproj.io]` | MEDIUM | deleting the Application CASCADES deletion to every resource it manages — confirm the cascade is intended |
+| Gateway API `HTTPRoute` / `Gateway` | a cross-namespace backend or Secret reference with no `ReferenceGrant` in the target namespace | HIGH | the reference is silently DENIED — the route or TLS never works; the `ReferenceGrant` must live in the referenced namespace |
+| VPA `VerticalPodAutoscaler` | `updateMode: Auto` or `Recreate` | MEDIUM | it EVICTS running pods to resize them; and a VPA plus an HPA on the same metric fight — pick one per metric |
+| KEDA `ScaledObject` | `minReplicaCount: 0` / `idleReplicaCount: 0`; a secret inline in the trigger `metadata` | MEDIUM | scales the workload to zero (cold-start latency, dropped work if unintended); put credentials behind a `TriggerAuthentication` / `authenticationRef`, never inline |
+
+**Stale operator CRD apiVersions.** Operator CRs move through their own
+apiVersion deprecations, independent of the built-in ones in
+k8s-manifest-checks.md. Flag a chart pinned to a superseded group/version
+and check it against the operator's current CRD — common examples: Istio
+`networking.istio.io/v1beta1` (VirtualService / Gateway / DestinationRule
+now have a `v1`), External-Secrets `external-secrets.io/v1beta1` (now `v1`),
+Sealed-Secrets `bitnami.com/v1alpha1`. A chart rendering an apiVersion the
+target cluster's operator no longer serves fails at apply, exactly like a
+removed built-in API.

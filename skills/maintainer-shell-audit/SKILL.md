@@ -52,10 +52,12 @@ reference.
 
 - `shellcheck` — **the only hard requirement.** Verified against 0.11.0.
 - `git` — to enumerate tracked scripts.
-- `shfmt` (3.13.1), `checkmake`, `bashate` — all OPTIONAL. `shfmt` is
-  formatting only; `checkmake` lints Makefiles (absent here → fall back to
-  `make`'s flags plus the catalogue); `bashate` (OpenStack style) overlaps
-  shellcheck, so run it only when the entrusted repo already uses it.
+- `shfmt` (3.13.1), `checkmake`, `mbake`, `bashate`, `checkbashisms` — all
+  OPTIONAL. `shfmt` formats shell; `checkmake` lints and `mbake` formats +
+  validates Makefiles; `bashate` and `checkbashisms` overlap shellcheck
+  (the latter for `#!/bin/sh` bashisms, which `shellcheck -s sh` also
+  covers). Run each only if the entrusted repo already uses it; the
+  tool-matrix reference documents all six.
 
 Never make the audit depend on an optional tool. If one is missing, run
 the rest, mark the report `PARTIAL`, and name every tool skipped. A
@@ -177,24 +179,23 @@ makefile-findings reference.
 
 `set -euo pipefail` plus `IFS=$'\n\t'` is the right default for a
 standalone script — but a **sourced** helper must NOT set it (it mutates
-its caller's shell). It is not magic; it has four holes that each produced
-a real "it succeeded" bug: `set -e` is suppressed in a tested context
-(`if`, `&&`/`||`, `!`), masked by `local x="$(cmd)"` (`SC2155`), fooled by
-a SIGPIPE stage under `pipefail`, and tripped by `"$@"` under `set -u` on
-bash 3.2. All four, with reproductions and fixes, are in the shell-findings
-reference (§2).
+its caller's shell). It is not magic: `set -e` has four holes that each
+produced a real "it succeeded" bug (tested-context suppression, `SC2155`
+masking, SIGPIPE under `pipefail`, `"$@"` under `set -u` on bash 3.2), all
+with reproductions and fixes in the shell-findings reference (§2).
 
 ## Makefile audit
 
 There is no Makefile in this repo — this half is for entrusted downstream
 repos that have one. The five findings behind most real Makefile bugs:
 missing `.PHONY`; missing `.DELETE_ON_ERROR` (a failed recipe leaves a
-fresh-mtime half-output the next `make` trusts); a default `/bin/sh`
-`SHELL` with no `-e` (fix: `SHELL := bash` + `.SHELLFLAGS := -eu -o
-pipefail -c`); spaces instead of a tab (`*** missing separator`); and one
-shell per recipe line (`cd` does not carry across lines). Full catalogue —
-`=`/`:=`/`?=` expansion, `$$` escaping, parallel-build races, and the Make
-security findings — in the makefile-findings reference.
+fresh-mtime half-output the next `make` trusts); a default `SHELL` with no
+`-e` (fix: `SHELL := bash` + `.SHELLFLAGS := -eu -o pipefail -c`); spaces
+instead of a tab (`*** missing separator`); and one shell per recipe line
+(`cd` does not carry across lines). Full catalogue — expansion operators,
+`$$` escaping, special targets and automatic variables, parallel-build
+races, the GNU-Make version caveats, and the Make security findings — in
+the makefile-findings reference.
 
 ## Fix vs suppress
 
@@ -273,9 +274,10 @@ parse error was hiding.
 Each reference carries its own Table of Contents; its sections are listed
 after the link so you can see what is inside before opening it.
 
-- [tool-matrix](references/tool-matrix.md) — shellcheck; shfmt; checkmake; bashate; Error handling — when a tool is missing or misbehaves.
-- [shell-findings](references/shell-findings.md) — Shebang and dialect; The strict header; Quoting and expansion — the highest-yield class; Error propagation; Cleanup and traps; Temp files; Input handling and globs; Injection sinks — the CRITICAL class; Exit codes; Portability.
-- [makefile-findings](references/makefile-findings.md) — Structure — the five findings that matter most; Variable expansion — `=` vs `:=` vs `?=` vs `+=`; Recipe-shell semantics; Parallelism and ordering; Portability; Security findings; The verification pass.
+- [tool-matrix](references/tool-matrix.md) — shellcheck; shfmt; checkmake; mbake (Makefile formatter + validator); bashate; checkbashisms; Error handling — when a tool is missing or misbehaves.
+- [shell-findings](references/shell-findings.md) — Shebang and dialect; The strict header; Quoting and expansion — the highest-yield class; Error propagation; Cleanup and traps; Temp files; Input handling and globs; Injection sinks — the CRITICAL class; Exit codes; Portability; Useless constructs and wrong-operator comparisons.
+- [makefile-findings](references/makefile-findings.md) — Structure — the five findings that matter most; Variable expansion — `=` vs `:=` vs `?=` vs `+=`; Recipe-shell semantics; Parallelism and ordering; Portability; Security findings; The verification pass; Special targets and automatic variables.
+- [portability](references/portability.md) — Bashisms and their POSIX equivalents; Test-and-comparison portability; POSIX parameter expansion; The array-free rewrite; GNU vs BSD userland; Detecting bashisms mechanically.
 - [hardening-templates](references/hardening-templates.md) — The strict preamble (standalone scripts); Cleanup with a trap and mktemp; Checked directory change; Declare-then-assign (unmask the exit code); Safe argument parsing with getopts; Safe file iteration; Array for a command with variable arguments; Makefile preamble; Multi-line recipe that needs one shell; Re-scan proof (paste into the report).
 - [suppression-policy](references/suppression-policy.md) — The one rule; When a suppression is legitimate; The decision procedure; Where a suppression lives; The worked example — this repo's push guard (the rule that outranks all others); The forbidden shortcuts (all are "suppress to go green").
 - Companion skills: `maintainer-config-lint` (broad multi-format config

@@ -100,6 +100,12 @@ kubeconform \
 Always present file-absolute line numbers in the report. A reviewer who
 has to count documents to find the error will not fix it.
 
+Schema validation is static — it grades the manifest in isolation. The
+server-side dry-run that ALSO sees admission webhooks, a policy engine,
+quotas and missing references is in
+[validation-and-dry-run.md](validation-and-dry-run.md); run it read-only
+whenever a cluster context is available.
+
 ## Workload scorers — kube-score, kubesec, polaris, kube-linter
 
 ### kube-score — workload scoring

@@ -29,6 +29,14 @@ A tag satisfies the scanners. A digest satisfies *reproducibility*. They
 are different guarantees — a pinned tag still floats. Digest-pin any image
 that sits in a supply-chain-sensitive path, and bump it deliberately.
 
+"Minimal" deserves a number, not an adjective, and each minimal base carries
+a cost (Alpine's musl libc, distroless's absent shell, scratch's missing CA
+bundle and user database) — the size table and the per-base tradeoffs are in
+[image-scanning-and-runtime](image-scanning-and-runtime.md). That same file
+covers the separate question a policy scan never answers: whether the built
+image ships known CVEs (`trivy image` / `docker scout`), which is distinct
+from the `DS-*`/`CKV_DOCKER_*` misconfiguration check.
+
 ## 2. Runtime user
 
 | Check | Defect | Fix |
@@ -78,6 +86,13 @@ the reason down.
 
 Typical impact: a Go service goes from ~1 GB to ~10 MB. This is the single
 highest-leverage size fix.
+
+Not every extra `FROM` is a defect. A `--target`-gated **test stage** (tests
+run during the build, test deps never reach production) and a
+`--platform`-driven **multi-arch cross-compile** stage are legitimate
+patterns — recognise them before flagging. Templates for both, plus the
+`COPY --from=<registry-image>` supply-chain case, are in
+[remediation-templates](remediation-templates.md).
 
 ## 6. Layers and cache
 

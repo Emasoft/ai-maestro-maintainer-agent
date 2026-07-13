@@ -65,6 +65,7 @@ will make the judgement for you.
 | `pull_request` | the PR's code | none (read-only token, no secrets on fork PRs) | safe default |
 | `pull_request_target` | the BASE branch's code | full write token + all secrets | high risk |
 | `workflow_run` | the BASE branch's code | full write token + secrets | safe, if it does not check out PR code |
+| `issue_comment` | the BASE branch's code | full write token + secrets | high risk — fires for ANY commenter (see below) |
 
 `pull_request_target` exists so a workflow can comment on, or label, a
 fork's PR — jobs that need a write token, which `pull_request` denies.
@@ -96,6 +97,35 @@ with no secrets, and a `workflow_run` job that consumes its result.
 `workflow_run` is safe *by construction* (it runs base-branch code) but
 inherits the same rule: do not check out the triggering PR's head, and
 treat any artifact downloaded from the upstream run as untrusted data.
+
+### Comment-triggered ChatOps (`issue_comment`)
+
+`issue_comment` (and `issue_comment` on a PR) runs the base branch's
+workflow with the full write token and all secrets — like
+`pull_request_target` — but it fires on a comment posted by **anyone**,
+including a drive-by account with `author_association: NONE`. A ChatOps
+handler (`/deploy`, `/run-tests`) is therefore a privileged surface any
+stranger can poke. Two things make it a high finding:
+
+1. **No permission gate.** A safe handler gates the job on BOTH
+   `github.event.issue.pull_request` (the comment is on a PR) AND an
+   `author_association` allowlist. A handler with neither is exploitable.
+2. **Checkout-and-run of PR head.** If the handler resolves the PR's head
+   ref and checks it out, then builds/tests/installs it, an outside
+   commenter's PR code runs with the base branch's secrets — the same
+   catastrophic shape as the `pull_request_target` defect, reached via a
+   comment instead of a push.
+
+`author_association` values, most- to least-trusted: `OWNER`, `MEMBER`,
+`COLLABORATOR`, `CONTRIBUTOR`, `FIRST_TIME_CONTRIBUTOR`, `FIRST_TIMER`,
+`NONE`. A sound gate allows only `OWNER` / `MEMBER` / `COLLABORATOR`.
+
+Gotcha worth calling out in the report: `author_association` alone is a
+WEAK gate. `CONTRIBUTOR` is anyone who has ever had a PR merged, so an
+allowlist that includes `CONTRIBUTOR` grants ChatOps to a large,
+open-ended set. A robust gate checks team/role membership via the API,
+not the association string. Flag an association-only gate that admits
+`CONTRIBUTOR` (or wider) as a medium finding.
 
 ## Secret exposure
 

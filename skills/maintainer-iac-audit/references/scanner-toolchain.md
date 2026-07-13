@@ -8,6 +8,7 @@
 - [tflint](#tflint)
 - [Checkov](#checkov)
 - [Trivy](#trivy)
+- [Scanner version regressions — a crash is not a pass](#scanner-version-regressions--a-crash-is-not-a-pass)
 - [Scanning the plan JSON instead of the HCL](#scanning-the-plan-json-instead-of-the-hcl)
 - [Documented suppression — the only permitted escape hatch](#documented-suppression--the-only-permitted-escape-hatch)
 - [Exit codes](#exit-codes)
@@ -117,6 +118,30 @@ trivy config --tf-exclude-downloaded-modules .       # skip vendored module code
 defaults, so a bucket made public *by a variable* can scan clean.
 Pass the repo's own non-secret tfvars; if the tfvars carry secrets,
 scan the plan JSON instead (below).
+
+## Scanner version regressions — a crash is not a pass
+
+A scanner that panics, crashes, or exits on an internal error has told
+you NOTHING about the code — and its non-zero exit can be
+misread as "findings handled" or its zero exit (if it crashed after
+printing) as "clean". Both readings are wrong: a crashed scan is an
+UNKNOWN, never a pass.
+
+These tools do ship regressions. Trivy's v0.60.x line, for one, had a
+period where it panicked on some Terraform inputs; the fix landed in a
+later release. So when a scanner misbehaves:
+
+- Do not lower severity, add `--soft-fail`, or skip the file to get
+  past the crash — that converts an unknown into a false green.
+- Pin the scanner to a known-good version (the host package manager
+  supports version-pinned installs), re-run, and record the pinned
+  version in the report so CI and the local run agree.
+- If it still crashes on a specific file, isolate that file, scan the
+  rest, and report the crashing file as `scanner-error-unscanned` —
+  a finding in its own right, not a silent gap.
+
+The CI pipeline and the local audit MUST run the same scanner version;
+a local pass on a newer/older build than CI is not a preview of CI.
 
 ## Scanning the plan JSON instead of the HCL
 

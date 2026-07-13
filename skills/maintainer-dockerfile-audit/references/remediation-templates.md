@@ -21,6 +21,9 @@ Apply the smallest change that removes the finding at its root.
 - [.dockerignore](#dockerignore)
 - [Instruction hygiene](#instruction-hygiene)
 - [Hardening a shipped image further](#hardening-a-shipped-image-further)
+- [Scratch and distroless runtimes](#scratch-and-distroless-runtimes)
+- [BuildKit mounts beyond secrets](#buildkit-mounts-beyond-secrets)
+- [Multi-stage advanced patterns](#multi-stage-advanced-patterns)
 
 ## Non-root user
 
@@ -311,3 +314,127 @@ docker buildx build --provenance=true --sbom=true -t app:1.2.3 .
 
 `COPY --link` produces layers that survive a base-image change without a
 rebuild; `COPY --chmod=0644` sets permissions without an extra `RUN chmod`.
+
+## Scratch and distroless runtimes
+
+A `scratch` runtime is empty — no CA bundle, no user database, no shell. Two
+fixes are almost always needed and almost always forgotten:
+
+```dockerfile
+# syntax=docker/dockerfile:1
+FROM golang:1.24-alpine AS builder
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+# CGO_ENABLED=0 forces a STATIC binary — scratch has no libc to link against.
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/server ./cmd/server
+
+FROM scratch
+# 1. HTTPS from a scratch image fails without a CA bundle — copy it in.
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /out/server /server
+# 2. scratch has no /etc/passwd, so a NAMED user cannot resolve.
+#    Declare a numeric uid:gid instead — this still satisfies the non-root policy.
+USER 10001:10001
+ENTRYPOINT ["/server"]
+```
+
+Distroless keeps a CA bundle and a built-in `nonroot` user, but still has no
+shell — a curl-based HEALTHCHECK cannot run:
+
+```dockerfile
+FROM gcr.io/distroless/static-debian12
+COPY --from=builder /out/server /server
+USER nonroot:nonroot
+ENTRYPOINT ["/server"]
+```
+
+For a distroless service that needs a health probe, ship a tiny static probe
+binary and point `HEALTHCHECK` at it, or document the check as inapplicable —
+never fake it with a shell the image does not have.
+
+## BuildKit mounts beyond secrets
+
+The secret mount defaults to exposing the file at a `run/secrets/<id>` path;
+name a different `target=` only when the tool expects the credential
+elsewhere (an npmrc, an aws credentials file):
+
+```dockerfile
+# syntax=docker/dockerfile:1
+
+# SSH agent forwarding — clone a private repo WITHOUT baking a key into a layer.
+RUN --mount=type=ssh git clone git@github.com:owner/private-repo.git
+
+# Language cache mounts persist across builds (Go needs BOTH the module and
+# the build cache to actually speed up).
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go build -o /out/app ./...
+```
+
+```bash
+docker build --ssh default .
+```
+
+The SSH mount is the correct fix for a Dockerfile that currently `COPY`s a
+private deploy key in and `rm`s it later — that key is still in the layer.
+
+## Multi-stage advanced patterns
+
+Patterns worth RECOGNISING on audit (they are correct, not defects) and worth
+reaching for when hardening:
+
+```dockerfile
+# syntax=docker/dockerfile:1
+
+# Test-as-a-stage: tests run DURING the build and gate it; the test deps never
+# reach production. Build the whole thing, or stop at the test stage on CI.
+FROM python:3.12-slim AS deps
+WORKDIR /app
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+FROM deps AS test
+RUN pip install --no-cache-dir --prefix=/install -r requirements-dev.txt
+COPY . .
+RUN pytest tests/
+
+FROM python:3.12-slim AS production
+# <prefix> is the shared usr/local tree (see the Python multi-stage note above)
+COPY --from=deps /install <prefix>
+COPY . .
+RUN useradd -m -u 10001 appuser && chown -R appuser:appuser /app
+USER appuser
+CMD ["python", "app.py"]
+```
+
+```bash
+docker build --target test -t app:test .      # CI: run tests only
+docker build -t app:1.2.3 .                    # release: tests still gate it
+```
+
+Cross-compile for several architectures with the predefined build args
+(`BUILDPLATFORM` is the builder's arch; `TARGETOS`/`TARGETARCH` the target):
+
+```dockerfile
+FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS builder
+ARG TARGETOS
+ARG TARGETARCH
+WORKDIR /src
+COPY . .
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /out/app ./...
+```
+
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 -t app:1.2.3 .
+```
+
+Two more to know:
+
+- `COPY --from=nginx:alpine /path /path` copies from a REGISTRY image, not a
+  build stage. Treat that image as a supply-chain dependency: it should be
+  pinned like any `FROM`.
+- Debugging: `docker build --target <stage>` builds up to one stage so you can
+  inspect it, and `DOCKER_BUILDKIT=1 docker build --progress=plain --no-cache .`
+  prints every step's output when a build behaves differently under BuildKit.
