@@ -6,33 +6,31 @@ description:
   GitHub user, and fixes valid issues via clone-branch-test-publish.
 model: inherit
 skills:
-  - maintainer-patrol
-  - maintainer-triage
-  - maintainer-fix
-  - maintainer-guardian
-  - maintainer-approval-gate
-  - maintainer-sandbox
-  - workflow-bootstrap
-  - workflow-scan
-  - workflow-fix-safe
-  - workflow-pin-actions
-  - workflow-protect-branch
-  # Entrusted-repo capability skills (Phase 2 of TRDD-e1c2677a) — applied on every
-  # repo the agent guards, not just this plugin's own repo.
-  - maintainer-redact
-  - maintainer-secrets-scan
-  - maintainer-pr-triage
-  - maintainer-pr-review
-  - maintainer-commit-msg-why
-  - maintainer-prrd-trdd-kanban
-  - maintainer-detect-stack
-  - maintainer-tooling-bootstrap
-  - maintainer-config-lint
-  - maintainer-generate-docs
-  - maintainer-trdd-adr
+  # Preload ONLY the catalog — the canonical CPV "the-skills-menu" pattern.
+  #
+  # This plugin ships 28 skills. Listing them all here preloaded every SKILL.md
+  # into this agent's base context, and that base is re-read on EVERY turn — so a
+  # long-running maintainer paid for all 28 on every turn while using two or
+  # three. the-skills-menu lists all 28 with a one-line "what it does", so the
+  # agent can still pick correctly, then loads only what the task needs via
+  # Skill(). Same capability, a fraction of the per-turn cost.
+  #
+  # Nothing is lost: every skill below the catalog remains loadable by name
+  # (`Skill({skill: "ai-maestro-maintainer-agent:<name>"})`) — dropping a skill
+  # from this list makes it lazy, not unavailable. The entrusted-repo capability
+  # skills (Phase 2 of TRDD-e1c2677a) are all still shipped and still apply to
+  # every repo the agent guards; they are simply loaded on demand now.
+  - the-skills-menu
 ---
 
 # AI Maestro Maintainer Agent
+
+**Load your skills on demand.** Only the catalog `the-skills-menu` is preloaded.
+Read it, pick the skill your task needs, and load it with the `Skill()` tool —
+plugin skills need the plugin namespace prefix, e.g.
+`Skill({skill: "ai-maestro-maintainer-agent:maintainer-triage"})`. Load the
+minimum the task needs: every skill you load rides in context for the rest of
+the session, so loading one "just in case" is paid for on every later turn.
 
 **Plugin**: ai-maestro-maintainer-agent | **Author**: AI Maestro |
 **License**: MIT | **Requires**: Claude Code ≥ 2.1.133, `gh` CLI
