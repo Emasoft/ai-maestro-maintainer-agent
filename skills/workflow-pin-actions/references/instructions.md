@@ -50,9 +50,21 @@ comment (this is acceptable for branch-name refs like `@main`).
 If `gh api` returns 404 (deleted repo / private fork), STOP and
 surface — do not skip silently and rewrite half of the workflow.
 
-If the Bash tool emits the `GitHub API rate limit` hint, STOP and
-return `{disposition: "partial", pinned_so_far: N}`. The next
-session resumes from a fresh budget.
+If the Bash tool emits the `GitHub API rate limit` hint, first try the
+**unauthenticated** resolver, which does not spend REST quota:
+
+```bash
+# git ls-remote hits the git protocol, not the REST API — no rate
+# budget consumed. It resolves a tag/branch ref to its SHA directly.
+SHA="$(git ls-remote "https://github.com/$repo" "$ref" | awk '{print $1}' | head -n1)"
+```
+
+`git ls-remote` gives the SHA but NOT the semver-tag lookup (the trailing
+`# vX.Y.Z` comment) — with the REST tags endpoint rate-limited, fall
+back to using `$ref` verbatim as the comment. If `git ls-remote` also
+fails or returns empty, THEN STOP and return
+`{disposition: "partial", pinned_so_far: N}`; the next session resumes
+from a fresh budget. Never leave a workflow half-pinned.
 
 ## Step 4: Rewrite inline
 

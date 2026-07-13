@@ -40,10 +40,14 @@ branch. Pushing is the caller's responsibility.
 3. Layer idempotent hardening on each `.github/workflows/*.y*ml`:
    top-level `permissions: contents: read`, `concurrency:`,
    per-job `timeout-minutes:`, per-checkout
-   `persist-credentials: false`, plus a jq `--arg` trap audit
-   (rewrite any `${VAR}` inside a double-quoted jq filter to use
-   `--arg name "$VAR"`). Use the Read+Edit tools — never sed/awk
-   for YAML edits.
+   `persist-credentials: false`, expression-injection rewrites
+   (env-var indirection — see
+   [references/injection-hardening.md](references/injection-hardening.md)),
+   the jq `--arg` trap audit, per-job permission scoping, and
+   derived-secret masking. Use the Read+Edit tools — never sed/awk
+   for YAML edits. Two classes are NOT auto-fixable — a
+   `pull_request_target` that checks out PR head code, and a secret
+   reaching a log/URL/artifact — STOP and route those to human review.
 4. Post-scan via workflow-scan; abort if new findings appeared.
 5. Stage by name (NEVER `git add -A`) and commit:
    `chore(ci): apply safe workflow hardening`.
@@ -101,10 +105,18 @@ skill aborts without committing — regression guard.
 - zizmor fix-mode reference: <https://docs.zizmor.sh/usage/#auto-fixing>
 - Companion skills: `workflow-scan`, `workflow-pin-actions`,
   `workflow-protect-branch`.
+- [Expression-injection hardening](references/injection-hardening.md):
+  - The defect, in one sentence
+  - Attacker-controllable context fields
+  - The fix — env-var indirection
+  - Why `env:` works and quoting does not
+  - What env-var indirection does NOT fix
+  - The rewrite procedure
 - [Full step-by-step instructions](references/instructions.md):
   - Step 1: Protected-branch guard
   - Step 2: Pre-scan baseline
   - Step 3: Run zizmor --fix=safe
-  - Step 4: Hardening edits
+  - Step 4: Hardening edits (incl. injection rewrite, per-job
+    permission scoping, derived-secret masking)
   - Step 5: Post-scan regression guard
   - Step 6: Stage by name and commit
