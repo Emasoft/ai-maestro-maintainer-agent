@@ -1,13 +1,15 @@
 ---
 trdd-id: OOG7QWVV
 title: Ship a real worktree capability, and fix the MAIN_ROOT idiom that truncated paths with a space
-column: dev
+column: published
 created: 2026-07-14T21:33:03+0200
-updated: 2026-07-14T21:33:03+0200
+updated: 2026-07-14T22:07:36+0200
 current-owner: ai-maestro-maintainer-agent
 task-type: feature
 release-via: publish
 relevant-rules: [1, 6]
+implementation-commits: [5104c5a, 163535f, 546537f, a693b27]
+released-in: [v1.7.16, v1.7.17]
 ---
 
 # Ship a real worktree capability, and fix the MAIN_ROOT idiom
@@ -174,26 +176,35 @@ decoration:
 
 ## EHT — effects to handle
 
-- **TRDD (new):** port the reference's `docker/Dockerfile` (agent CLIs in a
-  container) into `scripts/sandbox/dockerfiles/`. **Security must be fixed on
-  port** — the user's words: *"security was completely ignored by the
-  parallel-code project."* It does `curl -fsSL … | bash` (this plugin ships
-  `scripts/sentinel/rules/curl_pipe_shell.py`, which flags exactly that), runs as
-  **root** (creates an `agent` user but never `USER agent`), and pins nothing
-  (`FROM ubuntu:22.04`). CI runs Checkov/Trivy over that directory and would fail.
-- **TRDD (new):** port the reference's Apple codesign + notarization workflow as a
-  `maintainer-macos-notarize` skill. The ephemeral-keychain + App Store Connect
-  API-key pattern and its `if: always()` cleanup are genuinely good. On port: add
-  `timeout-minutes` (the reference has none → 6h default, violating the gh-actions
-  rule), scope `permissions` per-job instead of repo-wide `contents: write`, and
-  cover the non-electron-builder path (`xcrun notarytool submit --wait` +
-  `stapler staple`).
-- **Upstream (CPV):** `RC-DEP-TAG-PIPELINE` is a **false positive**. It claims
+All three are now terminal.
+
+- **DONE (v1.7.17, commit `546537f`)** — ported the reference's `docker/Dockerfile`
+  into `scripts/sandbox/dockerfiles/agent-cli.Dockerfile`. Security fixed on port,
+  per the user: *"security was completely ignored by the parallel-code project.
+  fix that."* Four upstream properties were NOT reproduced: the fetch-piped-into-a-
+  shell installer (this plugin ships `sentinel/rules/curl_pipe_shell.py` to flag
+  exactly that in the repos it maintains), running as **root** (it created an
+  `agent` user and never issued `USER agent`), an unpinned base, and build-time apt
+  repos. The last one turned out to be a rule the whole directory already followed
+  — **no image here fetches over the network at build time** — so `gh` is absent
+  (no Debian package; its apt repo would make this the one image that reaches out
+  mid-build). `tests/test_dockerfile_hardening.py` now enforces all of it across
+  EVERY Dockerfile, so the next adapted upstream cannot reintroduce the class.
+- **DONE (v1.7.17, commit `a693b27`)** — shipped `maintainer-macos-notarize`. The
+  reference's ephemeral-keychain + App Store Connect API-key pattern and its
+  `if: always()` cleanup are the right shape; added the four things it lacked
+  (`timeout-minutes`, per-job `permissions`, a `concurrency` group, and
+  `stapler staple` for the non-electron-builder path). `actionlint` caught **SC2046**
+  in the keychain-list line I wrote — an unquoted `$(...)` that would word-split a
+  keychain path containing a space, i.e. *the same bug class as this TRDD's own
+  subject*. Fixed with a bash-3.2-safe array (macOS runners have no `mapfile`).
+- **ALREADY FILED** — `RC-DEP-TAG-PIPELINE` is a CPV **false positive**: it claims
   `publish.py` never tags `{name}--v{version}`, but `scripts/publish.py:1698` builds
   `f"{get_plugin_name(root)}--v{new_ver}"` and pushes it atomically —
-  `ai-maestro-maintainer-agent--v1.7.15` exists on the remote. CPV's scan greps for a
-  literal plugin name and misses the computed f-string. File on
-  `Emasoft/claude-plugins-validation`; do not patch CPV from this repo (cross-project rule).
+  `ai-maestro-maintainer-agent--v1.7.17` is on the remote. CPV greps for a literal
+  plugin name and misses the computed f-string. Upstream issue
+  **Emasoft/claude-plugins-validation#168** already exists; not re-filed. Per the
+  cross-project rule, CPV is not patched from this repo.
 
 ## Bug autopsy
 
