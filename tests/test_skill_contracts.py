@@ -1,13 +1,15 @@
 """
-Skill-doc contract tests for the 14 skills the fleet-readiness audit (#10 M12)
-found without dedicated test coverage:
+Skill-doc contract tests for the 20 skills the fleet-readiness audit (#10 M12)
+plus the CPV coverage audit found without dedicated test coverage:
 
   patrol, triage, fix, pr-triage, pr-review, workflow-scan, workflow-fix-safe,
   workflow-pin-actions, workflow-protect-branch, detect-stack, tooling-bootstrap,
-  config-lint, generate-docs, trdd-adr.
+  config-lint, generate-docs, trdd-adr, and the six cc-devops-skills distillations
+  (k8s-audit, dockerfile-audit, shell-audit, iac-audit, ci-audit,
+  observability-audit).
 
 No mocks. Every assertion runs against the REAL shipped SKILL.md + its
-references/ on disk. The universal contract (parametrized over all 14) checks
+references/ on disk. The universal contract (parametrized over all 20) checks
 each skill's frontmatter validity, the no-tool-grant-frontmatter invariant
 (ADR-0002 / PRRD S7), the presence of the core body sections, and that every
 `references/...` link in the body resolves to a real file (broken-reference
@@ -15,7 +17,7 @@ guard). Per-skill tests add the structural invariant unique to each skill.
 
 Consistent with this repo's grouped-test convention (test_sentinel_rules_a..f
 cover many rules in one module): one table-driven module gives every one of the
-14 skills real, regression-catching coverage without 14 near-duplicate stub
+20 skills real, regression-catching coverage without 20 near-duplicate stub
 files.
 """
 
@@ -30,7 +32,9 @@ from conftest import REPO_ROOT
 
 SKILLS_ROOT = REPO_ROOT / "skills"
 
-# The 14 skills the audit flagged as uncovered.
+# Skills the audit flagged as uncovered, plus the six DevOps-audit skills
+# distilled from the cc-devops-skills corpus (each new skill gets the universal
+# contract assertions — no-tool-grant-keys, SKILL.md present, references resolve).
 AUDIT_UNCOVERED_SKILLS = [
     "maintainer-patrol",
     "maintainer-triage",
@@ -46,6 +50,12 @@ AUDIT_UNCOVERED_SKILLS = [
     "maintainer-config-lint",
     "maintainer-generate-docs",
     "maintainer-trdd-adr",
+    "maintainer-k8s-audit",
+    "maintainer-dockerfile-audit",
+    "maintainer-shell-audit",
+    "maintainer-iac-audit",
+    "maintainer-ci-audit",
+    "maintainer-observability-audit",
 ]
 
 TOOL_GRANT_KEYS = ("allowed-tools", "disallowed-tools", "tools")

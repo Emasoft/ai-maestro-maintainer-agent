@@ -17,7 +17,9 @@
 
 ## Step 1: Prepare the Workspace
 
-If the repo is not already cloned locally:
+Resolve the workspace — **in-place** when this agent's own workdir already
+IS the target repo (fleet self-maintenance), else an isolated per-session
+clone:
 
 ```bash
 REPO="<githubRepo>"
@@ -26,26 +28,48 @@ REPO="<githubRepo>"
 # AI Maestro backups only snapshot the agent workdir, and agent
 # migration between hosts only ships the workdir. State outside
 # the workdir is silently lost on both. Resolution order:
-#   1. $AIMAESTRO_AGENT_DIR — proposed AI Maestro env var
-#      (https://github.com/Emasoft/ai-maestro/issues/32)
-#   2. $CLAUDE_PROJECT_DIR  — Claude Code project dir
-#   3. $PWD                 — last-resort fallback
-AGENT_DIR="${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+#   1. $AGENT_WORK_DIR      — THE authoritative AI Maestro variable.
+#      Baked into the pane env at `tmux new-session -e` time, and used by
+#      the directory-guard hook as the sandbox boundary, so it is
+#      definitionally the agent's workdir. Set identically whether the
+#      workdir is ~/agents/<name> or an adopted ~/Code/<project>.
+#   2. $CLAUDE_PROJECT_DIR  — Claude Code's own var (plain non-fleet session)
+#   3. $PWD                 — last-resort fallback ONLY
+#
+# Do NOT key off $PWD alone: it happens to equal the workdir at startup and
+# then silently diverges the moment the agent — or any subagent — cd's, so
+# the bug reads as "works on my machine" and corrupts state elsewhere.
+# (This previously named a *proposed* var, $AIMAESTRO_AGENT_DIR, that AI
+# Maestro never sets; the chain therefore always fell through to $PWD.
+# Confirmed against the server source: ai-maestro#57. Verify a variable is
+# actually exported before depending on it — a name is a hypothesis.)
+AGENT_DIR="${AGENT_WORK_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
 
-# Per-session workspace isolation. CLAUDE_CODE_SESSION_ID is exported by
-# Claude Code >= 2.1.132 to every Bash subprocess. When two MAINTAINER
-# sessions race on the same repo without this suffix, both write to the
-# same checkout and corrupt each other's index. When the env var is
-# absent (older CC), fall back to the historical single-workspace path.
-SESSION_SUFFIX=""
-[ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && SESSION_SUFFIX="-${CLAUDE_CODE_SESSION_ID:0:8}"
-WORKSPACE="$AGENT_DIR/.aimaestro/workspace$SESSION_SUFFIX"
+# Self-maintenance detection: does $AGENT_DIR's origin already point at
+# $REPO? As a fleet agent the workdir root can BE this plugin's own
+# checkout; if the repo we're asked to maintain is that same repo, we work
+# IN-PLACE. Cloning a second copy into .aimaestro/workspace/ would waste
+# disk AND leave the outer checkout the fleet session sits in stale (nothing
+# re-syncs it afterward). See the persona's "Self-maintenance deployment".
+AGENT_REPO="$(git -C "$AGENT_DIR" remote get-url origin 2>/dev/null \
+  | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')"
 
-mkdir -p "$WORKSPACE"
-cd "$WORKSPACE"
-if [ ! -d ".git" ]; then
-  gh repo clone "$REPO" . -- --depth=50
+if [ "$AGENT_REPO" = "$REPO" ]; then
+  # In-place: the workdir IS the target repo. No nested clone.
+  cd "$AGENT_DIR"
+else
+  # External target: isolated per-session clone. CLAUDE_CODE_SESSION_ID is
+  # exported by Claude Code >= 2.1.132 to every Bash subprocess; the suffix
+  # stops two MAINTAINER sessions racing on the same repo from corrupting
+  # each other's index. Absent (older CC) → historical single-workspace path.
+  SESSION_SUFFIX=""
+  [ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && SESSION_SUFFIX="-${CLAUDE_CODE_SESSION_ID:0:8}"
+  WORKSPACE="$AGENT_DIR/.aimaestro/workspace$SESSION_SUFFIX"
+  mkdir -p "$WORKSPACE"
+  cd "$WORKSPACE"
+  [ -d ".git" ] || gh repo clone "$REPO" . -- --depth=50
 fi
+
 git fetch origin
 git checkout main
 git pull origin main
@@ -169,16 +193,34 @@ pattern BEFORE it lands.
 
 ## Step 6: Commit
 
+Stage ONLY the files you changed (never `git add -A`). Write a conventional
+subject, a WHY body paragraph (what was wrong, why this change is correct,
+which alternative you rejected), and the `Agent:` trailer identifying the
+authoring plugin — PRRD G1.1 recommends the trailer, and the WHY paragraph
+satisfies the `maintainer-commit-msg-why` hook when it is installed:
+
 ```bash
 git add <specific files>
-git commit -m "fix: <description> (closes #$ISSUE_NUM)"
+git commit -m "fix: <description> (closes #$ISSUE_NUM)" \
+           -m "<WHY: what was broken, why this fix is correct, alternative rejected.>" \
+           -m "Agent: ai-maestro-maintainer-agent"
 ```
 
-For feature implementations: `feat: <description> (closes #$ISSUE_NUM)`
+For feature implementations use `feat:` instead of `fix:` in the subject.
+The `Agent:` trailer carries the plugin's stable package slug — greppable
+ecosystem-wide (`git log --grep "Agent: ai-maestro-maintainer-agent"`) and
+rename-surviving.
 
 ---
 
 ## Step 7: Publish
+
+> **Self-maintenance exception (`$AGENT_REPO == $REPO`):** if the target IS
+> this maintainer's OWN repo, do NOT run `publish.py` yourself. Releasing
+> (bump + push + tag + GH release) is NON-EXEMPT, and this repo's pre-push
+> hook refuses branch pushes anyway. Commit locally, then STOP and
+> request an authorized release (label the issue `awaiting-release`). See
+> the persona's "Self-maintenance deployment" section.
 
 Use the strict publish pipeline if available:
 
