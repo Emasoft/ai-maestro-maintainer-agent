@@ -47,7 +47,7 @@ jobs:
         run: |
           set +e
           # WHY: pin CPV to release tag v2.152.1 (not default-branch HEAD) so this security gate is reproducible — an unpinned ref runs whatever CPV HEAD is at release time (supply-chain drift, the exact class this plugin guards against); audit 20260703_214848; matches this plugin's own workflow-pin-actions doctrine.
-          uvx --from git+https://github.com/Emasoft/claude-plugins-validation@v2.152.1 \
+          uvx --from git+https://github.com/Emasoft/claude-plugins-validation@v2.158.0 \
             --with pyyaml \
             cpv-remote-validate plugin . --strict
           EXIT_CODE=$?

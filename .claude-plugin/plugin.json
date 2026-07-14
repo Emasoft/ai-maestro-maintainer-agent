@@ -13,5 +13,18 @@
       "name": "ai-maestro-plugin",
       "version": "^2.7.9"
     }
-  ]
+  ],
+  "cpv": {
+    "pipeline": {
+      "intentional_divergence": [
+        "scripts/publish.py",
+        "git-hooks/pre-push",
+        ".mega-linter.yml",
+        ".markdownlint.json",
+        ".github/workflows/ci.yml",
+        ".github/workflows/release.yml",
+        ".github/workflows/notify-marketplace.yml"
+      ]
+    }
+  }
 }
