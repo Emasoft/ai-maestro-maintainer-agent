@@ -1,3 +1,9 @@
+<!-- cspell:ignore biuld lastest -->
+<!-- `biuld` and `lastest` are DELIBERATE misspellings — they are the sample
+     broken workflows this page teaches you to recognize. Correcting them would
+     destroy the lesson, so they are ignored here rather than in the global
+     dictionary: a real `biuld` typo anywhere else must still fail the build. -->
+
 # Engine coverage — who catches what
 
 ## Table of Contents
