@@ -1,44 +1,57 @@
 ---
 trdd-id: 6VT033ST
 title: Canon pipeline migration (ai-maestro #44) plus the plugin-dependency resolver tag
-column: dev
+column: published
 created: 2026-07-13T23:20:42+0200
-updated: 2026-07-13T23:20:42+0200
+updated: 2026-07-14T17:42:00+0200
 current-owner: ai-maestro-maintainer-agent
 task-type: infra
 release-via: publish
 relevant-rules: [1]
+implementation-commits: [42a27ba, fd5882f, dac01f8, 5a25695]
+released-version: 1.7.10
 ---
 
 # Canon pipeline migration (ai-maestro #44) plus the plugin-dependency resolver tag
 
-## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-07-13
+## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-07-14
 
-**Where it stands:** code COMPLETE and locally verified. NOT pushed. NOT released.
+**Where it stands: SHIPPED. `v1.7.10`, commit `5a25695`, released 2026-07-14 (USER-authorized).**
+All three workflows green (CI · Release · Notify Marketplace). This TRDD is `published` — do not
+edit the body; new work = new TRDD.
 
 | Component | State |
 |---|---|
-| `scripts/publish.py` | DONE — `get_plugin_name()` + resolver tag; both tags in ONE `--atomic` push |
-| `tests/test_publish_resolver_tag.py` | DONE — 10 real tests, all passing (no mocks) |
-| `skills/the-skills-menu/SKILL.md` | DONE — hand-written (canon's generated one is broken); 0 lint errors |
-| `agents/…-main-agent.md` | DONE — preloads only the catalog; 28 skills now load on demand |
-| `.commitlintrc.json` | DONE — adopted (inert: commitlint is not in `ENABLE_LINTERS`) |
+| `scripts/publish.py` | SHIPPED — `get_plugin_name()` (`:289`) + resolver tag (`:1627`); both tags in ONE `--atomic` push (`:1656`) |
+| `tests/test_publish_resolver_tag.py` | SHIPPED — 10 real tests (no mocks); suite 568/568 |
+| `skills/the-skills-menu/SKILL.md` | SHIPPED — hand-written (canon's generated one is broken); 0 lint errors |
+| `agents/…-main-agent.md` | SHIPPED — preloads only the catalog; 28 skills now load on demand |
+| `.commitlintrc.json` | SHIPPED — adopted (inert: commitlint is not in `ENABLE_LINTERS`) |
 | Canon regressions | REJECTED (4) — see the table below |
-| CPV coordination | DONE — `claude-plugins-validation#165` (3 asks + upstream offer) |
+| Both tags on `origin` | `v1.7.10` and `ai-maestro-maintainer-agent--v1.7.10` → same commit `5a25695` |
+| GitHub writes | DONE — ai-maestro **#44** fleet row · this repo's **#28** (answered + CLOSED) · **#29-Q1** |
 
-**NEXT ACTION:** run the full gate — `uv run tests/run-all-tests.py`, then the EXACT CI
-command (below), then `publish.py --patch --dry-run`. Then commit locally and **STOP**.
-
-**Do NOT push.** Pushing *is* a release here (the process-ancestry pre-push hook permits no
-other path), and release authorization is a **separate, still-pending** USER decision.
+**OPEN FOLLOW-UP (the only one) — CPV is now AHEAD of our pin.** CPV **v2.158.0** shipped in
+response to our `claude-plugins-validation#165`: `standardize --fix` now injects the
+resolver-tag stage into an EXISTING `publish.py`, and `--force-templates` now MERGES config
+files instead of clobbering them. **Our CI still pins `v2.152.1`**
+(`.github/workflows/ci.yml:154`, `release.yml:50`). Next step, as its own TRDD: bump the pin and
+re-run `standardize --fix` against v2.158.0 to confirm its migration is a **no-op** against our
+hand-rolled stage rather than a duplicate. Two of the four rejections below may become adoptable
+once merge-not-replace is real — **re-extract before believing that.**
 
 **SUPERSEDED — do NOT carry forward:**
 
+- "Committed, not released / do NOT push." **Released** 2026-07-14 with explicit USER
+  authorization. `main` is level with `origin/main`.
 - The 2026-07-10 canon diff in `[[project_cpv_pipeline_drift_do_not_standardize]]` (it
-  predicted `publish.py` would gain G2c/G2d gates). **Wrong now.** Canon v2.157.2 leaves
+  predicted `publish.py` would gain G2c/G2d gates). **Wrong.** Canon v2.157.2 left
   `publish.py` entirely alone — CPV #145's profile-awareness works.
 - The ai-maestro #44 thread's "apply these 4 canon-CI fixes by hand" recipe. **All four are
   fixed** (CPV #142 CLOSED 2026-06-21). Verified, not assumed.
+- The framing that plugins simply "forgot" the resolver-tag stage. CPV confirmed the real
+  cause: `standardize` REFUSED to touch an existing `publish.py`, so every plugin that had one
+  was standardized without ever gaining the stage — and was told it succeeded.
 
 ## Why
 
@@ -145,3 +158,20 @@ must not move).
   single-line regex on `description:` where a YAML parse was needed: 21 of our skills use the
   `description: |` block-scalar form and all 21 came out empty. Lesson: never regex a line out
   of YAML. Reported as `claude-plugins-validation#165`.
+
+[^4]: [ocd:2026-07-14 lmd:2026-07-14] PARTIAL CORRECTION of my own `#165` Ask 2. I reported
+  "canon's `publish.py` never creates the `{name}--v{version}` resolver tag". CPV's maintainer
+  corrected it, and the true shape is **narrower and worse**: the *generator* had minted the tag
+  correctly since v2.156.0 — but `standardize` is profile-aware and **deliberately refuses to
+  overwrite an existing `publish.py`**, so every plugin that already had one (i.e. all of them)
+  was standardized **without ever gaining the stage**, and was reported as succeeding. Fixed in
+  v2.158.0 by a surgical injection under a plain `--fix`.
+  **Lesson: I diagnosed from the ARTIFACT I could see (the template) instead of the CODE PATH
+  that produces it.** Reading canon's generated `publish.py` template shows the tag missing —
+  true, but it is not why *my* file lacked it, and the difference decides who is affected. "The
+  template lacks X" and "the tool never gives you X" are different claims; only the second was
+  actionable, and I could only have distinguished them by reading the standardizer's
+  refuse-to-overwrite branch. When reporting a tool bug, trace the path from tool to *your*
+  file — never infer the mechanism from the output alone. The over-broad report still got the
+  fix shipped, but a fleet reading it would have concluded "canon can't do this" when the truth
+  was "canon silently skipped you", which is the more urgent alarm.
