@@ -66,7 +66,7 @@ skill calls `command -v` before invoking any tool.
    GMT-offset stamp:
 
    ```bash
-   MAIN_ROOT="$(git worktree list | head -n1 | awk '{print $1}')"
+   MAIN_ROOT="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
    DIR="$MAIN_ROOT/reports/maintainer-iac-audit"
    mkdir -p "$DIR"
    TS="$(date +%Y%m%d_%H%M%S%z)"

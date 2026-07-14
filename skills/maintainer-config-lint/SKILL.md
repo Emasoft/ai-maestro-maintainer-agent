@@ -44,7 +44,7 @@ invoking it and degrades gracefully when one is missing.
    with a `YYYYMMDD_HHMMSS±HHMM` local-time-plus-offset stamp:
 
    ```bash
-   MAIN_ROOT="$(git worktree list | head -n1 | awk '{print $1}')"
+   MAIN_ROOT="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
    DIR="$MAIN_ROOT/reports/maintainer-config-lint"
    mkdir -p "$DIR"
    TS="$(date +%Y%m%d_%H%M%S%z)"

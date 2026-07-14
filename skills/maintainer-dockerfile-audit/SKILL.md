@@ -119,7 +119,7 @@ inapplicable policy (`HEALTHCHECK`) with the reason written into BOTH
 8. **Report** to `$MAIN_ROOT/reports/maintainer-dockerfile-audit/`:
 
    ```bash
-   MAIN_ROOT="$(git worktree list | head -n1 | awk '{print $1}')"
+   MAIN_ROOT="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
    DIR="$MAIN_ROOT/reports/maintainer-dockerfile-audit"
    mkdir -p "$DIR"
    REPORT="$DIR/$(date +%Y%m%d_%H%M%S%z)-dockerfile-audit.md"

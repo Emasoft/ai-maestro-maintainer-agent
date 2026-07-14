@@ -104,10 +104,18 @@ def _local_ts() -> str:
 
 
 def _main_root() -> Path:
-    """Repo root (works in main checkout and in linked worktrees)."""
-    out = subprocess.run(["git", "worktree", "list"], capture_output=True, text=True, check=False)
-    if out.returncode == 0 and out.stdout:
-        return Path(out.stdout.splitlines()[0].split()[0])
+    """Repo root (works in main checkout and in linked worktrees).
+
+    `--porcelain` is not a style preference. Plain `git worktree list` prints
+    `<path> <sha> [<branch>]`, so `.split()[0]` TRUNCATES any path containing a
+    space — routine on macOS — and the sandbox then writes its reports into a
+    directory that does not exist. Porcelain puts the path alone on its own line.
+    """
+    out = subprocess.run(["git", "worktree", "list", "--porcelain"], capture_output=True, text=True, check=False)
+    if out.returncode == 0:
+        for line in out.stdout.splitlines():
+            if line.startswith("worktree "):
+                return Path(line[len("worktree ") :])
     return Path(os.environ.get("CLAUDE_PROJECT_DIR", Path.cwd()))
 
 

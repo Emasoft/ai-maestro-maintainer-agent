@@ -31,7 +31,7 @@ and persist-credentials, exit early with disposition `noop`.
 ## Step 3: Run zizmor --fix=safe
 
 ```bash
-MAIN_ROOT="$(git worktree list | head -n1 | awk '{print $1}')"
+MAIN_ROOT="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
 DIR="$MAIN_ROOT/reports/workflow-fix-safe"
 mkdir -p "$DIR"
 TS="$(date +%Y%m%d_%H%M%S%z)"

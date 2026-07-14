@@ -581,7 +581,7 @@ SHOW mode never reaches this step.
 ## Step 7: Write report + refresh agent cache
 
 ```bash
-MAIN_ROOT="$(git worktree list | head -n1 | awk '{print $1}')"
+MAIN_ROOT="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
 DIR="$MAIN_ROOT/reports/workflow-protect-branch"
 mkdir -p "$DIR"
 TS="$(date +%Y%m%d_%H%M%S%z)"

@@ -85,7 +85,7 @@ runs `command -v` before invoking any external tool.
    GMT-offset stamp:
 
    ```bash
-   MAIN_ROOT="$(git worktree list | head -n1 | awk '{print $1}')"
+   MAIN_ROOT="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
    DIR="$MAIN_ROOT/reports/maintainer-ci-audit"
    mkdir -p "$DIR"
    REPORT="$DIR/$(date +%Y%m%d_%H%M%S%z)-ci-audit.md"

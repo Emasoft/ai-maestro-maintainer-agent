@@ -57,8 +57,8 @@ cd "$TARGET_REPO"
 git rev-parse --is-inside-work-tree >/dev/null || {
     echo "ERR: $TARGET_REPO is not a git work tree" >&2; exit 64; }
 
-MAIN_ROOT="$(git -C "$(git worktree list | head -n1 | awk '{print $1}')" \
-              rev-parse --show-toplevel 2>/dev/null || echo "$CLAUDE_PROJECT_DIR")"
+MAIN_ROOT="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
+[ -n "$MAIN_ROOT" ] || MAIN_ROOT="$CLAUDE_PROJECT_DIR"
 SKILL_REFS="$MAIN_ROOT/skills/maintainer-commit-msg-why/references"
 HOOK_SRC="$SKILL_REFS/hooks/commit-msg.sh"
 AUDIT_SRC="$SKILL_REFS/audit-script.sh"

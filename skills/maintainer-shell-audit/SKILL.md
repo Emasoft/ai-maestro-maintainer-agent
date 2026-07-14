@@ -151,7 +151,7 @@ PARTIAL run never reports PASS.
 8. **Report** to `$MAIN_ROOT/reports/maintainer-shell-audit/`:
 
    ```bash
-   MAIN_ROOT="$(git worktree list | head -n1 | awk '{print $1}')"
+   MAIN_ROOT="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
    DIR="$MAIN_ROOT/reports/maintainer-shell-audit"
    mkdir -p "$DIR"
    REPORT="$DIR/$(date +%Y%m%d_%H%M%S%z)-shell-audit.md"

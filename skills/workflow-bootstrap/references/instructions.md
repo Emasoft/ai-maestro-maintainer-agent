@@ -73,7 +73,8 @@ LANG=generic
 [ -f package.json ] && [ ! -f pyproject.toml ] && LANG=node
 
 # Step 3-4 — write workflows
-SKILL_REFS="$(git worktree list | head -n1 | awk '{print $1}')/skills/workflow-bootstrap/references/templates"
+MAIN_ROOT="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
+SKILL_REFS="$MAIN_ROOT/skills/workflow-bootstrap/references/templates"
 mkdir -p .github/workflows
 cp "$SKILL_REFS/$LANG.yml"        .github/workflows/ci.yml
 cp "$SKILL_REFS/zizmor-job.yml"   .github/workflows/security.yml

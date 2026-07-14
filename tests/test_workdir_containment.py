@@ -208,23 +208,37 @@ def _report_writers() -> list[Path]:
 def test_every_report_writer_targets_main_root_reports() -> None:
     """B5 — a report goes to `$MAIN_ROOT/reports/<component>/`, never anywhere else.
 
-    `$MAIN_ROOT` is resolved from `git worktree list | head -n1`, which names the
-    MAIN checkout even when invoked from a linked worktree — a worktree's own
-    reports/ dies with the branch, taking the audit trail with it.
+    `$MAIN_ROOT` names the MAIN checkout even when the skill runs from a linked
+    worktree — a worktree's own reports/ dies with the branch, taking the audit
+    trail with it.
+
+    It MUST be resolved with `--porcelain`. Plain `git worktree list` prints
+    `<path> <sha> [<branch>]`, so any column-splitting recipe (`awk '{print $1}'`,
+    `cut -d' ' -f1`) truncates a path containing a space — routine on macOS — and
+    the skill then writes its report into a directory that does not exist, while
+    reporting success. That bug shipped in 13 of these files; this assertion is
+    what stops the next copy-paste from reintroducing it.
     """
     writers = _report_writers()
     assert writers, "expected at least one shipped component to write a report"
     for p in writers:
         text = p.read_text(encoding="utf-8", errors="replace")
+        rel = p.relative_to(REPO)
         for m in REPORT_DIR_ASSIGN.finditer(text):
             val = m.group("val")
             assert "MAIN_ROOT" in val and "/reports/" in val, (
-                f"{p.relative_to(REPO)} sets REPORT_DIR={val.strip()!r}; reports must live "
+                f"{rel} sets REPORT_DIR={val.strip()!r}; reports must live "
                 "under $MAIN_ROOT/reports/<component>/"
             )
-        assert "git worktree list" in text, (
-            f"{p.relative_to(REPO)} writes a report but never resolves MAIN_ROOT from "
-            "`git worktree list` — from a linked worktree it would write to the wrong root"
+        assert "git worktree list --porcelain" in text, (
+            f"{rel} writes a report but never resolves MAIN_ROOT from "
+            "`git worktree list --porcelain` — from a linked worktree it would write to "
+            "the wrong root, and any non-porcelain form truncates a path with a space"
+        )
+        assert "worktree list | " not in text, (
+            f"{rel} pipes plain `git worktree list` into a column splitter. That "
+            "truncates any path containing a space. Use: "
+            "git worktree list --porcelain | sed -n '1s/^worktree //p'"
         )
 
 

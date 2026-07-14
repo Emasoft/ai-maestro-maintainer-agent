@@ -149,7 +149,7 @@ done
 # GH_HTTP_TIMEOUT=300 gh pr review "$PR" --repo "$REPO" --comment --body-file "$BODY_FILE"
 
 # Save a copy under reports/ for the audit trail.
-MAIN_ROOT="$(git worktree list | head -n1 | awk '{print $1}')"
+MAIN_ROOT="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
 REPORT_DIR="$MAIN_ROOT/reports/maintainer-pr-review"
 mkdir -p "$REPORT_DIR"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S%z)"
