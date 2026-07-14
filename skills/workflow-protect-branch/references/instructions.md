@@ -132,6 +132,34 @@ over-matches: it pulls in `concurrency.group` values, boolean leafs
 to be present"*. Verified empirically on 2026-05-27 when an earlier
 shell-grep recipe produced the wrong context list.
 
+**The context is the job's `name:`, NOT its key.** GitHub names a check
+run after the job's `name:` when one is set, falling back to the job key
+only when it is absent — and required-check contexts are matched
+**case-sensitively**. So a job
+
+```yaml
+  validate:
+    name: Validate
+```
+
+reports the context `Validate`, and a ruleset requiring `validate` waits
+for a check that will never arrive. Combined with
+`strict_required_status_checks_policy`, that does not merely weaken the
+gate — it makes **every PR in the repo permanently unmergeable**, while
+the PR page shows all checks green. This is not hypothetical: it silently
+blocked four dependabot PRs on this very plugin for weeks (the earlier fix
+here replaced `grep` with a YAML parser but kept reading the wrong field).
+
+**Matrix jobs are skipped, deliberately.** A job with a `strategy.matrix`
+reports one check run *per combination*, named `Job name (value1, value2)`
+— never the bare name. The bare name would therefore never match, and a
+guessed expansion would be wrong the moment the matrix is built from
+`fromJSON`, an expression, or `include`/`exclude`. Since naming a context
+that never reports **deadlocks the branch**, the fail-safe is to omit
+matrix jobs from the required set and say so out loud, rather than to
+guess. A gate that is slightly narrower than intended is recoverable; a
+branch nobody can merge into is not.
+
 ```bash
 CHECKS_JSON="$(python3 -c "
 import yaml, json, glob, sys
@@ -163,8 +191,25 @@ for f in sorted(glob.glob('.github/workflows/*.yml') + glob.glob('.github/workfl
     # would deadlock every non-admin PR (the check stays pending forever).
     if not ({'pull_request', 'pull_request_target'} & triggers(wf)):
         continue
-    for job_id in (wf.get('jobs') or {}):
-        checks.append({'context': job_id})
+    for job_id, job in (wf.get('jobs') or {}).items():
+        job = job or {}
+        # A matrix job reports one check run PER COMBINATION, named
+        # 'Name (v1, v2)' — never the bare name. We cannot name those
+        # contexts reliably (fromJSON / expressions / include / exclude),
+        # and requiring a context that never reports DEADLOCKS the branch.
+        # Omit it and warn: a narrower gate is recoverable, an unmergeable
+        # branch is not.
+        if (job.get('strategy') or {}).get('matrix'):
+            print('WARN: skipping matrix job %r in %s — its check runs are named '
+                  'per-combination, so no single context can be required safely.'
+                  % (job_id, f), file=sys.stderr)
+            continue
+        # GitHub names the check run after the job's 'name:' when set, and
+        # falls back to the job KEY only when it is absent. Contexts are
+        # matched CASE-SENSITIVELY, so requiring the key of a job that has a
+        # name (validate -> 'Validate') waits forever on a check that never
+        # arrives — with strict policy on, that blocks every PR in the repo.
+        checks.append({'context': job.get('name') or job_id})
 print(json.dumps(checks))
 ")"
 ```
