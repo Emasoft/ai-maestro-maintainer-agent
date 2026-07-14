@@ -1,32 +1,44 @@
 ---
 trdd-id: A6NY2TJU
 title: Two latent defects that made every PR in this repo unmergeable — required-check context and the missing cspell dictionary
-column: dev
+column: published
 created: 2026-07-14T18:39:11+0200
-updated: 2026-07-14T18:39:11+0200
+updated: 2026-07-14T19:05:00+0200
 current-owner: ai-maestro-maintainer-agent
 task-type: bugfix
 release-via: publish
 relevant-rules: [1]
+implementation-commits: [e61590f, a5e3776, d2aac9f, 5d686ff]
+released-version: 1.7.13
 ---
 
 # Two latent defects that made every PR in this repo unmergeable
 
 ## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-07-14
 
-**Where it stands:** both defects FIXED. The cspell half shipped in **v1.7.11**. The
-branch-protection half is committed locally and NOT yet released.
+**Where it stands: SHIPPED and DONE.** Everything below is released and verified. This TRDD
+is `published` — do not edit the body; new work = new TRDD.
 
 | Component | State |
 |---|---|
-| `.cspell.json` + `.cspell-project-words.txt` | SHIPPED v1.7.11 — 554 unknown words → 0 |
-| Live `baseline-pr-and-checks` ruleset (id `17471105`) | FIXED via API — context `validate` → `Validate`; readback verified |
-| `skills/workflow-protect-branch/references/instructions.md` | FIXED — derives the job NAME, skips matrix jobs |
-| `tests/test_protect_branch_contexts.py` | NEW — 6 tests, runs the REAL recipe extracted from the shipped doc |
-| dependabot PRs #21 #22 #23 #25 | ALL MERGED (the first PRs ever to merge here) |
+| `.cspell.json` + `.cspell-project-words.txt` | SHIPPED **v1.7.11** — 554 unknown words → 0 across 257 files |
+| Live `baseline-pr-and-checks` ruleset (id `17471105`) | FIXED via API — context `validate` → `Validate`; readback echoes it verbatim |
+| `skills/workflow-protect-branch/references/instructions.md` | SHIPPED **v1.7.12** — derives the job NAME, skips matrix jobs |
+| `tests/test_protect_branch_contexts.py` | SHIPPED — 6 tests, run the REAL recipe extracted from the shipped doc |
+| CPV pin + `cpv.pipeline.intentional_divergence` | SHIPPED **v1.7.12** — pin v2.152.1 → v2.158.0; 7 files declared; warnings 12 → 5 |
+| `tests/test_workdir_containment.py` (#27 B2/B4/B5) | SHIPPED **v1.7.13** — 11 tests |
+| dependabot PRs #21 #22 #23 #25 | **ALL MERGED** — the first PRs ever to merge in this repo |
+| GitHub | ai-maestro **#44** row · **#28** closed · **#29** Q1–Q7 · **#27** B-rows · CPV **#168** filed |
 
-**NEXT ACTION:** release the branch-protection skill fix, then reply to ai-maestro **#27**
-and **#29 Q2–Q7**.
+Suite **585 green**. CPV `--strict` on v2.158.0: `CRITICAL=0 MAJOR=0 MINOR=0 NIT=0`.
+
+**The one deliberate deferral:** CPV's `RC-TEST-COVERAGE` reports 23 of 56 components with no
+discoverable test (almost all of `commands/`). Advisory, non-blocking, and genuinely too large
+to bundle here — tracked as its own TRDD rather than buried in this one.
+
+**Do NOT re-run the canon migration** (see `[[project_cpv_pipeline_drift_do_not_standardize]]`):
+`standardize --fix` on v2.158.0 is a byte-identical no-op, and the 7 remaining
+`RC-PIPELINE-DRIFT-001` warnings are now *declared* rather than merely tolerated.
 
 ## The bug that mattered: no PR in this repo could ever be merged
 
