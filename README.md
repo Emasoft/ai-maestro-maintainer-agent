@@ -90,6 +90,7 @@ Once the agent session is running:
 | `maintainer-generate-docs` | "generate community files", "scaffold CONTRIBUTING", "audit missing docs" |
 | `maintainer-trdd-adr` | "bootstrap TRDDs", "set up ADRs", "scaffold a TRDD", "author an ADR", "validate design docs" |
 | `maintainer-worktree` | "make a worktree", "work in isolation", "remove the worktree", "clean up worktrees", "where is the main repo root" |
+| `maintainer-macos-notarize` | "notarize the mac build", "set up code signing", "why does Gatekeeper block my app", "audit macOS signing" |
 
 ## Governance Rules
 

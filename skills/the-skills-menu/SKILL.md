@@ -16,7 +16,7 @@ discover its operational skills at runtime. The agent preloads only this catalog
 in its `skills:` frontmatter; everything else loads on demand via the `Skill()`
 tool.
 
-**Why it exists:** preloading all 29 skills injects every one of them into the
+**Why it exists:** preloading all 30 skills injects every one of them into the
 agent's base context on every turn, and a long-running agent re-reads that base
 on each turn. Preloading one catalog and loading the two or three skills a task
 actually needs is the same capability at a fraction of the per-turn cost.
@@ -54,24 +54,25 @@ is exactly the cost this catalog exists to avoid.
 | 9 | `maintainer-guardian` | Proactive supply-chain threat scan of the repo — at session start, on patrol, and pre-merge |
 | 10 | `maintainer-iac-audit` | Audits and hardens Terraform/OpenTofu and Terragrunt code |
 | 11 | `maintainer-k8s-audit` | Audits and hardens Kubernetes manifests, Helm charts and Ansible playbooks |
-| 12 | `maintainer-observability-audit` | Audits monitoring and logging config — Prometheus rules, Alertmanager routes, Loki, Fluent |
-| 13 | `maintainer-patrol` | Polls the entrusted repo for new issues and dispatches `maintainer-triage` per issue |
-| 14 | `maintainer-pr-review` | Deep review of a pull request once triage has cleared it |
-| 15 | `maintainer-pr-triage` | Triages an incoming pull request and decides its disposition |
-| 16 | `maintainer-prrd-trdd-kanban` | The MAINTAINER's role in the PRRD / TRDD / 17-column kanban workflow |
-| 17 | `maintainer-redact` | Redacts private data before any public GitHub content is authored |
-| 18 | `maintainer-sandbox` | Runs untrusted tools or packages in a throwaway container instead of on the host |
-| 19 | `maintainer-secrets-scan` | Secret-scans the working tree and recent commits |
-| 20 | `maintainer-shell-audit` | Audits and hardens shell scripts, git hooks and Makefiles (shellcheck, shfmt) |
-| 21 | `maintainer-tooling-bootstrap` | Audits and installs the maintainer CLI tools (gh, uv, actionlint, ...) on a new host |
-| 22 | `maintainer-trdd-adr` | Scaffolds or authors TRDDs and ADRs under `design/tasks/` and `design/adrs/` |
-| 23 | `maintainer-triage` | Triages a new open issue and decides the action — fix, ask, close, or defer |
-| 24 | `maintainer-worktree` | Creates, inspects, and destroys git worktrees for isolated work; the destroy path refuses to discard an agent's work |
-| 25 | `workflow-bootstrap` | Creates the first `.github/workflows/` for a repo that has none |
-| 26 | `workflow-fix-safe` | Applies ONLY the safe zizmor auto-fixes to the repo's workflows |
-| 27 | `workflow-pin-actions` | SHA-pins every unpinned third-party action |
-| 28 | `workflow-protect-branch` | Queries or applies the ratified default-branch and release-tag rulesets |
-| 29 | `workflow-scan` | Read-only security audit of GitHub Actions workflows (zizmor + actionlint + the Sentinel rules) |
+| 12 | `maintainer-macos-notarize` | Audits or bootstraps Apple code-signing + notarization for a repo shipping macOS binaries |
+| 13 | `maintainer-observability-audit` | Audits monitoring and logging config — Prometheus rules, Alertmanager routes, Loki, Fluent |
+| 14 | `maintainer-patrol` | Polls the entrusted repo for new issues and dispatches `maintainer-triage` per issue |
+| 15 | `maintainer-pr-review` | Deep review of a pull request once triage has cleared it |
+| 16 | `maintainer-pr-triage` | Triages an incoming pull request and decides its disposition |
+| 17 | `maintainer-prrd-trdd-kanban` | The MAINTAINER's role in the PRRD / TRDD / 17-column kanban workflow |
+| 18 | `maintainer-redact` | Redacts private data before any public GitHub content is authored |
+| 19 | `maintainer-sandbox` | Runs untrusted tools or packages in a throwaway container instead of on the host |
+| 20 | `maintainer-secrets-scan` | Secret-scans the working tree and recent commits |
+| 21 | `maintainer-shell-audit` | Audits and hardens shell scripts, git hooks and Makefiles (shellcheck, shfmt) |
+| 22 | `maintainer-tooling-bootstrap` | Audits and installs the maintainer CLI tools (gh, uv, actionlint, ...) on a new host |
+| 23 | `maintainer-trdd-adr` | Scaffolds or authors TRDDs and ADRs under `design/tasks/` and `design/adrs/` |
+| 24 | `maintainer-triage` | Triages a new open issue and decides the action — fix, ask, close, or defer |
+| 25 | `maintainer-worktree` | Creates, inspects, and destroys git worktrees for isolated work; the destroy path refuses to discard an agent's work |
+| 26 | `workflow-bootstrap` | Creates the first `.github/workflows/` for a repo that has none |
+| 27 | `workflow-fix-safe` | Applies ONLY the safe zizmor auto-fixes to the repo's workflows |
+| 28 | `workflow-pin-actions` | SHA-pins every unpinned third-party action |
+| 29 | `workflow-protect-branch` | Queries or applies the ratified default-branch and release-tag rulesets |
+| 30 | `workflow-scan` | Read-only security audit of GitHub Actions workflows (zizmor + actionlint + the Sentinel rules) |
 
 ## Output
 
