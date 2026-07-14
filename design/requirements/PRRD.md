@@ -1,6 +1,6 @@
 ---
-prrd-version: 1.1
-updated: 2026-06-11T11:25:00+0200
+prrd-version: 2.0
+updated: "2026-07-09T15:16:02+0200"
 project: ai-maestro-maintainer-agent
 project-id: ai-maestro-maintainer-agent
 canonical-source: design/requirements/PRRD.md
@@ -27,7 +27,7 @@ spec: `~/.claude/rules/prrd-design-rules.md`.
 
 ## 🥇 GOLDEN — set by the USER (immutable to MANAGER)
 
-- **G1.1** — Every agent that writes to GitHub (issue, issue comment, PR, PR comment, PR review, discussion, release note) MUST begin the body with a one-line self-identification of which agent/role/plugin authored it, because all AI Maestro agents share the single human-owner GitHub identity (the owner's gh CLI auth). Recommended leading line: _Posted by the Claude developing **<plugin-or-role>** (via the shared @owner gh auth)._ Commit messages SHOULD carry an `Agent: <role>` trailer.
+- **G1.2** — Every agent that writes to GitHub (issue, issue comment, PR, PR comment, PR review, discussion, release note) MUST begin the body with a one-line self-identification of which agent/role/plugin authored it, because all AI Maestro agents share the single human-owner GitHub identity (the shared @owner gh CLI auth). The canonical leading line — mandated by the USER on 2026-06-09, superseding the earlier italic _Posted by the Claude developing …_ style — is: This is the Claude responsible for the <project> project. Commit messages SHOULD carry an `Agent: <plugin-slug>` trailer (the stable package slug, e.g. `Agent: ai-maestro-maintainer-agent`), greppable ecosystem-wide and rename-surviving.
 
 ## 🥈 SILVER — MANAGER-mutable (agents propose via COS)
 

@@ -94,7 +94,7 @@ def test_baseline_atomic_write_replaces_previous_file(tmp_path: Path) -> None:
     """guardian-baseline.json atomic write produces the documented file at the documented path."""
     agent_dir = tmp_path / "agent"
     agent_dir.mkdir()
-    env = {"AIMAESTRO_AGENT_DIR": str(agent_dir)}
+    env = {"AGENT_WORK_DIR": str(agent_dir)}
     sd = state_dir(env=env)
     target = sd / "guardian-baseline.json"
 

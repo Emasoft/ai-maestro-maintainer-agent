@@ -105,6 +105,14 @@ Idempotent — re-running on an already-pinned workflow is a no-op.
   <https://docs.github.com/rest/git/refs>
 - Companion skills: `workflow-scan`, `workflow-fix-safe`,
   `workflow-protect-branch`.
+- [Action currency](references/action-currency.md) — pinning holds the
+  major, so staleness is a SEPARATE finding this reference explains:
+  - Pin vs flag: what this skill does and does not do
+  - Node.js runtime EOL timeline
+  - Hard sunsets (permanent failures, not warnings)
+  - Current major versions (dated snapshot — re-verify)
+  - Detecting a stale major
+  - Third-party actions: review the bundled dist, not just src
 - [Full step-by-step instructions](references/instructions.md):
   - Step 1: Protected-branch guard
   - Step 2: Discover unpinned refs

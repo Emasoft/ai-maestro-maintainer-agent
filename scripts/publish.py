@@ -286,6 +286,33 @@ def get_current_version(plugin_root: Path) -> str | None:
     except (json.JSONDecodeError, OSError):
         return None
 
+def get_plugin_name(plugin_root: Path) -> str:
+    """Read the plugin name from .claude-plugin/plugin.json. Exit 1 on failure.
+
+    Deliberately fail-fast with NO fallback (unlike get_current_version, which
+    may return None). This name is what Claude Code's dependency resolver
+    filters release tags on — see the resolver-tag block in
+    stage_commit_and_push. A guessed or defaulted name would produce a tag that
+    no resolver can ever match, and the damage would not surface here: it would
+    surface later, as an unresolvable dependency in someone else's install.
+    Stopping the release is strictly cheaper than shipping a silently-wrong tag.
+    """
+    pj = plugin_root / ".claude-plugin" / "plugin.json"
+    if not pj.is_file():
+        cprint(f"  {RED}plugin.json not found at {pj} — cannot build the resolver tag.{NC}")
+        sys.exit(1)
+    try:
+        data = json.loads(pj.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as e:
+        cprint(f"  {RED}plugin.json unreadable: {e}{NC}")
+        sys.exit(1)
+    name = str(data.get("name") or "").strip()
+    if not name:
+        cprint(f"  {RED}plugin.json has no 'name' — the {{name}}--v{{version}} "
+               f"resolver tag cannot be built.{NC}")
+        sys.exit(1)
+    return name
+
 def update_plugin_json(root: Path, new_ver: str) -> tuple[bool, str]:
     """Write version to .claude-plugin/plugin.json."""
     pj = root / ".claude-plugin" / "plugin.json"
@@ -1576,21 +1603,45 @@ def stage_commit_and_push(root: Path, new_ver: str, dry_run: bool) -> None:
     """
     cprint(f"\n{BOLD}[10/11] Committing and pushing...{NC}")
     tag = f"v{new_ver}"
+    # The RESOLVER tag. Since Claude Code 2.1.110, a version-constrained plugin
+    # dependency resolves ONLY against tags named "{plugin-name}--v{version}":
+    # the resolver lists the repo's tags, filters to those starting with
+    # "{plugin-name}--v", and picks the highest one satisfying the range. A repo
+    # whose releases carry only "v{version}" therefore looks, to the resolver,
+    # like a repo with NO tags at all — every constrained dependency on it fails
+    # with "no git tag satisfying <range>" while `git ls-remote --tags` plainly
+    # lists them. That is not hypothetical: it grounded the entire ai-maestro
+    # fleet for a day (ai-maestro#28 / TRDD-JT3U4ZVM).
+    #
+    # BOTH tags ship, and they are NOT redundant:
+    #   v{version}                -> GitHub Releases + the marketplace notify chain
+    #   {plugin-name}--v{version} -> the ONLY tag the dependency resolver reads
+    #
+    # They are created together and pushed in the SAME --atomic transaction as
+    # the commit, so a release can never land half-tagged (a commit with one tag
+    # but not the other is exactly the state that makes the failure hard to spot).
+    #
+    # NB: do NOT reach for `claude plugin tag <name>` here. That CLI's positional
+    # argument is a PATH, not a tag name — invoked with a tag name it silently
+    # creates nothing and the release looks fine right up until an install fails.
+    resolver_tag = f"{get_plugin_name(root)}--v{new_ver}"
     expected_subject = f"chore: bump version to {new_ver}"
     head_subject = _head_commit_message(root)
     tree_clean = _git_porcelain_clean(root)
     tag_exists = _local_tag_exists(root, tag)
+    resolver_tag_exists = _local_tag_exists(root, resolver_tag)
 
     if dry_run:
         if head_subject == expected_subject and tree_clean:
             cprint(f"  Would skip commit (HEAD already '{expected_subject}', tree clean)")
         else:
             cprint(f"  Would commit: {expected_subject}")
-        if tag_exists:
-            cprint(f"  Would skip tag (already exists locally): {tag}")
-        else:
-            cprint(f"  Would tag: {tag}")
-        cprint(f"  Would push (atomic): origin HEAD {tag}")
+        for t, exists in ((tag, tag_exists), (resolver_tag, resolver_tag_exists)):
+            if exists:
+                cprint(f"  Would skip tag (already exists locally): {t}")
+            else:
+                cprint(f"  Would tag: {t}")
+        cprint(f"  Would push (atomic): origin HEAD {tag} {resolver_tag}")
         return
 
     if head_subject == expected_subject and tree_clean:
@@ -1600,10 +1651,13 @@ def stage_commit_and_push(root: Path, new_ver: str, dry_run: bool) -> None:
         run(["git", "add", "-A"], cwd=root)
         run(["git", "commit", "-m", expected_subject], cwd=root)
 
-    if tag_exists:
-        cprint(f"  {YELLOW}Tag {tag} already exists locally — skipping tag step.{NC}")
-    else:
-        run(["git", "tag", "-a", tag, "-m", f"Release {tag}"], cwd=root)
+    # Both tags are created here (idempotently — an interrupted publish may have
+    # left either one behind) and pushed together below.
+    for t, exists in ((tag, tag_exists), (resolver_tag, resolver_tag_exists)):
+        if exists:
+            cprint(f"  {YELLOW}Tag {t} already exists locally — skipping tag step.{NC}")
+        else:
+            run(["git", "tag", "-a", t, "-m", f"Release {t}"], cwd=root)
 
     # gh-auth precheck — fail fast with actionable error if gh missing/unauthed.
     owner, repo = _resolve_owner_repo(root)
@@ -1615,12 +1669,12 @@ def stage_commit_and_push(root: Path, new_ver: str, dry_run: bool) -> None:
     # transaction in the wire protocol; the server rolls back if any ref
     # update fails. git_with_retry still wraps the call so transient
     # network hiccups (4xx-class permanent errors fall through immediately).
-    cprint(f"  {BLUE}$ git push --atomic origin HEAD {tag}{NC}")
+    cprint(f"  {BLUE}$ git push --atomic origin HEAD {tag} {resolver_tag}{NC}")
     git_with_retry(
-        ["git", "push", "--atomic", "origin", "HEAD", tag],
+        ["git", "push", "--atomic", "origin", "HEAD", tag, resolver_tag],
         cwd=str(root), capture_output=False,
     )
-    cprint(f"  {GREEN}Pushed {tag} atomically.{NC}")
+    cprint(f"  {GREEN}Pushed {tag} + {resolver_tag} atomically.{NC}")
 
 def stage_gh_release(root: Path, new_ver: str, dry_run: bool) -> None:
     """Step 11: Create GitHub release via gh CLI.

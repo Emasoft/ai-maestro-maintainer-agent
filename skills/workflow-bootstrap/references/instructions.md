@@ -7,6 +7,7 @@
 - [Step-by-step commands](#step-by-step-commands)
 - [Post-merge ruleset apply](#post-merge-ruleset-apply)
 - [Per-language walk-throughs](#per-language-walk-throughs)
+- [Optional supply-chain add-ons](#optional-supply-chain-add-ons)
 
 ## Language detection table
 
@@ -198,3 +199,21 @@ User: "set up workflows for this new Python repo"
 → REFUSE; recommend: workflow-fix-safe + workflow-pin-actions
 → exit 64
 ```
+
+## Optional supply-chain add-ons
+
+The base CI baseline is deliberately lean. Two extra SECURITY controls
+apply only to a subset of repos and are offered, not forced:
+
+- a `pull_request`-time **dependency-review** gate (blocks vulnerable /
+  badly-licensed dependency deltas), for any repo with a lockfile
+  GitHub's dependency graph understands;
+- **OIDC keyless auth + SBOM/build-provenance attestation**, for any
+  repo that publishes an artifact or container image (removes
+  long-lived registry secrets; makes the artifact verifiable).
+
+Full snippets, the exact `permissions:` each needs, and the "when NOT
+to add" guardrails are in
+[supply-chain-extras.md](supply-chain-extras.md). Do not add either
+unprompted, and never widen the top-level `permissions:` to fit them —
+`id-token` / `attestations` / `packages` are per-job grants.

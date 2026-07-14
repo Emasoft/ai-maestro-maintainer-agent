@@ -1,0 +1,78 @@
+{
+  "version": "0.2",
+  "language": "en,en-GB",
+  "dictionaryDefinitions": [
+    {
+      "name": "project-words",
+      "path": "./.cspell-project-words.txt",
+      "description": "This project's own vocabulary — tool names, CI/k8s nouns, author surnames, identifiers from the security-scanning skills. Kept in a plain newline file so it diffs cleanly and can be regenerated.",
+      "addWords": false
+    }
+  ],
+  "dictionaries": [
+    "project-words",
+    "softwareTerms",
+    "bash",
+    "shellscript",
+    "python",
+    "node",
+    "npm",
+    "typescript",
+    "docker",
+    "fullstack",
+    "filetypes",
+    "companies",
+    "misc",
+    "en_US",
+    "en_GB"
+  ],
+  "comment-en-GB": "en-GB is loaded alongside en_US because the prose in this repo uses British spellings (behaviour, authorised, artefacts, amortised, analyser). Without it, correct English fails the build.",
+  "ignorePaths": [
+    "uv.lock",
+    "*.json",
+    "CHANGELOG.md",
+    "design/**",
+    "**/tests/fixtures/**",
+    "**/fixtures/**",
+    "*_dev/**",
+    ".claude/**",
+    ".tldr/**",
+    "llm_externalizer_output/**"
+  ],
+  "comment-design": "design/** is the TRDD corpus. A TRDD in a terminal column is FROZEN by rule (its body must never be edited) and it quotes the user verbatim. A spell finding in a frozen document is therefore UNFIXABLE and would red the build forever, so the corpus is excluded rather than gated. This is not a suppression of a live finding — it is an acknowledgement that the corpus is immutable by design.",
+  "ignoreRegExpList": [
+    "sha-pins",
+    "long-hex",
+    "urls",
+    "example-credentials",
+    "base64-blobs"
+  ],
+  "patterns": [
+    {
+      "name": "sha-pins",
+      "description": "Action SHA pins. Dependabot rewrites these on every bump, so a spell-checker must never gate on them — otherwise every dependency PR fails Lint on a 40-char hex string, which is exactly what blocked PRs #21/#22/#23/#25.",
+      "pattern": "/\\b[0-9a-f]{7,64}\\b/g"
+    },
+    {
+      "name": "long-hex",
+      "description": "Digests, checksums, uppercase hashes.",
+      "pattern": "/\\b[0-9A-Fa-f]{16,}\\b/g"
+    },
+    {
+      "name": "urls",
+      "description": "URLs and bare hostnames — their path segments are not English.",
+      "pattern": "/(https?:\\/\\/|www\\.)[^\\s\"'`)>\\]]+/g"
+    },
+    {
+      "name": "example-credentials",
+      "description": "DELIBERATELY-FAKE credentials in the security-teaching fixtures and docs (AKIA…, ghp_…, sk-…, AIza…). They are the sample data this plugin's own secret-scanning tests match against, so they must stay verbatim and must not be spell-gated. They are not live secrets.",
+      "pattern": "/\\b(AKIA|ASIA|ghp_|gho_|ghs_|ghu_|github_pat_|sk-|xox[baprs]-|AIza)[A-Za-z0-9_\\-]{4,}/g"
+    },
+    {
+      "name": "base64-blobs",
+      "description": "PEM bodies / base64 payloads in key fixtures.",
+      "pattern": "/\\b[A-Za-z0-9+\\/]{32,}={0,2}\\b/g"
+    }
+  ],
+  "words": []
+}
