@@ -2,7 +2,7 @@
 
 <!--BADGES-START-->
 [![CI](https://github.com/Emasoft/ai-maestro-maintainer-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Emasoft/ai-maestro-maintainer-agent/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.7.8-blue)](https://github.com/Emasoft/ai-maestro-maintainer-agent/releases)
+[![Version](https://img.shields.io/badge/version-1.7.11-blue)](https://github.com/Emasoft/ai-maestro-maintainer-agent/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 <!--BADGES-END-->
 
@@ -169,9 +169,11 @@ design folders (`design/proposals|tasks|refused|archived`). Full model:
 - SERENA MCP (optional, improves code search)
 - **`ai-maestro-plugin`** (declared in `plugin.json` `dependencies`) — install
   it from the `Emasoft/ai-maestro-plugins` marketplace alongside this plugin.
-  It provides the PRRD/TRDD/kanban governance scripts the
-  `maintainer-prrd-trdd-kanban` skill invokes (`get-prrd.py`, `prrd-edit.py`,
-  `findprrd.py`, `findtrdd.py`, `kanban.py` under `scripts/prrd-trdd/`).
+  It provides the granular `ama-*` PRRD/TRDD/kanban governance skills
+  (`ama-kanban-render`, `ama-trdd-*`, `ama-prrd-*`, `ama-proposal-approvals`)
+  that the `maintainer-prrd-trdd-kanban` wrapper builds on — they own the
+  `scripts/prrd-trdd/` governance scripts (`get-prrd.py`, `prrd-edit.py`,
+  `findprrd.py`, `findtrdd.py`, `kanban.py`).
   Without it those commands fail silently at runtime. As of Claude Code
   ≥ 2.1.143 this declared dependency is **enforced**: `claude plugin enable`
   force-enables it (and its transitive deps), and
@@ -231,7 +233,7 @@ design folders (`design/proposals|tasks|refused|archived`). Full model:
   `pyproject.toml [tool.uv]` knobs — `min-release-age`, `trust-policy`,
   `frozen-lockfile`, `blockExoticSubdeps`) — to
   `$AGENT_DIR/.aimaestro/state/guardian-baseline.json` (where
-  `$AGENT_DIR = ${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}`,
+  `$AGENT_DIR = ${AGENT_WORK_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}`,
   per the post-v1.1.0 governance fix that relocated state into
   the agent's working directory so AI Maestro backups + host
   migration capture it). At

@@ -16,8 +16,9 @@ Use one of these private channels instead:
 Please include:
 
 - The project version.
-- Your platform (`uname -a` on Unix; PowerShell `$PSVersionTable`
-  on Windows).
+- Your platform: the operating system, CPU architecture, and OS or
+  kernel version (Windows users can read this from PowerShell's
+  version table).
 - A redacted reproduction case (drop any `/Users/<name>` segments
   before submitting per the redaction convention in
   `CONTRIBUTING.md`).

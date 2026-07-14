@@ -46,13 +46,13 @@ desktop) carries the ledger with the agent.
 The agent working directory is resolved via this fallback chain:
 
 ```bash
-# 1. $AIMAESTRO_AGENT_DIR is the canonical AI Maestro env var
-#    (preferred when AI Maestro is the runtime, see
-#    https://github.com/Emasoft/ai-maestro/issues/32).
+# 1. $AGENT_WORK_DIR is the canonical AI Maestro env var — exported into the
+#    pane environment when the session is created, and treated by the
+#    directory-guard hook as the sandbox boundary.
 # 2. $CLAUDE_PROJECT_DIR is Claude Code's standard project dir
-#    (current actual env var until AI Maestro ships its own).
+#    (covers a plain, non-fleet session).
 # 3. $PWD is the last-resort fallback for unmanaged runs.
-AGENT_DIR="${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+AGENT_DIR="${AGENT_WORK_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
 STATE_DIR="$AGENT_DIR/.aimaestro/state"
 mkdir -p "$STATE_DIR"
 ```
