@@ -41,12 +41,16 @@ def _shipped_files() -> list[Path]:
     Uses `git ls-files` rather than a glob so that untracked scratch, reports/,
     and the _dev trees can never leak into the assertions.
     """
+    # splitlines(), NOT split(): git ls-files emits one path per line, and a path
+    # containing a space would be shredded into two bogus entries by whitespace
+    # splitting — silently DROPPING the real file from a containment scan whose
+    # whole job is to miss nothing.
     out = subprocess.run(
         ["git", "ls-files", "--", *SHIPPED_DIRS],
         cwd=REPO, capture_output=True, text=True, check=True,
-    ).stdout.split()
+    ).stdout.splitlines()
     skip = {".json", ".lock", ".png", ".jpg", ".ico"}
-    return [REPO / f for f in out if Path(f).suffix not in skip]
+    return [REPO / f for f in (ln.strip() for ln in out) if f and Path(f).suffix not in skip]
 
 
 # ─────────────────── B2 — do not clobber the repo's own config ───────────────────

@@ -1403,6 +1403,77 @@ def _git_porcelain_clean(root: Path) -> bool:
     return r.returncode == 0 and not r.stdout.strip()
 
 
+def _release_managed_paths(root: Path) -> list[str]:
+    """The repo-relative paths the release pipeline itself rewrites during a bump.
+
+    This is the ONLY set the release commit may stage. It mirrors, one-for-one,
+    the files the update_* helpers above actually write:
+
+      .claude-plugin/plugin.json       update_plugin_json
+      .claude-plugin/marketplace.json  update_self_marketplace_json (Layout C)
+      pyproject.toml                   update_pyproject_toml
+      README.md                        stage_update_badges
+      CHANGELOG.md                     stage_changelog
+      uv.lock                          re-synced by any `uv run` in the gates
+      scripts/**/*.py with __version__ update_python_versions
+
+    The `__version__` predicate is deliberately the SAME test update_python_versions
+    applies, so the staged set can never drift from the written set: a script that
+    carries no __version__ is never rewritten, and so is never staged.
+    """
+    paths = [
+        ".claude-plugin/plugin.json",
+        ".claude-plugin/marketplace.json",
+        "pyproject.toml",
+        "README.md",
+        "CHANGELOG.md",
+        "uv.lock",
+    ]
+    scripts_dir = root / "scripts"
+    if scripts_dir.is_dir():
+        version_re = re.compile(r'^__version__\s*=\s*["\']', re.MULTILINE)
+        for py_file in sorted(scripts_dir.rglob("*.py")):
+            try:
+                if version_re.search(py_file.read_text(encoding="utf-8")):
+                    paths.append(str(py_file.relative_to(root)))
+            except OSError:
+                continue
+    return [p for p in paths if (root / p).exists()]
+
+
+def _unmanaged_dirty_paths(root: Path, managed: list[str]) -> list[str]:
+    """Paths that are dirty/untracked but are NOT release-managed.
+
+    Anything here was left behind by a gate (a linter's auto-fix, a tool's
+    artifact, a stray scratch file) and has no business riding a public release
+    commit. Gitignored files never appear in `git status --porcelain`, so the
+    reports/ and *_dev/ trees are correctly invisible to this check.
+    """
+    try:
+        r = subprocess.run(
+            ["git", "status", "--porcelain"],
+            capture_output=True, text=True, cwd=str(root),
+            check=False, timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if r.returncode != 0:
+        return []
+    managed_set = set(managed)
+    dirty: list[str] = []
+    for line in r.stdout.splitlines():
+        if not line.strip():
+            continue
+        # Porcelain v1: "XY <path>"; a rename is "XY old -> new".
+        path = line[3:]
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1]
+        path = path.strip().strip('"')
+        if path and path not in managed_set:
+            dirty.append(path)
+    return dirty
+
+
 def _head_commit_message(root: Path) -> str:
     """Return the subject line of HEAD, or '' on failure."""
     try:
@@ -1648,7 +1719,32 @@ def stage_commit_and_push(root: Path, new_ver: str, dry_run: bool) -> None:
         cprint(f"  {YELLOW}HEAD is already '{expected_subject}' and tree is clean — "
                f"skipping commit (interrupted-publish recovery).{NC}")
     else:
-        run(["git", "add", "-A"], cwd=root)
+        # Stage BY NAME, never `git add -A`.
+        #
+        # The tree was verified clean at stage [1/11], but ~9 gates run between
+        # there and here (lint, tests, CPV, consistency) and any of them can leave
+        # an artifact behind. `git add -A` would sweep that artifact into the
+        # release commit and PUSH it to a public repo — which is precisely how a
+        # scratch file, a tool's output, or a credential-bearing log becomes a
+        # permanent part of git history. Gitignored trees (reports/, *_dev/) are
+        # safe, but anything untracked and *not* ignored is not.
+        #
+        # This plugin refuses to do what it tells everyone else not to do: its own
+        # skills (workflow-fix-safe, maintainer-fix) instruct "stage by name, NEVER
+        # `git add -A`", and so does the user's global rule.
+        managed = _release_managed_paths(root)
+        leftover = _unmanaged_dirty_paths(root, managed)
+        if leftover:
+            cprint(f"  {RED}REFUSED: a gate left files behind that the release does not "
+                   f"manage:{NC}")
+            for p in leftover[:20]:
+                cprint(f"    {RED}{p}{NC}")
+            if len(leftover) > 20:
+                cprint(f"    {RED}… and {len(leftover) - 20} more{NC}")
+            cprint(f"  {RED}Committing them would push unreviewed content to a public repo. "
+                   f"Remove them, or gitignore them, then re-run.{NC}")
+            sys.exit(1)
+        run(["git", "add", "--", *managed], cwd=root)
         run(["git", "commit", "-m", expected_subject], cwd=root)
 
     # Both tags are created here (idempotently — an interrupted publish may have
