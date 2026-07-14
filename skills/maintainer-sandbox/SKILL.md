@@ -132,6 +132,7 @@ xargs -r docker rm -f`.
 
 - [usage](references/usage.md) — CLI + recipe + safety details:
   - [Pick the right entry point](references/usage.md#pick-the-right-entry-point)
+  - [Images](references/usage.md#images)
   - [CLI reference](references/usage.md#cli-reference)
   - [Shootout recipe schema](references/usage.md#shootout-recipe-schema)
   - [Safety invariants](references/usage.md#safety-invariants)

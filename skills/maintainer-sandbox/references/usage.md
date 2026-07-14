@@ -8,11 +8,50 @@ and stream progress to the user.
 ## Table of Contents
 
 - [Pick the right entry point](#pick-the-right-entry-point)
+- [Images](#images)
 - [CLI reference](#cli-reference)
 - [Shootout recipe schema](#shootout-recipe-schema)
 - [Safety invariants](#safety-invariants)
 - [Common workflows](#common-workflows)
 - [Troubleshooting](#troubleshooting)
+
+---
+
+## Images
+
+Built from `scripts/sandbox/dockerfiles/*.Dockerfile` by `build-images`. Every
+one runs as a non-root user on a pinned base — enforced by
+`tests/test_dockerfile_hardening.py`, not merely intended.
+
+| Image | For |
+|---|---|
+| `aimm-sandbox:node-baseline` | running an untrusted npm install / test in a clean Node container |
+| `aimm-sandbox:node-sfw`, `:node-safe-chain` | the same, under a specific supply-chain defence, for shootouts |
+| `aimm-sandbox:python-baseline` | the same, for pypi |
+| `aimm-sandbox:mitm` | optional mitmproxy sidecar — records outbound traffic when a recipe sets `capture_network: true` |
+| `aimm-sandbox:agent-cli` | a dev container carrying the **Claude Code CLI** plus a working toolchain (git, python, node, build tools, ripgrep, jq) |
+
+**`agent-cli` is the one image that is NOT for untrusted code.** The others exist
+to run hostile packages with `--network none`; an agent CLI has to reach the API,
+so it needs `--network bridge` and a key at run time:
+
+```bash
+uv run scripts/sandbox/sandbox.py run aimm-sandbox:agent-cli "$REPO" \
+  --cmd 'claude -p "audit this repo"' --network bridge --allow-writes
+```
+
+What it isolates is the **filesystem and the toolchain** — the repo's postinstall
+scripts, its dependencies, and whatever the agent does to them never touch the
+host. It does not isolate the network. Pin the CLI at build time when
+reproducibility matters:
+`docker build --build-arg CLAUDE_CODE_VERSION=2.1.191 …`.
+
+**No image here fetches anything over the network at build time** — apt, npm, and
+pip only. That is why `gh` is absent from `agent-cli`: it has no Debian package,
+and adding its apt repo would make this the one image that reaches out mid-build.
+`python-baseline` learned the same lesson (its curl-based `uv` installer kept
+breaking when the upstream layout drifted; it uses `pip install uv` now). A
+derived image can add whatever a specific task needs.
 
 ---
 
