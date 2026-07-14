@@ -408,16 +408,41 @@ def test_recover_refuses_to_delete_an_independent_git_repo(spaced_repo: Path) ->
 # ---------------------------------------------------------------------------
 
 
-def test_gitignored_dirs_finds_node_modules(spaced_repo: Path) -> None:
-    """The ignored dirs that actually exist in the main checkout are discovered."""
-    assert worktree.gitignored_dirs(spaced_repo) == ["dist", "node_modules"]
+def test_gitignored_paths_finds_node_modules(spaced_repo: Path) -> None:
+    """The ignored paths that actually exist in the main checkout are discovered."""
+    assert worktree.gitignored_paths(spaced_repo) == ["dist", "node_modules"]
 
 
-def test_gitignored_dirs_never_offers_to_link_the_worktree_dir(spaced_repo: Path) -> None:
+def test_gitignored_paths_never_offers_to_link_the_worktree_dir(spaced_repo: Path) -> None:
     """.worktrees must never be symlinked into a worktree — it would contain itself."""
     (spaced_repo / worktree.WORKTREE_DIR).mkdir()
-    (spaced_repo / ".gitignore").write_text("node_modules/\n.venv/\n.worktrees/\n")
-    assert worktree.WORKTREE_DIR not in worktree.gitignored_dirs(spaced_repo)
+    (spaced_repo / ".gitignore").write_text("node_modules/\n.venv/\n/dist\n.worktrees/\n")
+    assert worktree.WORKTREE_DIR not in worktree.gitignored_paths(spaced_repo)
+
+
+def test_claude_managed_worktrees_dir_is_never_linked(spaced_repo: Path) -> None:
+    """`.claude/worktrees/` — Claude Code's OWN worktree dir — must not be linked either.
+
+    Since CC 2.1.178 the harness keeps its worktrees in `.claude/worktrees/`. That
+    path is the reason NEVER_LINK had to become a set of PATH PREFIXES rather than
+    bare first-segment names: its first component is `.claude`, a directory we very
+    much DO descend into (it holds the local skills, settings, and the memgrep
+    index). A first-component check would wave it straight through — and symlinking
+    it into a worktree makes that worktree contain the directory that contains it.
+    """
+    (spaced_repo / ".claude" / "worktrees" / "cc-managed").mkdir(parents=True)
+    (spaced_repo / ".claude" / "skills").mkdir(parents=True)
+    (spaced_repo / ".claude" / "skills" / "s.md").write_text("local\n")
+    (spaced_repo / ".gitignore").write_text("node_modules/\n.venv/\n/dist\n.claude/\n")
+
+    found = worktree.gitignored_paths(spaced_repo)
+
+    assert not any(p.startswith(".claude/worktrees") for p in found), f"a worktree-holding dir must never be offered for linking, got: {found}"
+    # And the guard must be surgical, not a blanket ban on .claude:
+    assert worktree._is_never_link(".claude/worktrees")
+    assert worktree._is_never_link(".claude/worktrees/cc-managed")
+    assert not worktree._is_never_link(".claude/skills"), "the rest of .claude must still be linkable"
+    assert not worktree._is_never_link(".claude")
 
 
 def test_create_symlinks_node_modules_into_the_worktree(spaced_repo: Path) -> None:
@@ -507,12 +532,35 @@ def test_ensure_symlink_excludes_is_idempotent(spaced_repo: Path) -> None:
     assert lines.count(worktree.EXCLUDE_HEADER) == 1
 
 
-def test_link_gitignored_dirs_refuses_a_path_escape(spaced_repo: Path) -> None:
-    """A link name must be ONE path component — `../../etc` would escape the worktree."""
+def test_link_gitignored_paths_refuses_a_path_escape(spaced_repo: Path) -> None:
+    """A link path must stay INSIDE the worktree — `../../.ssh` must not be linkable.
+
+    The original guard was "a link name must be ONE path component", which made
+    escape impossible by construction. Nested paths (`.claude/skills`) broke that
+    rule, so the guard had to be REPLACED, not dropped — relaxing a constraint
+    that was doing security work is how a path traversal gets introduced.
+    """
     wt = worktree.create_worktree(spaced_repo, "feat", link_gitignored=False)
-    for evil in ("../escape", "..", "/etc", "a/b", "~/secrets"):
-        with pytest.raises(WorktreeError, match="single path component"):
-            worktree.link_gitignored_dirs(spaced_repo, wt.path, [evil])
+    for evil in ("../escape", "..", "/etc/passwd", "~/.ssh/id_rsa", "a/../../b", ""):
+        with pytest.raises(WorktreeError, match="refusing to link"):
+            worktree.link_gitignored_paths(spaced_repo, wt.path, [evil])
+
+
+def test_link_gitignored_paths_allows_a_legitimate_nested_path(spaced_repo: Path) -> None:
+    """A nested path is NOT an escape — it is the entire point of the change.
+
+    `.claude/skills` contains a separator and is perfectly safe. A guard that
+    rejected it would be rejecting the feature.
+    """
+    (spaced_repo / ".claude" / "skills").mkdir(parents=True)
+    (spaced_repo / ".claude" / "skills" / "s.md").write_text("local\n")
+    wt = worktree.create_worktree(spaced_repo, "feat", link_gitignored=False)
+
+    linked = worktree.link_gitignored_paths(spaced_repo, wt.path, [".claude/skills"])
+
+    assert linked == [".claude/skills"]
+    assert (wt.path / ".claude" / "skills").is_symlink()
+    assert (wt.path / ".claude" / "skills" / "s.md").read_text() == "local\n"
 
 
 def test_no_link_leaves_the_worktree_bare(spaced_repo: Path) -> None:
@@ -520,6 +568,104 @@ def test_no_link_leaves_the_worktree_bare(spaced_repo: Path) -> None:
     wt = worktree.create_worktree(spaced_repo, "feat", link_gitignored=False)
     assert not (wt.path / "node_modules").exists()
     assert _git(wt.path, "status", "--porcelain").strip() == ""
+
+
+# ---------------------------------------------------------------------------
+# 7b. The `.claude` case — a PARTIALLY tracked directory
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def claude_repo(spaced_repo: Path) -> Path:
+    """A repo whose `.claude/` is PARTIALLY tracked — the shape that broke the first cut.
+
+    Two scopes live side by side in one directory, and they must reach the
+    worktree by two different routes:
+
+      - **project-scoped** = git-TRACKED  -> git checks it out. Free.
+      - **local-scoped**   = git-IGNORED  -> nothing brings it across unless we
+                             symlink it.
+
+    The local half is not incidental: it holds a locally-installed skill, the
+    memgrep INDEX (three levels down, inside a tracked directory), and per-machine
+    state. Without it an agent in the worktree has the memory `.md` files but
+    cannot `memgrep recall` — a silent, empty-result failure, not an error.
+    """
+    c = spaced_repo / ".claude"
+    (c / "project" / "memory").mkdir(parents=True)
+    (c / "project" / "memory" / "MEMORY.md").write_text("# shared, committed\n")  # project-scoped
+
+    # local-scoped (all gitignored):
+    (c / "skills" / "my-local-skill").mkdir(parents=True)
+    (c / "skills" / "my-local-skill" / "SKILL.md").write_text("---\nname: local\n---\n")
+    (c / "project" / "memory" / ".memgrep").mkdir()
+    (c / "project" / "memory" / ".memgrep" / "index.db").write_text("sqlite\n")
+    (c / "janitor").mkdir()
+    (c / "janitor" / "state.json").write_text("{}\n")
+    (c / "settings.local.json").write_text('{"local": true}\n')  # a FILE, not a dir
+
+    (spaced_repo / ".gitignore").write_text("node_modules/\n.venv/\n/dist\n.claude/skills/\n.claude/janitor/\n.claude/settings.local.json\n.memgrep/\n")
+    _git(spaced_repo, "add", ".gitignore", ".claude/project/memory/MEMORY.md")
+    _git(spaced_repo, "commit", "-qm", "claude")
+    return spaced_repo
+
+
+def test_gitignored_paths_descends_into_a_partially_tracked_directory(claude_repo: Path) -> None:
+    """The local-scoped half of `.claude/` is found — at any depth, files included.
+
+    A top-level-only scan (the first cut) returns NONE of these, because `.claude`
+    itself is tracked and git therefore descends into it rather than collapsing it.
+    """
+    found = worktree.gitignored_paths(claude_repo)
+    assert ".claude/skills" in found, "a locally-installed skill must be discovered"
+    assert ".claude/janitor" in found
+    assert ".claude/settings.local.json" in found, "an ignored FILE, not just a dir"
+    assert ".claude/project/memory/.memgrep" in found, "nested 3 deep INSIDE a tracked dir"
+    assert ".claude/project/memory/MEMORY.md" not in found, "tracked — git checks it out"
+
+
+def test_worktree_sees_both_the_tracked_and_the_local_half_of_claude(claude_repo: Path) -> None:
+    """The whole point: a worktree gets project-scoped AND local-scoped `.claude`."""
+    wt = worktree.create_worktree(claude_repo, "feat")
+    c = wt.path / ".claude"
+
+    # project-scoped: a REAL file, checked out by git — never a symlink.
+    assert (c / "project" / "memory" / "MEMORY.md").read_text() == "# shared, committed\n"
+    assert not (c / "project" / "memory" / "MEMORY.md").is_symlink()
+
+    # local-scoped: symlinked to the main checkout's.
+    assert (c / "skills").is_symlink()
+    assert (c / "skills" / "my-local-skill" / "SKILL.md").exists(), "the local skill must be usable"
+    assert (c / "project" / "memory" / ".memgrep" / "index.db").exists(), "memgrep index must resolve"
+    assert (c / "janitor" / "state.json").exists()
+    assert (c / "settings.local.json").read_text() == '{"local": true}\n'
+
+
+def test_the_claude_symlinks_leave_the_worktree_status_clean(claude_repo: Path) -> None:
+    """None of the linked local state shows up as untracked.
+
+    The nested ones are the risk: an exclude entry must be the FULL root-anchored
+    path (`/.claude/project/memory/.memgrep`), because a bare `.memgrep` would
+    match at every depth and hide directories we never touched.
+    """
+    wt = worktree.create_worktree(claude_repo, "feat")
+    status = _git(wt.path, "status", "--porcelain").strip()
+    assert status == "", f"worktree must be clean, got: {status!r}"
+
+    lines = worktree.git_info_exclude_path(wt.path).read_text().splitlines()
+    assert "/.claude/project/memory/.memgrep" in lines, "the exclude must be root-anchored and FULL"
+    assert ".memgrep" not in lines, "a bare basename would match at any depth"
+
+
+def test_writing_through_the_link_reaches_the_main_checkout(claude_repo: Path) -> None:
+    """The links are live, not copies — an agent's local state is SHARED, not forked.
+
+    This is deliberate. A copy would drift: the agent would write a memory in the
+    worktree, the worktree would be destroyed, and the memory would go with it.
+    """
+    wt = worktree.create_worktree(claude_repo, "feat")
+    (wt.path / ".claude" / "janitor" / "written-in-worktree.txt").write_text("hello\n")
+    assert (claude_repo / ".claude" / "janitor" / "written-in-worktree.txt").read_text() == "hello\n"
 
 
 # ---------------------------------------------------------------------------

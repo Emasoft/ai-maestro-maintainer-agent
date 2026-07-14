@@ -76,11 +76,33 @@ Creates `.worktrees/<name>` on a new branch (default `wt/<name>`), branched from
 the repo's **detected** default branch — `origin/HEAD`, repaired if stale, never
 a hardcoded `main`.
 
-It then **symlinks the gitignored directories** (`node_modules`, `.venv`,
-`vendor`, …) from the main checkout into the worktree, and excludes them via
-`.git/info/exclude`. Without that step a fresh worktree holds only *tracked*
-files, so the agent you drop into it cannot install, build, or test — the
-worktree is born broken. Pass `--no-link` to skip it.
+It then **symlinks every gitignored path** — files and directories, at **any
+depth** — from the main checkout into the worktree, and hides them via
+`.git/info/exclude`. Pass `--no-link` to skip it.
+
+**Why this is not optional.** A worktree checks out only **git-TRACKED** files.
+Restated in scope terms:
+
+| scope | | reaches the worktree by |
+|---|---|---|
+| **project-scoped** = git-tracked | committed, shared | **git checks it out.** Free. |
+| **local-scoped** = git-ignored | machine-private | **nothing** — it is simply ABSENT. |
+
+The obvious half is `node_modules` / `.venv`: without them the agent cannot
+install, build, or test, and the worktree is born broken. At least that one fails
+loudly.
+
+**The dangerous half is `.claude/`, because it is PARTIALLY tracked and its
+failure is SILENT.** `.claude/project/memory/*.md` is tracked and arrives; but a
+locally-installed skill in `.claude/skills/`, `settings.local.json`,
+`.claude/janitor/`, and — three levels down, *inside a tracked directory* —
+`.claude/project/memory/.memgrep/`, **the memgrep INDEX**, are all ignored. Miss
+them and the agent has the memory files but no index, so **`memgrep recall`
+returns nothing and raises no error**: it reports an empty corpus rather than a
+missing index, and the agent proceeds as if there were nothing to remember.
+
+The links are **live, not copies** — deliberately. A copy would drift, and a
+memory the agent wrote inside the worktree would die with it.
 
 Two failures are caught up front, because git's own messages for them are
 opaque:

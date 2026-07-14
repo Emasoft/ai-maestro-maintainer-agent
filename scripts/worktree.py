@@ -48,7 +48,7 @@ import subprocess
 import sys
 import time
 from dataclasses import asdict, dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 # Worktrees live under the repo so they share the same filesystem (cheap
 # symlinks, no cross-device copies). This directory MUST be gitignored — an
@@ -60,10 +60,26 @@ WORKTREE_DIR = ".worktrees"
 # this header is how we know not to write the block a second time.
 EXCLUDE_HEADER = "# maintainer-worktree: symlinked gitignored dirs"
 
-# Never symlink these into a worktree. `.worktrees` would make the worktree
-# contain itself (the symlink resolves back to the parent that holds it), and
-# anything git-internal is per-worktree state that must not be shared.
-NEVER_LINK = frozenset({WORKTREE_DIR, ".git"})
+# Never symlink these into a worktree. These are PATH PREFIXES, not bare names,
+# and that distinction is load-bearing:
+#
+#   - `.worktrees` (ours) and `.claude/worktrees` (Claude Code's own, since
+#     CC 2.1.178) both HOLD worktrees. Linking either one into a worktree makes
+#     that worktree contain the directory that contains it — the symlink resolves
+#     back to its own parent.
+#   - `.git` is per-worktree state and must never be shared.
+#
+# A first-component check is NOT enough: `.claude/worktrees` has the first
+# component `.claude`, which is a directory we very much DO want to descend into
+# (it holds the local-scoped skills, settings, and the memgrep index). So the
+# guard has to match the path, not its first segment.
+NEVER_LINK = (".git", WORKTREE_DIR, ".claude/worktrees")
+
+
+def _is_never_link(rel: str) -> bool:
+    """True when `rel` is, or lives under, a path we must never symlink."""
+    posix = PurePosixPath(rel).as_posix()
+    return any(posix == p or posix.startswith(p + "/") for p in NEVER_LINK)
 
 
 class WorktreeError(RuntimeError):
@@ -272,72 +288,107 @@ def _default_base(root: Path) -> str:
 # --------------------------------------------------------------------------
 
 
-def gitignored_dirs(root: Path | str) -> list[str]:
-    """Top-level gitignored directories that EXIST in the main checkout.
+def gitignored_paths(root: Path | str) -> list[str]:
+    """EVERY gitignored path that exists in the main checkout — files and dirs, at ANY depth.
 
     A fresh worktree contains only TRACKED files. No node_modules, no .venv, no
-    vendor/, no target/. An agent dropped into one cannot install, build, or
-    test — the worktree is born broken, and the agent's first act is a
-    five-minute dependency install it should never have had to do.
+    target/. An agent dropped into one cannot install, build, or test — the
+    worktree is born broken, and its first act is a dependency install it should
+    never have had to do.
 
-    `--porcelain -z --ignored` (traditional mode) collapses a fully-ignored
-    directory to a single `!! node_modules/` entry rather than listing every
-    file inside it, and -z means NUL separators with no shell quoting, so a
-    directory name with a space survives.
+    Two things this must NOT assume, both of which were wrong in the first cut:
+
+    - **Not just top-level.** `.claude/` is a *partially* tracked directory: its
+      project memory is committed, while `.claude/chat_history/`,
+      `.claude/janitor/`, `.claude/scheduled_tasks.json`, and — three levels
+      down — `.claude/project/memory/.memgrep/` are ignored. A top-level-only
+      scan returns NONE of them, so an agent in the worktree gets the memory
+      `.md` files but no memgrep INDEX, and `memgrep recall` silently finds
+      nothing. Local state has to be linked where it actually lives.
+    - **Not just directories.** `.claude/scheduled_tasks.json` is a file.
+
+    Git does the hard part: `--ignored` (traditional mode) COLLAPSES a fully
+    ignored directory to one `!! node_modules/` entry instead of listing every
+    file inside it, and descends only where a directory is partially tracked —
+    which is exactly the granularity we want. `-z` gives NUL separators with no
+    shell quoting, so a path containing a space survives intact.
     """
     out = _git("status", "--porcelain", "-z", "--ignored", cwd=root, check=False)
-    names: set[str] = set()
+    paths: set[str] = set()
     for entry in out.split("\0"):
         if not entry.startswith("!! "):
             continue
-        rel = entry[3:]
-        if not rel.endswith("/"):  # a file, not a directory
+        rel = entry[3:].rstrip("/")
+        if not rel or _is_never_link(rel):
+            # A worktree-holding directory would make the worktree contain itself;
+            # `.git` is per-worktree state that must never be shared.
             continue
-        name = rel.rstrip("/")
-        if "/" in name:  # nested — we only link top-level dirs
-            continue
-        if name in NEVER_LINK:
-            continue
-        names.add(name)
-    return sorted(names)
+        paths.add(rel)
+    return sorted(paths)
 
 
-def _assert_safe_link_name(name: str) -> None:
-    """A link name must be a single path component.
+def _safe_link_target(worktree: Path, rel: str) -> Path:
+    """Resolve `rel` inside `worktree`, refusing anything that escapes it.
 
-    `link_gitignored_dirs` builds its destination as `<worktree>/<name>`. If
-    `name` were `../..` or `/etc` or `a/b`, that destination would land OUTSIDE
-    the worktree — and we would then create a symlink there, or overwrite
-    something. Names discovered by `gitignored_dirs()` are already top-level,
-    but a caller may pass its own list, so the check lives at the point of use.
+    The destination is now a nested path (`.claude/project/memory/.memgrep`), so
+    the old rule — "a link name must be a single path component" — no longer
+    holds. That rule WAS the escape guard, so relaxing it means REPLACING it, not
+    dropping it: a crafted `../../.ssh` or an absolute `/etc` would otherwise put
+    a symlink outside the worktree, or overwrite something.
+
+    Two checks, because either alone is bypassable:
+      1. the string is relative, has no `..` component, and no `~`;
+      2. the resolved parent really is inside the worktree — which catches the
+         case where a directory on the path is itself a symlink pointing out.
     """
-    if not name or name in (".", "..") or "/" in name or "\\" in name or name.startswith("~"):
-        raise WorktreeError(f"refusing to link {name!r}: a link name must be a single path component. A name containing a separator, '..', or '~' would place the symlink OUTSIDE the worktree.")
+    p = PurePosixPath(rel)
+    if not rel or p.is_absolute() or ".." in p.parts or rel.startswith("~") or "\\" in rel:
+        raise WorktreeError(f"refusing to link {rel!r}: a link path must be relative and inside the worktree. An absolute path, a '..' component, or a '~' would place the symlink OUTSIDE it.")
+
+    dst = worktree / Path(rel)
+    parent = safe_realpath(dst.parent)
+    wt = safe_realpath(worktree)
+    if parent != wt and wt not in parent.parents:
+        raise WorktreeError(f"refusing to link {rel!r}: it resolves to {parent}, outside the worktree {wt}")
+    return dst
 
 
-def link_gitignored_dirs(root: Path | str, worktree: Path | str, names: list[str] | None = None) -> list[str]:
-    """Symlink the main checkout's gitignored dirs into the worktree.
+def link_gitignored_paths(root: Path | str, worktree: Path | str, paths: list[str] | None = None) -> list[str]:
+    """Symlink the main checkout's gitignored files and dirs into the worktree.
 
-    Returns the names actually linked (a name whose source is missing, or whose
-    destination already exists, is skipped — this is idempotent).
+    Returns the paths actually linked. A path whose source is gone, or whose
+    destination already exists, is skipped — so this is idempotent and safe to
+    re-run.
     """
     root = safe_realpath(root)
     worktree = safe_realpath(worktree)
-    names = gitignored_dirs(root) if names is None else names
+    paths = gitignored_paths(root) if paths is None else paths
 
     linked: list[str] = []
-    for name in names:
-        _assert_safe_link_name(name)
-        if name in NEVER_LINK:
+    for rel in sorted(paths):
+        # VALIDATE FIRST, unconditionally. The existence check below must not come
+        # before this: an escaping path that happens not to exist would then be
+        # silently `continue`d instead of refused, and the guard would be armed only
+        # for paths that already exist — which is exactly the set an attacker does
+        # not need it for. A security check that runs conditionally is not a check.
+        dst = _safe_link_target(worktree, rel)
+
+        if _is_never_link(rel):
             continue
-        src = root / name
-        if not src.is_dir():
+        src = root / Path(rel)
+        if not src.exists():
             continue
-        dst = worktree / name
         if dst.exists() or dst.is_symlink():
             continue
-        dst.symlink_to(src, target_is_directory=True)
-        linked.append(name)
+        # A nested target's parents are usually already present (they are tracked —
+        # that is WHY git descended into them). Create them if not: a directory
+        # holding nothing but an excluded symlink is invisible to `git status`,
+        # because git does not report an untracked directory with no untracked
+        # contents.
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        _safe_link_target(worktree, rel)  # re-check: the mkdir must not have escaped
+        dst.symlink_to(src, target_is_directory=src.is_dir())
+        linked.append(rel)
     return linked
 
 
@@ -363,7 +414,7 @@ def git_info_exclude_path(worktree: Path | str) -> Path:
     return safe_realpath(p) / "info" / "exclude"
 
 
-def ensure_symlink_excludes(worktree: Path | str, names: list[str]) -> Path | None:
+def ensure_symlink_excludes(worktree: Path | str, paths: list[str]) -> Path | None:
     """Make the symlinks invisible to git. Without this, every `git status` lies.
 
     The subtle half of symlinking. A `.gitignore` entry written with a trailing
@@ -375,19 +426,21 @@ def ensure_symlink_excludes(worktree: Path | str, names: list[str]) -> Path | No
 
     A pattern in `info/exclude` without the trailing slash matches both.
 
-    Entries are ROOT-ANCHORED (`/node_modules`, not `node_modules`) on purpose:
-    a bare pattern also matches at any depth, which would hide a legitimately
-    tracked `packages/foo/node_modules` from git. We only want to hide the one
-    at the root.
+    Entries are ROOT-ANCHORED — `/node_modules`, and for a nested path the FULL
+    path from the repo root (`/.claude/project/memory/.memgrep`), never a bare
+    basename. A bare pattern matches at ANY depth, so `memgrep` would hide every
+    directory of that name anywhere in the tree, and `node_modules` would hide a
+    legitimately tracked `packages/foo/node_modules` in a monorepo. Anchoring
+    hides exactly the one symlink we created and nothing else.
     """
-    if not names:
+    if not paths:
         return None
     path = git_info_exclude_path(worktree)
     path.parent.mkdir(parents=True, exist_ok=True)
 
     existing = path.read_text(encoding="utf-8") if path.exists() else ""
     present = set(existing.splitlines())
-    wanted = [f"/{n}" for n in names]
+    wanted = [f"/{p}" for p in paths]
     missing = [w for w in wanted if w not in present]
     if not missing:
         return path
@@ -475,7 +528,7 @@ def create_worktree(
     _git("worktree", "add", "-b", branch, str(path), base, cwd=root)
 
     if link_gitignored:
-        linked = link_gitignored_dirs(root, path)
+        linked = link_gitignored_paths(root, path)
         ensure_symlink_excludes(path, linked)
 
     return Worktree(path=path, branch=branch, head=_git("rev-parse", "HEAD", cwd=path).strip())

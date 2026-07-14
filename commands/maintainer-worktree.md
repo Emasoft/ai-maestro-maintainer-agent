@@ -20,9 +20,14 @@ Five verbs:
 - `list` — the worktrees, their branches, and whether any is detached or
   prunable. `--json` for structured output.
 - `create <name>` — `.worktrees/<name>` on a new branch (default `wt/<name>`),
-  branched from the repo's **detected** default branch, never a hardcoded
-  `main`. Symlinks the gitignored dirs (`node_modules`, `.venv`, …) in so the
-  worktree is usable immediately; `--no-link` to skip.
+  branched from the repo's **detected** default branch, never a hardcoded `main`.
+  Symlinks in **every gitignored path** — files and dirs, at any depth — so the
+  worktree is usable immediately; `--no-link` to skip. A worktree checks out only
+  git-TRACKED files, so the *local-scoped* (git-ignored) half is otherwise simply
+  ABSENT: not just `node_modules`, but a locally-installed skill in
+  `.claude/skills/`, `settings.local.json`, and the memgrep **index** at
+  `.claude/project/memory/.memgrep/` — miss that last one and `memgrep recall`
+  returns nothing with no error.
 - `remove <name>` — destroy it. **Guarded**: refuses when the worktree is on a
   different branch, on a detached HEAD, or dirty — because removing it then would
   silently delete an agent's work. `--force` is the explicit opt-out;
