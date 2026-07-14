@@ -1,3 +1,8 @@
+<!-- cspell:ignore lastest -->
+<!-- `ubuntu-lastest` is a DELIBERATE misspelling — it is the example typo this
+     page exists to teach. Ignored here, not in the global dictionary, so a real
+     `lastest` typo anywhere else still fails the build. -->
+
 # Runner labels — the valid set, retirements, and the "clean scan, broken run" gap
 
 `runs-on:` names a GitHub-hosted (or self-hosted) runner. actionlint
