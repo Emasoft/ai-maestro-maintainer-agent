@@ -16,7 +16,7 @@ discover its operational skills at runtime. The agent preloads only this catalog
 in its `skills:` frontmatter; everything else loads on demand via the `Skill()`
 tool.
 
-**Why it exists:** preloading all 28 skills injects every one of them into the
+**Why it exists:** preloading all 29 skills injects every one of them into the
 agent's base context on every turn, and a long-running agent re-reads that base
 on each turn. Preloading one catalog and loading the two or three skills a task
 actually needs is the same capability at a fraction of the per-turn cost.
@@ -66,11 +66,12 @@ is exactly the cost this catalog exists to avoid.
 | 21 | `maintainer-tooling-bootstrap` | Audits and installs the maintainer CLI tools (gh, uv, actionlint, ...) on a new host |
 | 22 | `maintainer-trdd-adr` | Scaffolds or authors TRDDs and ADRs under `design/tasks/` and `design/adrs/` |
 | 23 | `maintainer-triage` | Triages a new open issue and decides the action — fix, ask, close, or defer |
-| 24 | `workflow-bootstrap` | Creates the first `.github/workflows/` for a repo that has none |
-| 25 | `workflow-fix-safe` | Applies ONLY the safe zizmor auto-fixes to the repo's workflows |
-| 26 | `workflow-pin-actions` | SHA-pins every unpinned third-party action |
-| 27 | `workflow-protect-branch` | Queries or applies the ratified default-branch and release-tag rulesets |
-| 28 | `workflow-scan` | Read-only security audit of GitHub Actions workflows (zizmor + actionlint + the Sentinel rules) |
+| 24 | `maintainer-worktree` | Creates, inspects, and destroys git worktrees for isolated work; the destroy path refuses to discard an agent's work |
+| 25 | `workflow-bootstrap` | Creates the first `.github/workflows/` for a repo that has none |
+| 26 | `workflow-fix-safe` | Applies ONLY the safe zizmor auto-fixes to the repo's workflows |
+| 27 | `workflow-pin-actions` | SHA-pins every unpinned third-party action |
+| 28 | `workflow-protect-branch` | Queries or applies the ratified default-branch and release-tag rulesets |
+| 29 | `workflow-scan` | Read-only security audit of GitHub Actions workflows (zizmor + actionlint + the Sentinel rules) |
 
 ## Output
 

@@ -3,6 +3,13 @@
 docs_dev/
 scripts_dev/
 
+# Git worktrees created by scripts/worktree.py + the maintainer-worktree skill.
+# This entry is load-bearing, not housekeeping: an unignored worktree shows up as
+# an untracked path, and publish.py's staging guard refuses to cut a release while
+# the tree carries dirty paths it does not manage. Without this line, merely
+# CREATING a worktree would block the next release.
+.worktrees/
+
 # Python
 __pycache__/
 *.py[cod]

@@ -89,6 +89,7 @@ Once the agent session is running:
 | `maintainer-config-lint` | "lint config files", "validate JSON/YAML/TOML", "audit repo config files" |
 | `maintainer-generate-docs` | "generate community files", "scaffold CONTRIBUTING", "audit missing docs" |
 | `maintainer-trdd-adr` | "bootstrap TRDDs", "set up ADRs", "scaffold a TRDD", "author an ADR", "validate design docs" |
+| `maintainer-worktree` | "make a worktree", "work in isolation", "remove the worktree", "clean up worktrees", "where is the main repo root" |
 
 ## Governance Rules
 
