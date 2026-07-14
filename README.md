@@ -2,7 +2,7 @@
 
 <!--BADGES-START-->
 [![CI](https://github.com/Emasoft/ai-maestro-maintainer-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Emasoft/ai-maestro-maintainer-agent/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.7.12-blue)](https://github.com/Emasoft/ai-maestro-maintainer-agent/releases)
+[![Version](https://img.shields.io/badge/version-1.7.13-blue)](https://github.com/Emasoft/ai-maestro-maintainer-agent/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 <!--BADGES-END-->
 
