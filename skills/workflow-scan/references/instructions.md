@@ -45,17 +45,40 @@ Exit codes (zizmor v1.x contract):
 ## Step 3: Run actionlint
 
 ```bash
+ALINT_JSON="$DIR/$TS-actionlint.json"
 ALINT_LOG="$DIR/$TS-actionlint.log"
 : > "$ALINT_LOG"
 ALINT_COUNT=0
 for f in .github/workflows/*.y*ml; do
   [ -e "$f" ] || continue
-  actionlint "$f" >> "$ALINT_LOG" 2>&1 || ALINT_COUNT=$((ALINT_COUNT + 1))
+  actionlint -format '{{json .}}' "$f" >> "$ALINT_JSON" 2>> "$ALINT_LOG" \
+    || ALINT_COUNT=$((ALINT_COUNT + 1))
 done
 ```
 
-Each file is run separately so one bad file does not abort the
-rest.
+Each file is run separately so one bad file does not abort the rest.
+
+`-format '{{json .}}'` yields structured findings — each carries
+`message`, `filepath`, `line`, `column`, `kind` (the rule that fired),
+and `snippet`. Group the report on `kind`, exactly as zizmor findings
+group on `audit`. Do not line-scrape the human-readable format.
+
+actionlint exit codes: `0` clean, `1` findings, `2` FATAL (unparseable
+file / bad config). Exit 2 is a TOOL ERROR, not a dirty scan — surface
+it as such; never report it as clean.
+
+Two preconditions worth checking once, before the loop:
+
+- `shellcheck` on PATH — actionlint shells out to it for every `run:`
+  block. Absent, the highest-yield lint layer is silently off. Note the
+  degradation in the report header.
+- `.github/actionlint.yaml` present — if so, read it. A scan run under
+  its `ignore:` list is not a clean scan and the report must say so.
+  It is also the correct fix for a repo with self-hosted runners
+  drowning in unknown-label findings.
+
+See [engine-coverage.md](engine-coverage.md) for what each engine owns
+and what it is blind to.
 
 Then run the bundled Sentinel port (32 deterministic rules; covers
 the structural classes zizmor does not):
@@ -69,10 +92,17 @@ SENTINEL_EX=$?   # 0 = no critical/high, 1 = critical/high present
 
 ## Step 4: Render markdown report
 
-Parse `$JSON` (zizmor) and `$SENTINEL_JSON` (Sentinel) with `jq` and
-render per [report-layout.md](report-layout.md). Group by severity
-descending, then audit/rule ID ascending. Include the actionlint and
-Sentinel findings in their own sections.
+Parse `$JSON` (zizmor), `$ALINT_JSON` (actionlint) and `$SENTINEL_JSON`
+(Sentinel) with `jq` and render per [report-layout.md](report-layout.md).
+Group by severity descending, then audit/rule ID ascending. Include the
+actionlint and Sentinel findings in their own sections.
+
+Classify each finding — severity, auto-fixability, and which skill
+remediates it — per [threat-classes.md](threat-classes.md). Two classes
+in that table are **never auto-fixable** and must survive as findings
+rather than be absorbed by a later hardening pass:
+`pull_request_target` checking out PR head code, and any secret reaching
+a log, URL, or artifact.
 
 ## Step 5: Rate-limit handling
 

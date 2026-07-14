@@ -433,11 +433,13 @@ AI Maestro backups and host migration capture them:
 
 ```bash
 # Resolve the agent working dir:
-#   1. $AIMAESTRO_AGENT_DIR (preferred — AI Maestro env var, see
-#      https://github.com/Emasoft/ai-maestro/issues/32)
-#   2. $CLAUDE_PROJECT_DIR  (Claude Code project dir)
-#   3. $PWD                 (last-resort fallback)
-AGENT_DIR="${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+#   1. $AGENT_WORK_DIR      (authoritative — AI Maestro exports it into the
+#      pane env at session creation; the directory-guard hook uses it as the
+#      sandbox boundary, so it IS the agent's workdir by definition)
+#   2. $CLAUDE_PROJECT_DIR  (Claude Code's own var; plain non-fleet session)
+#   3. $PWD                 (last-resort fallback — never rely on it alone;
+#      it diverges silently as soon as anything cd's)
+AGENT_DIR="${AGENT_WORK_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
 STATE_DIR="$AGENT_DIR/.aimaestro/state"
 mkdir -p "$STATE_DIR"
 

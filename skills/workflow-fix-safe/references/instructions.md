@@ -101,6 +101,17 @@ block contains `persist-credentials: false`:
     persist-credentials: false
 ```
 
+### Expression-injection rewrite
+
+The general remediation for zizmor's `template-injection` audit — the
+attacker-controllable context fields, the env-var indirection fix, why
+quoting alone fails, and the step-by-step rewrite — is a hardening edit
+this skill performs. The full catalogue and procedure live in
+[injection-hardening.md](injection-hardening.md). Apply it to every
+`run:` block the pre-scan flagged, then continue with the `jq --arg`
+walk-through below for the second-stage (shell command-substitution)
+case it does not by itself close.
+
 ### jq command-substitution audit (the `--arg` trap)
 
 Documentation reference for the `--arg` hardening pattern. This
@@ -153,6 +164,87 @@ run: |
 
 If the regex pattern above returns zero hits, this Hardening
 Edit is a no-op for that workflow.
+
+### Per-job permission scoping
+
+The top-level `permissions: contents: read` default (added above) is
+the floor. A job that genuinely needs a write scope — commenting on a
+PR, pushing a package, requesting an OIDC token — should carry that
+scope on the JOB, not by widening the top-level default:
+
+```yaml
+permissions:
+  contents: read        # top-level floor stays read-only
+
+jobs:
+  label-pr:
+    permissions:
+      contents: read
+      pull-requests: write   # only this job can write PRs
+    steps:
+      ...
+```
+
+This is an idempotent edit only when the write scope is already present
+somewhere too broad (a top-level `write`, or `write-all`). Detection:
+for each workflow, if the top-level block grants any `write` scope, OR
+contains `permissions: write-all`, narrow the top level to
+`contents: read` and re-grant the specific scope on the job(s) that use
+it. If you cannot determine which job needs the scope from the workflow
+alone, STOP — do not guess; route to human review. Never widen
+permissions to make a step pass.
+
+**Permission scope catalogue.** The `permissions:` block accepts these
+scopes, each set to `read`, `write`, or `none`:
+
+| Scope | Grants |
+|---|---|
+| `contents` | repo contents — read to checkout, write to push/tag/release |
+| `pull-requests` | comment on / label / edit PRs |
+| `issues` | comment on / label / edit issues |
+| `packages` | read/write GitHub Packages (GHCR) |
+| `statuses` | write commit statuses |
+| `checks` | write check runs |
+| `deployments` | write deployment statuses |
+| `security-events` | upload SARIF / code-scanning results |
+| `id-token` | mint an OIDC token (keyless cloud auth, attestation) |
+| `attestations` | write build-provenance / SBOM attestations |
+| `actions` | manage workflow runs / artifacts via the API |
+| `pages` | deploy GitHub Pages |
+
+**What common actions actually need** — use this to right-size a job's
+grant instead of leaving a broad default:
+
+| Action | Minimal scope on its job |
+|---|---|
+| `actions/checkout` | `contents: read` |
+| `actions/dependency-review-action` | `contents: read` |
+| `github/codeql-action` (analyze) | `security-events: write` |
+| `actions/attest-build-provenance` / `attest-sbom` | `id-token: write` + `attestations: write` |
+| a job that pushes to GHCR | `packages: write` |
+| a job that comments on / labels a PR | `pull-requests: write` |
+
+Grant the write scope on the JOB that uses it; the top-level default
+stays `contents: read`.
+
+### Derived-secret masking
+
+GitHub auto-masks registered secrets in logs, but NOT values DERIVED
+from them (a decoded credential, a signed URL, a token a step computes).
+When a `run:` step produces such a value, add an explicit mask before it
+can be printed:
+
+```yaml
+- name: Compute signed URL
+  run: |
+    SIGNED="$(./sign.sh)"
+    echo "::add-mask::$SIGNED"     # mask BEFORE any later echo/use
+    echo "url=$SIGNED" >> "$GITHUB_OUTPUT"
+```
+
+This is an ADDITIVE edit only where a derived value is demonstrably
+present; it is not a blanket transform. If a step merely consumes a
+registered secret via `env:` (already masked), no edit is needed.
 
 ## Step 5: Post-scan regression guard
 

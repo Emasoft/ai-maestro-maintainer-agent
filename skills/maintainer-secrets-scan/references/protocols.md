@@ -53,7 +53,7 @@ detect_tool() {
 
 `$AGENT_DIR` resolves to the maintainer plugin's working dir —
 see [Atomic write pattern](../../maintainer-guardian/references/threat-classes.md#atomic-write-pattern)
-for the resolution recipe (`$AIMAESTRO_AGENT_DIR` →
+for the resolution recipe (`$AGENT_WORK_DIR` →
 `$CLAUDE_PROJECT_DIR` → `$PWD`).
 
 ## trufflehog invocation

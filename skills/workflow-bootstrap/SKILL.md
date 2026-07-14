@@ -124,5 +124,11 @@ Does NOT:
   - Step-by-step commands
   - Post-merge ruleset apply
   - Per-language walk-throughs
+  - Optional supply-chain add-ons
+- [Optional supply-chain add-ons](references/supply-chain-extras.md):
+  - Dependency-review PR gate
+  - Build attestation via OIDC (keyless)
+  - OIDC token claims and the trust-policy condition
+  - When NOT to add these
 - Companion: `workflow-scan`, `workflow-fix-safe`,
   `workflow-pin-actions`, `workflow-protect-branch`.

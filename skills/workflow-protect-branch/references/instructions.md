@@ -552,11 +552,12 @@ gh api "repos/$REPO/rulesets" > "$REPORT"
 # State MUST live inside the AGENT WORKING DIRECTORY (never $HOME)
 # so AI Maestro backups and host-to-host migration capture it.
 # Resolution order:
-#   1. $AIMAESTRO_AGENT_DIR — proposed AI Maestro env var
-#      (https://github.com/Emasoft/ai-maestro/issues/32)
-#   2. $CLAUDE_PROJECT_DIR  — Claude Code project dir
-#   3. $PWD                 — last-resort fallback
-AGENT_DIR="${AIMAESTRO_AGENT_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
+#   1. $AGENT_WORK_DIR      — the authoritative AI Maestro env var (exported
+#      into the pane env at session creation; the sandbox boundary the
+#      directory-guard hook enforces)
+#   2. $CLAUDE_PROJECT_DIR  — Claude Code's own var (plain non-fleet session)
+#   3. $PWD                 — last-resort fallback only
+AGENT_DIR="${AGENT_WORK_DIR:-${CLAUDE_PROJECT_DIR:-$PWD}}"
 CACHE_DIR="$AGENT_DIR/.aimaestro/state"
 mkdir -p "$CACHE_DIR"
 CACHE_TMP="$CACHE_DIR/branch-rules.json.tmp.$$"

@@ -43,11 +43,15 @@ on a linked GitHub issue. No file mutations, no commits, no push.
    with a `YYYYMMDD_HHMMSS±HHMM` local-time-plus-offset stamp.
 2. Run `uvx zizmor --gh-token "$(gh auth token)" --format=json
    .github/workflows/` and capture exit code.
-3. Run `actionlint <file>` for every `*.yml`, then run
+3. Run `actionlint -format '{{json .}}' <file>` for every `*.yml`, then
    `uv run --with pyyaml scripts/sentinel_scan.py scan --format json .`
-   and merge all three engines' findings.
+   and merge all three engines' findings. The engines overlap very
+   little — see
+   [references/engine-coverage.md](references/engine-coverage.md).
 4. Render the markdown report per
-   [references/report-layout.md](references/report-layout.md).
+   [references/report-layout.md](references/report-layout.md), and
+   classify each finding (severity, auto-fixability, remediating skill)
+   per [references/threat-classes.md](references/threat-classes.md).
 5. On rate-limit hint: re-run with `--offline`, note in header.
 6. If an issue number is in context, post the report's first 40
    lines as a comment; auto-create the label
@@ -114,6 +118,27 @@ is mutated.
 - actionlint docs: <https://github.com/rhysd/actionlint>
 - Sentinel port: `scripts/sentinel_scan.py` (32 deterministic
   rules; `scan` + `fix` subcommands)
+- [Engine coverage](references/engine-coverage.md):
+  - Division of labour
+  - What actionlint alone catches
+  - actionlint rule kinds — the `kind` field
+  - Beyond the workflows directory: composite actions
+  - Machine-readable actionlint output
+  - actionlint exit codes
+  - actionlint config — `.github/actionlint.yaml`
+  - `act` — parse-only, never execute
+- [Threat classes](references/threat-classes.md):
+  - Routing table
+  - Expression injection
+  - Trigger hazards
+  - Secret exposure
+  - Over-broad permissions
+- [Runner labels](references/runner-labels.md):
+  - Why this matters to an audit
+  - Valid GitHub-hosted labels (dated snapshot)
+  - Retired and deprecated runners
+  - The gap: a retired label passes lint but fails the run
+  - Self-hosted labels and false positives
 - [Report layout](references/report-layout.md):
   - File header
   - Severity summary
