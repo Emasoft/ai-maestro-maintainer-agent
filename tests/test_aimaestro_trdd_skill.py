@@ -84,6 +84,71 @@ def test_never_gate_on_version_is_stated(doc: Path) -> None:
     assert "version string" in text, f"{doc.name}: does not forbid gating on a version string"
 
 
+@pytest.mark.parametrize("doc", DOCS, ids=lambda p: p.name)
+def test_probe_is_verb_granular_not_just_script_granular(doc: Path) -> None:
+    """Every doc probes the VERB via the script's own --help, not just `command -v`.
+
+    THE REGRESSION THIS PINS (verified 2026-07-16, ai-maestro#69): the deployed
+    ~/.local/bin/aimaestro-trdd.sh is 330 lines and dispatches 7 verbs; the
+    governance-rules source is 387 lines and dispatches 8. The missing one is
+    `verify`. So a script-granular `command -v` probe PASSES on that host and the
+    verb still fails — the exact "skill teaching a verb the shipped CLI lacks"
+    failure the manifest's own §5 warns about, arrived at from the other side.
+
+    The script's own `--help` is the only source that describes THIS host: not the
+    manifest (it documents verify), not a version string, not a doc.
+    """
+    text = _flat(doc)
+    assert re.search(r"--help.{0,80}grep", text), (
+        f"{doc.name}: no per-VERB probe (script's own --help) — `command -v` alone is "
+        f"not enough; it passes on a host whose CLI lacks the verb"
+    )
+
+
+@pytest.mark.parametrize("doc", DOCS, ids=lambda p: p.name)
+def test_verify_is_marked_absent_on_the_deployed_script(doc: Path) -> None:
+    """Every doc flags that `verify` is NOT on the deployed CLI and must be probed.
+
+    Teaching `verify` as unconditionally available is a false capability claim: it
+    exists on governance-rules and in the manifest, but not on the deployed copy.
+    An agent that believes it can check authenticity, and cannot, is worse off than
+    one that knows it cannot — it may fall back to trusting the card's prose, which
+    is precisely what the token design exists to stop.
+    """
+    text = _flat(doc)
+    assert re.search(
+        r"not\s+(on\s+the\s+deployed|implemented\s+on\s+this\s+host)", text, re.I
+    ), f"{doc.name}: does not state that `verify` is absent from the deployed script"
+    assert "69" in text, f"{doc.name}: does not cite ai-maestro#69 for the verify gap"
+
+
+def test_docs_forbid_substituting_prose_when_verify_is_unavailable() -> None:
+    """When verify is absent the docs must forbid falling back to the card's prose.
+
+    The dangerous move is not "verify is missing" — it is an agent deciding that
+    `approval-judge:` looks fine, which is exactly what a forger writes.
+    """
+    for doc in (SKILL_MD, INSTRUCTIONS_MD, COMMAND_MD):
+        text = _flat(doc)
+        assert re.search(r"(do\s+not|never)\s+(infer|substitute)", text, re.I), (
+            f"{doc.name}: does not forbid substituting prose for a real verify"
+        )
+
+
+def test_tier_is_documented_as_a_claim_not_a_grant() -> None:
+    """`--tier` is a claim the server validates by AID — never a grant to trust.
+
+    Per ai-maestro#69 §2 the CLI is a thin passthrough that JSON-encodes --tier
+    verbatim, so a doc implying the typed number confers authority describes a
+    privilege-escalation surface as if it were a feature.
+    """
+    for doc in (SKILL_MD, COMMAND_MD):
+        text = _flat(doc)
+        assert re.search(r"`?--tier`?\s+is\s+a\s+\*{0,2}CLAIM", text, re.I), (
+            f"{doc.name}: does not frame --tier as a CLAIM the server validates"
+        )
+
+
 def test_probe_miss_degrades_explicitly_with_exit_3() -> None:
     """A probe miss is a loud, explicit degrade (exit 3) — never a silent skip.
 

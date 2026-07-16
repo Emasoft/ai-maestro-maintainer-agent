@@ -18,23 +18,54 @@ probe, and what `verify` actually proves).
 
 ## Step 1: Probe for the CLI
 
+Two probes, because the script existing does not mean the verb exists:
+
 ```bash
+# (a) is the CLI here at all?
 if ! command -v aimaestro-trdd.sh >/dev/null 2>&1; then
   echo "aimaestro-trdd.sh NOT AVAILABLE — the ai-maestro TRDD CLI is absent on this host."
-  echo "Read design/ directly instead; approval tokens cannot be minted or verified here."
+  echo "Read design/ directly instead; approvals cannot be minted or verified here."
+  exit 3
+fi
+
+# (b) does THIS host's copy implement the verb I am about to call?
+#     Its own --help is the only source that describes THIS host.
+aimaestro_trdd_has () {   # $1 = verb
+  aimaestro-trdd.sh --help 2>/dev/null | grep -qE "^[[:space:]]+$1\b"
+}
+```
+
+**Why the second probe is not paranoia — it is a live defect.** Verified 2026-07-16:
+
+| | lines | verbs dispatched |
+|---|---|---|
+| `~/.local/bin/aimaestro-trdd.sh` (deployed) | 330 | search read edit approve refuse promote archive — **7** |
+| `scripts/aimaestro-trdd.sh` @ `governance-rules` | 387 | the same **+ `verify`** — **8** |
+
+`command -v` passes on that host. `verify` still fails. The manifest documents
+`verify`; the deployed script does not have it (ai-maestro#69). **A skill teaching a
+verb the shipped CLI lacks is exactly as broken as a manifest promising one `main`
+does not ship** — so probe the verb, then degrade explicitly:
+
+```bash
+if aimaestro_trdd_has verify; then
+  aimaestro-trdd.sh verify "$ID" --json
+else
+  echo "verify is NOT implemented on this host — approval authenticity cannot be checked."
+  echo "Do NOT substitute the card's approval-judge:/Approval log prose for a real check."
   exit 3
 fi
 ```
 
-**Why this is mandatory.** `install.sh` clones ai-maestro without `--branch`, so a
-provisioned host tracks `main` — which ships only a subset of the scripts and none of
-the governance docs. The full surface exists where the `governance-rules` tree is run
-directly. So the manifest listing a script does **not** mean this host has it, and a
-host's `~/.local/bin` is residue (the installer copies, never prunes) — a deleted
-script lingers there and a fresh install simply lacks it.
+**Why any of this is mandatory.** `install.sh` clones ai-maestro without `--branch`,
+so a provisioned host tracks `main` — which ships only a subset of the scripts and
+none of the governance docs. The full surface exists where the `governance-rules` tree
+runs directly. So the manifest listing a script (or a verb) does **not** mean this host
+has it, and a host's `~/.local/bin` is residue (the installer copies, never prunes) —
+a deleted script lingers there and a fresh install simply lacks it.
 
 Never gate on a version string. A version tells you what a tree *intends* to ship;
-`command -v` tells you what is *here*.
+the script's own `--help` tells you what is *here*.
 
 ## Step 2: Search and read the board
 

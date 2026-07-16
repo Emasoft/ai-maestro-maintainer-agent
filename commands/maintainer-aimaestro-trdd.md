@@ -9,11 +9,16 @@ Its write verbs became agent-usable in `d7531e53` (TRDD-K2WJH7RF), governed by t
 
 Loads skill: **maintainer-aimaestro-trdd**
 
-**Probe first, always.** The CLI may be absent and that is normal: `install.sh` clones
-ai-maestro with no `--branch`, so a provisioned host tracks `main`, which ships only a
-subset of the scripts. `command -v aimaestro-trdd.sh` — on a miss, print the degrade
-and exit `3`. Never gate on a version string; never treat `~/.local/bin` as truth (the
-installer copies and never prunes, so it is residue).
+**Probe first — and probe the VERB, not just the script.** The CLI may be absent, and
+even when present it may lack the verb: verified 2026-07-16, the deployed copy is 330
+lines / 7 verbs while `governance-rules` is 387 / 8 — the missing one is **`verify`**
+(ai-maestro#69). So `command -v aimaestro-trdd.sh` for the script, then
+`aimaestro-trdd.sh --help | grep -qE "^[[:space:]]+<verb>\b"` for the verb; on either
+miss, print the degrade and exit `3`. Never gate on a version string; never infer a
+verb from `docs/SCRIPT-MANIFEST.md` (it documents `verify`, which the deployed script
+lacks); never treat `~/.local/bin` as truth (the installer copies and never prunes, so
+it is residue). **A skill teaching a verb the shipped CLI lacks is as broken as a
+manifest promising one `main` doesn't ship.**
 
 Eight verbs:
 
@@ -21,6 +26,11 @@ Eight verbs:
 - `read <id>` — the card
 - `verify <id>` — **is this approval REAL?** `--json`; exit `0` verified · **`2` NOT
   verified** · `1` error. Exit `2` is an answer — a finding to report, not to retry.
+  ⚠️ **Not on the deployed script — probe before calling** (ai-maestro#69). Where it is
+  absent, approval authenticity CANNOT be checked: say so, and never substitute the
+  card's `approval-judge:`/`## Approval log` prose for a real check.
+  `--tier` is a CLAIM the server must validate against the caller's real title by AID —
+  never a grant to trust (ai-maestro#69 §2).
 - `edit <id>` — `--set k=v` (repeatable); frontmatter in place, no folder move
 - `approve <id>` — `--approver W` `--tier N` `--rationale R`; proposal → planned,
   `git mv`, and **MINTS** the signed `approval-token:`

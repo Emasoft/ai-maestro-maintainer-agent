@@ -34,19 +34,38 @@ tree runs directly. The manifest is a **contract, not a presence guarantee**, an
 host's `~/.local/bin` is deployment residue (the installer copies and never prunes),
 never a source of truth.
 
-So every invocation starts with a probe, and a miss is an explicit, loud degrade —
-never a silent skip:
+**Probe the VERB, not just the script.** `command -v` alone is not enough — and this
+is not hypothetical: as of 2026-07-16 the copy deployed to `~/.local/bin` is **330
+lines and dispatches 7 verbs**, while `governance-rules` is **387 lines and dispatches
+8**. The missing one is `verify`. So `command -v` succeeds, the agent calls `verify`
+in good faith, and it fails. Ask the script itself what it can do:
 
 ```bash
+# Ask THIS host's script what it actually implements. Its own --help is the only
+# source that reflects this host — not the manifest, not a version, not a doc.
+aimaestro_trdd_has () {   # $1 = verb
+  command -v aimaestro-trdd.sh >/dev/null 2>&1 || return 1
+  aimaestro-trdd.sh --help 2>/dev/null | grep -qE "^[[:space:]]+$1\b"
+}
+
 if ! command -v aimaestro-trdd.sh >/dev/null 2>&1; then
   echo "aimaestro-trdd.sh NOT AVAILABLE on this host — the ai-maestro TRDD CLI is absent."
-  echo "Falling back to reading design/ directly; approval TOKENS cannot be minted or verified here."
+  echo "Falling back to reading design/ directly; approvals cannot be minted or verified here."
+  exit 3
+fi
+
+if ! aimaestro_trdd_has verify; then
+  echo "aimaestro-trdd.sh is present but does NOT implement 'verify' on this host."
+  echo "Approval authenticity CANNOT be checked here. Do NOT infer it from the card's prose."
   exit 3
 fi
 ```
 
-Never gate on a version string. Gate on `command -v`, a real `--help` probe, or file
-presence.
+Never gate on a version string, and never infer a verb from
+`docs/SCRIPT-MANIFEST.md` — the manifest is generated from `scripts/` on the
+`governance-rules` tree and documents `verify`, which the deployed script does not
+have. **A skill teaching a verb the shipped CLI lacks is exactly as broken as a
+manifest promising one `main` does not ship.**
 
 ## Instructions
 
@@ -63,16 +82,23 @@ Full recipes: [Full step-by-step instructions](references/instructions.md):
 
 ### The verbs
 
-| Subcommand | Flags |
-|---|---|
-| `search` | `--column C` `--id I` `--keyword K` `--zone proposals\|tasks\|archived\|refused` |
-| `read <id>` | — |
-| `verify <id>` | `--json` — exit `0` verified · **`2` NOT verified** · `1` error |
-| `edit <id>` | `--set k=v` (repeatable) — frontmatter in place, no folder move |
-| `approve <id>` | `--approver W` `--tier N` `--rationale R` — proposal → planned, `git mv` |
-| `refuse <id>` | `--approver W` `--tier N` `--reason R` — → `refused/` |
-| `promote <id> --column C` | `--note N` `--approver W` — advance in place |
-| `archive <id> --state S` | `--reason R` `--superseded-by ID` `--approver W` |
+| Subcommand | Deployed? | Flags |
+|---|---|---|
+| `search` | ✅ | `--column C` `--id I` `--keyword K` `--zone proposals\|tasks\|archived\|refused` |
+| `read <id>` | ✅ | — |
+| `verify <id>` | ⚠️ **NOT on the deployed script — probe first** | `--json` — exit `0` verified · **`2` NOT verified** · `1` error |
+| `edit <id>` | ✅ | `--set k=v` (repeatable) — frontmatter in place, no folder move |
+| `approve <id>` | ✅ | `--approver W` `--tier N` `--rationale R` — proposal → planned, `git mv` |
+| `refuse <id>` | ✅ | `--approver W` `--tier N` `--reason R` — → `refused/` |
+| `promote <id> --column C` | ✅ | `--note N` `--approver W` — advance in place |
+| `archive <id> --state S` | ✅ | `--reason R` `--superseded-by ID` `--approver W` |
+
+**The `verify` row is the reason this skill probes per-verb.** It is implemented on
+`governance-rules` (`cmd_verify`, dispatched) and documented in the manifest, but the
+copy deployed to `~/.local/bin` does not dispatch it (verified 2026-07-16; tracked in
+ai-maestro#69). Treat it as *available only where the probe says so*. **`--tier` is a
+CLAIM the server must validate against the caller's real title — never a grant**
+(ai-maestro#69 §2).
 
 Global `--agent <uuid|name>` targets that agent's `<workdir>/design` corpus.
 **Nothing is committed for you** — stage and commit the result yourself, by name.
