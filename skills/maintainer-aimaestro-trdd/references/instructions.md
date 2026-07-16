@@ -82,13 +82,29 @@ this workdir.
 ## Step 3: Verify an approval (the token check)
 
 ```bash
-aimaestro-trdd.sh verify 27IG72GX --json
+# Rely on the EXIT CODE — it is the settled half of the contract.
+# Read the flags from the host's own --help at call time; do NOT hardcode --json
+# (see "verify's flags are not frozen" below).
+aimaestro-trdd.sh verify 27IG72GX
 case $? in
   0) echo "VERIFIED — the approval token holds" ;;
   2) echo "NOT VERIFIED — this card's approval does not hold (a FINDING, report it)" ;;
   1) echo "ERROR — could not evaluate; do not report a verdict" ;;
 esac
 ```
+
+**`verify`'s flags are not frozen yet** (ai-maestro-plugin#29, open 2026-07-16). Settled:
+the exit codes (`0`/`2`/`1`, mirroring `aimaestro-portfolio.sh verify`) and the
+token-not-prose property. Unsettled: the posted frozen shape reads
+`verify <id> [--agent A]` and emits the verdict fields (`verified · token_id ·
+issuer_agent_id · issuer_title · min_approval_requirement · authority_sufficient ·
+reasons[]`) on STDOUT — whether **`--json`** survives is an open question CORE asked and
+ai-maestro has not answered. Teaching an unsettled flag is the same error as teaching an
+undeployed verb, so branch on the exit code and discover flags from `--help`.
+
+**A `min-approval-requirement: none` card verifies TRUE.** That is correct, not a
+forgery: Tier-0 work is unapproved by design. A verifier that cried forgery on routine
+`none` cards is one people learn to ignore — and an ignored verifier protects nothing.
 
 **Exit `2` is an answer, not a failure.** It means the approval does not hold. Report
 which card and stop — do not retry it away, and do not fall back to believing the

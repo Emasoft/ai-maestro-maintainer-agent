@@ -86,7 +86,7 @@ Full recipes: [Full step-by-step instructions](references/instructions.md):
 |---|---|---|
 | `search` | ✅ | `--column C` `--id I` `--keyword K` `--zone proposals\|tasks\|archived\|refused` |
 | `read <id>` | ✅ | — |
-| `verify <id>` | ⚠️ **NOT on the deployed script — probe first** | `--json` — exit `0` verified · **`2` NOT verified** · `1` error |
+| `verify <id>` | ⚠️ **NOT on the deployed script — probe first** | exit `0` verified · **`2` NOT verified** · `1` error. **Flags UNSETTLED** — see below |
 | `edit <id>` | ✅ | `--set k=v` (repeatable) — frontmatter in place, no folder move |
 | `approve <id>` | ✅ | `--approver W` `--tier N` `--rationale R` — proposal → planned, `git mv` |
 | `refuse <id>` | ✅ | `--approver W` `--tier N` `--reason R` — → `refused/` |
@@ -99,6 +99,22 @@ copy deployed to `~/.local/bin` does not dispatch it (verified 2026-07-16; track
 ai-maestro#69). Treat it as *available only where the probe says so*. **`--tier` is a
 CLAIM the server must validate against the caller's real title — never a grant**
 (ai-maestro#69 §2).
+
+> **`verify`'s FLAGS are not frozen yet — do not hardcode them** (ai-maestro-plugin#29,
+> open as of 2026-07-16). The exit-code contract IS settled (`0` / `2` / `1`, mirroring
+> `aimaestro-portfolio.sh verify`), and so is the token-not-prose property. But the
+> posted frozen shape reads `verify <id> [--agent A]` with the verdict fields
+> (`verified · token_id · issuer_agent_id · issuer_title · min_approval_requirement ·
+> authority_sufficient · reasons[]`) on STDOUT, and whether **`--json`** survives is an
+> open question CORE has asked and ai-maestro has not yet answered. So: rely on the
+> **exit code**, read flags from the host's own `--help` at call time, and do not teach
+> `--json` as given. Teaching an unsettled flag is the same error as teaching an
+> undeployed verb.
+>
+> **A `min-approval-requirement: none` card verifies TRUE — that is correct, not a
+> forgery.** Tier-0 work is legitimately unapproved-by-design. A verifier that cried
+> forgery on routine `none` cards would be one people learn to ignore, which would cost
+> more than it saves.
 
 Global `--agent <uuid|name>` targets that agent's `<workdir>/design` corpus.
 **Nothing is committed for you** — stage and commit the result yourself, by name.
