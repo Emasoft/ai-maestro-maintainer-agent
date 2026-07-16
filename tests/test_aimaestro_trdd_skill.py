@@ -68,9 +68,7 @@ def test_capability_probe_is_documented(doc: Path) -> None:
     aimaestro-trdd.sh; a doc that omits the probe teaches the agent to assume
     presence, which fails on exactly the hosts this plugin is meant to serve.
     """
-    assert "command -v aimaestro-trdd.sh" in _text(doc), (
-        f"{doc.name}: no `command -v aimaestro-trdd.sh` capability probe"
-    )
+    assert "command -v aimaestro-trdd.sh" in _text(doc), f"{doc.name}: no `command -v aimaestro-trdd.sh` capability probe"
 
 
 @pytest.mark.parametrize("doc", (SKILL_MD, INSTRUCTIONS_MD, COMMAND_MD), ids=lambda p: p.name)
@@ -99,10 +97,7 @@ def test_probe_is_verb_granular_not_just_script_granular(doc: Path) -> None:
     manifest (it documents verify), not a version string, not a doc.
     """
     text = _flat(doc)
-    assert re.search(r"--help.{0,80}grep", text), (
-        f"{doc.name}: no per-VERB probe (script's own --help) — `command -v` alone is "
-        f"not enough; it passes on a host whose CLI lacks the verb"
-    )
+    assert re.search(r"--help.{0,80}grep", text), f"{doc.name}: no per-VERB probe (script's own --help) — `command -v` alone is not enough; it passes on a host whose CLI lacks the verb"
 
 
 @pytest.mark.parametrize("doc", DOCS, ids=lambda p: p.name)
@@ -116,9 +111,7 @@ def test_verify_is_marked_absent_on_the_deployed_script(doc: Path) -> None:
     is precisely what the token design exists to stop.
     """
     text = _flat(doc)
-    assert re.search(
-        r"not\s+(on\s+the\s+deployed|implemented\s+on\s+this\s+host)", text, re.I
-    ), f"{doc.name}: does not state that `verify` is absent from the deployed script"
+    assert re.search(r"not\s+(on\s+the\s+deployed|implemented\s+on\s+this\s+host)", text, re.I), f"{doc.name}: does not state that `verify` is absent from the deployed script"
     assert "69" in text, f"{doc.name}: does not cite ai-maestro#69 for the verify gap"
 
 
@@ -127,12 +120,21 @@ def test_docs_forbid_substituting_prose_when_verify_is_unavailable() -> None:
 
     The dangerous move is not "verify is missing" — it is an agent deciding that
     `approval-judge:` looks fine, which is exactly what a forger writes.
+
+    The regex REQUIRES the prose context (prose / approval-judge / Approval log)
+    within reach of the prohibition. An earlier version matched a bare
+    `(do not|never)\\s+(infer|substitute)` and was a RUBBER STAMP: it kept passing
+    with this ban deleted, because it was matching the UNRELATED sentence "never
+    infer a verb from docs/SCRIPT-MANIFEST.md". Caught by mutation testing — a
+    prohibition test must pin the thing being prohibited, not any nearby "never".
     """
     for doc in (SKILL_MD, INSTRUCTIONS_MD, COMMAND_MD):
         text = _flat(doc)
-        assert re.search(r"(do\s+not|never)\s+(infer|substitute)", text, re.I), (
-            f"{doc.name}: does not forbid substituting prose for a real verify"
-        )
+        assert re.search(
+            r"(do\s+not|never)\s+(infer|substitute)\b.{0,90}?(prose|approval-judge|approval log)",
+            text,
+            re.I,
+        ), f"{doc.name}: does not forbid substituting the card's PROSE for a real verify"
 
 
 def test_tier_is_documented_as_a_claim_not_a_grant() -> None:
@@ -144,9 +146,7 @@ def test_tier_is_documented_as_a_claim_not_a_grant() -> None:
     """
     for doc in (SKILL_MD, COMMAND_MD):
         text = _flat(doc)
-        assert re.search(r"`?--tier`?\s+is\s+a\s+\*{0,2}CLAIM", text, re.I), (
-            f"{doc.name}: does not frame --tier as a CLAIM the server validates"
-        )
+        assert re.search(r"`?--tier`?\s+is\s+a\s+\*{0,2}CLAIM", text, re.I), f"{doc.name}: does not frame --tier as a CLAIM the server validates"
 
 
 def test_probe_miss_degrades_explicitly_with_exit_3() -> None:
@@ -170,9 +170,7 @@ def test_archive_refuses_failed() -> None:
     """
     for doc in DOCS:
         text = _flat(doc)
-        assert re.search(r"refuses?\s+`?failed`?", text, re.I), (
-            f"{doc.name}: does not state that archive refuses `failed`"
-        )
+        assert re.search(r"refuses?\s+`?failed`?", text, re.I), f"{doc.name}: does not state that archive refuses `failed`"
         for state in ("completed", "cancelled", "superseded"):
             assert state in text, f"{doc.name}: archive state `{state}` undocumented"
 
@@ -191,15 +189,9 @@ def test_verify_documents_all_three_exit_codes() -> None:
         text = _flat(doc)
         # NOT-verified must be tied to 2 in either shape, and checked FIRST:
         # a bare `verified` search would match inside "NOT VERIFIED".
-        assert re.search(r"[`\s]2[`)\s].{0,40}?NOT[ _-]?VERIFIED", text, re.I), (
-            f"{doc.name}: exit 2 (NOT verified) undocumented"
-        )
-        assert re.search(r"[`\s]0[`)\s].{0,40}?VERIFIED", text, re.I), (
-            f"{doc.name}: exit 0 (verified) undocumented"
-        )
-        assert re.search(r"[`\s]1[`)\s].{0,40}?ERROR", text, re.I), (
-            f"{doc.name}: exit 1 (error) undocumented"
-        )
+        assert re.search(r"[`\s]2[`)\s].{0,40}?NOT[ _-]?VERIFIED", text, re.I), f"{doc.name}: exit 2 (NOT verified) undocumented"
+        assert re.search(r"[`\s]0[`)\s].{0,40}?VERIFIED", text, re.I), f"{doc.name}: exit 0 (verified) undocumented"
+        assert re.search(r"[`\s]1[`)\s].{0,40}?ERROR", text, re.I), f"{doc.name}: exit 1 (error) undocumented"
 
 
 def test_exit_2_is_framed_as_an_answer_not_a_retryable_failure() -> None:
@@ -207,9 +199,7 @@ def test_exit_2_is_framed_as_an_answer_not_a_retryable_failure() -> None:
     for doc in (SKILL_MD, INSTRUCTIONS_MD, COMMAND_MD):
         text = _text(doc).lower()
         assert "retry" in text, f"{doc.name}: says nothing about not retrying a NOT-verified verdict"
-        assert "finding" in text or "answer" in text, (
-            f"{doc.name}: does not frame exit 2 as an answer/finding"
-        )
+        assert "finding" in text or "answer" in text, f"{doc.name}: does not frame exit 2 as an answer/finding"
 
 
 def test_verify_reads_the_token_not_the_prose() -> None:
@@ -222,9 +212,7 @@ def test_verify_reads_the_token_not_the_prose() -> None:
     for doc in DOCS:
         text = _text(doc)
         assert "approval-token" in text, f"{doc.name}: never mentions the approval-token"
-        assert "approval-judge" in text, (
-            f"{doc.name}: does not say approval-judge is IGNORED by verify"
-        )
+        assert "approval-judge" in text, f"{doc.name}: does not say approval-judge is IGNORED by verify"
 
 
 def test_verify_checks_signature_anchor_title_and_floor() -> None:
@@ -244,9 +232,7 @@ def test_identity_not_content_caveat_is_present() -> None:
     """
     for doc in DOCS:
         text = _flat(doc)
-        assert re.search(r"identity,?\s*(\*\*)?\s*not\s+(its\s+)?content", text, re.I), (
-            f"{doc.name}: missing the identity-not-content caveat"
-        )
+        assert re.search(r"identity,?\s*(\*\*)?\s*not\s+(its\s+)?content", text, re.I), f"{doc.name}: missing the identity-not-content caveat"
 
 
 def test_authority_ladder_and_its_two_hard_limits() -> None:
@@ -256,12 +242,8 @@ def test_authority_ladder_and_its_two_hard_limits() -> None:
         assert "min-approval-requirement" in text, f"{doc.name}: authority source undocumented"
         for rung in ("none", "orchestrator", "chief-of-staff", "manager", "user"):
             assert rung in text, f"{doc.name}: ladder rung `{rung}` missing"
-        assert re.search(r"own\s+proposal", text, re.I), (
-            f"{doc.name}: the no-self-approval limit is missing"
-        )
-        assert re.search(r"MANAGER\s+included", text, re.I), (
-            f"{doc.name}: does not state that no-self-approval binds MANAGER too"
-        )
+        assert re.search(r"own\s+proposal", text, re.I), f"{doc.name}: the no-self-approval limit is missing"
+        assert re.search(r"MANAGER\s+included", text, re.I), f"{doc.name}: does not state that no-self-approval binds MANAGER too"
 
 
 def test_nothing_is_committed_for_you() -> None:
@@ -272,9 +254,7 @@ def test_nothing_is_committed_for_you() -> None:
     staging whatever else is untracked.
     """
     for doc in DOCS:
-        assert re.search(r"[Nn]othing is committed for you", _flat(doc)), (
-            f"{doc.name}: does not warn that the CLI commits nothing"
-        )
+        assert re.search(r"[Nn]othing is committed for you", _flat(doc)), f"{doc.name}: does not warn that the CLI commits nothing"
     for doc in (SKILL_MD, INSTRUCTIONS_MD):
         assert re.search(r"by name", _flat(doc), re.I), f"{doc.name}: staging-by-name unstated"
 
@@ -315,9 +295,7 @@ def test_skill_body_links_instructions_as_markdown_link() -> None:
     A bare backtick path is a CPV MINOR and, more importantly, is not clickable
     for the agent reading it.
     """
-    assert "[Full step-by-step instructions](references/instructions.md)" in _text(SKILL_MD), (
-        "SKILL.md: instructions.md is not linked as a markdown link"
-    )
+    assert "[Full step-by-step instructions](references/instructions.md)" in _text(SKILL_MD), "SKILL.md: instructions.md is not linked as a markdown link"
 
 
 def test_report_path_uses_porcelain_not_a_column_split() -> None:
