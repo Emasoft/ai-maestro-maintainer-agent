@@ -36,8 +36,43 @@ default): `current-owner:`, `assignee:`, `priority:`, `task-type:`
 (`feature`|`bugfix`|`refactor`|`docs`|`infra`|`security`|`artifact`|`spike`|`audit`),
 `release-via:` (`publish`|`deploy`|`none`, default `none`),
 `test-requirements:`, `relevant-rules:` (PRRD rule numbers), `npt:`/`eht:`
-(prerequisite / effect-handling child TRDDs), `approval-tier:` (the tier the
-TRDD needs — see overlay).
+(prerequisite / effect-handling child TRDDs), `created-by:` (authorship, set
+once — distinct from `current-owner:` (write-lock) and `assignee:` (executor),
+which change hands), and the approval/mandate/derived fields below.
+
+## Approval, mandate, and derived fields (supersede `approval-tier:` — USER, 2026-07-10)
+
+- **`min-approval-requirement:`** names the TITLE that must approve — the
+  objective floor: `none | orchestrator | chief-of-staff | manager | user`
+  (lowercase kebab). **`user` is the TOP rung**; `maestro` is a deprecated
+  read-alias — normalize on read, NEVER write it.
+- **`approval-tier: N` is deprecated** — decode-only, never written on a new
+  TRDD. Legacy files migrate **on next touch** (no mass rewrite): `0 → none`,
+  `1 → chief-of-staff` (or `orchestrator` where dispatch-scoped), `2 → manager`,
+  `3 → user`. A file carries exactly ONE of the two fields; an absent/unknown
+  value resolves to **`manager`**, never `none`.
+- **Mandate** — a pre-approved TRDD, born in `design/tasks/` as
+  `column: planned` (never in `proposals/`): `mandate: true` +
+  `mandated-by: <title>`, valid iff
+  `authority(mandated-by) >= authority(min-approval-requirement)`.
+- **Judgment record** — a judged TRDD carries `approved: true|false|rejected`,
+  `approval-judge:` (who decided; a mandate's judge is its issuer) and
+  `approval-datetime:`. `aimaestro-trdd.sh approve` additionally MINTS a
+  host-signed `approval-token:` into the frontmatter, and `verify` answers from
+  the TOKEN — never from prose (exit `0` verified / `2` NOT verified / `1` error).
+- **Derived TRDDs (NPT/EHT platelets)** — `derived: true` +
+  `derived-kind: npt|eht` + `parent-trdd:`. **Depth is exactly 1**:
+  `derived: true ⇒ npt: [] and eht: []`, and no TRDD may name a derived TRDD as
+  its `parent-trdd:`. Sibling ordering uses `blocked-by:`, never `npt:`.
+- **Completion gate** — NPT gates the parent's `dev`; EHT gates its `complete`.
+  A parent with any open NPT/EHT is `blocked`, not `complete`.
+
+Canonical text: `rules/aimaestro/aimaestro-trdd-approval.md` (ai-maestro repo,
+seeded into agent workdirs as `.claude/rules/aimaestro-trdd-approval.md`).
+**Probe capability, never version**: an `install.sh`-provisioned host tracks
+`main`, which today carries none of the governance docs and only a subset of
+the scripts — gate on `command -v` / a `--help` probe / file presence, and
+degrade explicitly when the surface is absent.
 
 ## Column enum + approval overlay
 
@@ -55,11 +90,12 @@ authored in `design/proposals/` with `column: proposal`; on approval the
 approver sets `column: planned` and `git mv`s it into `design/tasks/`; on
 refusal it becomes `column: refused` in `design/refused/`. Terminal-DONE TRDDs
 (`completed`/`cancelled`/`superseded`) are `git mv`-ed to `design/archived/`.
-A **Tier-0** TRDD (the agent's own in-scope DERIVED NPT/EHT work, or applying
-the ratified baseline as-is) skips the proposal stage — author it directly in
-`design/tasks/` as `column: planned`. The MAINTAINER is a governance-layer peer
-and files Tier-2 proposals DIRECTLY to MANAGER (no CHIEF-OF-STAFF hop) — see
-`~/.claude/rules/trdd-approval-tiers.md`.
+A floor-`none` TRDD (Tier 0: the agent's own in-scope DERIVED NPT/EHT work, or
+applying the ratified baseline as-is) skips the proposal stage — author it
+directly in `design/tasks/` as `column: planned`. The MAINTAINER is a
+governance-layer peer and files manager-floor proposals
+(`min-approval-requirement: manager`) DIRECTLY to MANAGER (no CHIEF-OF-STAFF
+hop) — see `~/.claude/rules/trdd-approval-tiers.md`.
 
 ## Body sections
 
