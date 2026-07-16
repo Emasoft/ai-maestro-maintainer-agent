@@ -3,7 +3,7 @@ trdd-id: 27IG72GX
 title: Align plugin skills and docs with the ai-maestro governance and script-surface deltas from the issue 67 briefing
 column: planned
 created: 2026-07-16T15:43:43+0200
-updated: 2026-07-16T15:43:43+0200
+updated: 2026-07-16T15:53:23+0200
 current-owner: ai-maestro-maintainer-agent
 created-by: ai-maestro-maintainer-agent
 task-type: feature
@@ -16,13 +16,18 @@ approval-judge: user
 approval-datetime: 2026-07-16T15:43:43+0200
 npt: []
 eht: []
+implementation-commits: [cad3aae]
 ---
 
 # Align plugin skills and docs with the ai-maestro governance and script-surface deltas (issue 67 briefing)
 
 ## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-07-16
 
-- **NEXT ACTION:** execute Phase 1 (5-file edit set below), verify, commit, then Phase 2.
+- **Phase 1: DONE** (`cad3aae`) — `min-approval-requirement` migration + new-field docs.
+- **Phase 2: DONE** (see *Phase 2 findings* below) — script surface verified, probe rule baked in.
+- **NEXT ACTION:** Phase 3 — adopt `aimaestro-trdd.sh` as a capability-probed skill
+  (`skills/maintainer-aimaestro-trdd/`), covering the write verbs + token-based `verify`.
+  Then tests + CPV `--strict` + release via `publish.py`.
 - Briefing source: the ai-maestro Claude's reply on <https://github.com/Emasoft/ai-maestro/issues/67>
   (fetched 2026-07-16; canonical overlay text re-fetched from
   `rules/aimaestro/aimaestro-trdd-approval.md` @ `governance-rules` — NEVER port from the
@@ -70,6 +75,20 @@ testing plan — its own thread), any change to ai-maestro's repo (cross-project
   repo): a capability-probed skill covering the write verbs + token-based `verify`
   (exit 0 verified / 2 NOT verified / 1 error; `archive --state` refuses `failed`).
   Then tests, CPV `--strict` clean, release via `publish.py`.
+
+## Phase 2 findings (verified against `docs/SCRIPT-MANIFEST.md` @ `governance-rules`, 2026-07-16)
+
+| Check | Result |
+|---|---|
+| `aimaestro-agent.sh` (manifest L57) | **Tier A** — frozen, safe to call |
+| `aimaestro-teams.sh` (manifest L148) | **Tier A** — frozen, safe to call |
+| `aimaestro-governance.sh` (manifest L162) | **Tier A** — frozen, safe to call |
+| All 24 Tier-D dead scripts (§5.1 orphaned ×20, §5.2 phantom ×4) | **0 references in this plugin** — the sync bug that hits `ai-maestro-plugin` does not touch us |
+| Capability probing | **was absent** → added the *Probe capability, NEVER version* rule row to the agent persona |
+
+The 3 cited scripts appear in exactly ONE place — the persona's *Frozen CLI only* policy row.
+That row is not an operational caller, but it *instructs* agents to use those scripts, which
+is precisely where the presence assumption would bite on an `install.sh`-provisioned host.
 
 ## Verification
 
