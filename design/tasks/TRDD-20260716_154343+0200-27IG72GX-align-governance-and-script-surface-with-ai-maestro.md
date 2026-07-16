@@ -1,9 +1,9 @@
 ---
 trdd-id: 27IG72GX
 title: Align plugin skills and docs with the ai-maestro governance and script-surface deltas from the issue 67 briefing
-column: planned
+column: published
 created: 2026-07-16T15:43:43+0200
-updated: 2026-07-16T16:22:10+0200
+updated: 2026-07-16T20:33:00+0200
 current-owner: ai-maestro-maintainer-agent
 created-by: ai-maestro-maintainer-agent
 task-type: feature
@@ -16,7 +16,7 @@ approval-judge: user
 approval-datetime: 2026-07-16T15:43:43+0200
 npt: []
 eht: []
-implementation-commits: [cad3aae, aab61fd, 31c4fa2, 7ff8a4e, 093474a]
+implementation-commits: [cad3aae, aab61fd, 31c4fa2, 7ff8a4e, 093474a, d351301, 330aa9b, c1efd23]
 ---
 
 # Align plugin skills and docs with the ai-maestro governance and script-surface deltas (issue 67 briefing)
@@ -27,8 +27,17 @@ implementation-commits: [cad3aae, aab61fd, 31c4fa2, 7ff8a4e, 093474a]
 - **Phase 2: DONE** (`aab61fd`, see *Phase 2 findings*) — script surface verified, probe rule baked in.
 - **Phase 3: DONE** (`31c4fa2` → `7ff8a4e` → `093474a`) — `maintainer-aimaestro-trdd`
   skill + command + 28 tests. Full suite **722/722**, ruff clean.
-- **NEXT ACTION:** release via `scripts/publish.py` (pushing IS the release; NON-EXEMPT —
-  needs authorization). Nothing else is pending.
+- **RELEASED — shipped in v1.7.20** (2026-07-16). User delegated the release decision
+  ("do as you think is best. you have my trust."). `publish.py --patch` green (11/11).
+  The validate gate first blocked on a real MINOR in the new skill — the `Resources`
+  pointer to ai-maestro's `rules/aimaestro/aimaestro-trdd-approval.md` matched CPV's
+  plugin-internal-prefix heuristic (`rules/` IS a plugin dir) and read as plugin-local;
+  fixed in `330aa9b` by qualifying it as external and dropping the `rules/`-prefixed
+  backtick path (devitalize, not suppress), then re-released. NEXT ACTION: none —
+  follow-ups [A] (verify `--json` once ai-maestro-plugin#29 settles) and [B] (R49
+  refusal-protocol) ride a FUTURE release when they resolve upstream.
+- **CI: GREEN** on `c1efd23` (Actions run 29524354220, conclusion success) + Notify
+  Marketplace green. Release fully verified end-to-end.
 - **THE FINDING THAT MATTERS (Phase 3):** the deployed `~/.local/bin/aimaestro-trdd.sh`
   is **330 lines / 7 verbs and LACKS `verify`**; `governance-rules` is **387 / 8** and has
   it (`cmd_verify`). The manifest documents `verify`. So `command -v` passes and the verb
