@@ -186,4 +186,5 @@ finding, not a failure to retry.
 - [Full step-by-step instructions](references/instructions.md) — the runnable recipes.
 - `docs/SCRIPT-MANIFEST.md` (ai-maestro, `governance-rules`) — the frozen contract;
   §5.3/§5.4 are why this skill exists.
-- `rules/aimaestro/aimaestro-trdd-approval.md` — the canonical approval/mandate model.
+- `aimaestro-trdd-approval.md` (ai-maestro, `governance-rules`, in rules/aimaestro/) — the
+  canonical approval/mandate model.
