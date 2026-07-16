@@ -3,7 +3,7 @@ trdd-id: 27IG72GX
 title: Align plugin skills and docs with the ai-maestro governance and script-surface deltas from the issue 67 briefing
 column: planned
 created: 2026-07-16T15:43:43+0200
-updated: 2026-07-16T15:53:23+0200
+updated: 2026-07-16T16:22:10+0200
 current-owner: ai-maestro-maintainer-agent
 created-by: ai-maestro-maintainer-agent
 task-type: feature
@@ -16,7 +16,7 @@ approval-judge: user
 approval-datetime: 2026-07-16T15:43:43+0200
 npt: []
 eht: []
-implementation-commits: [cad3aae]
+implementation-commits: [cad3aae, aab61fd, 31c4fa2, 7ff8a4e, 093474a]
 ---
 
 # Align plugin skills and docs with the ai-maestro governance and script-surface deltas (issue 67 briefing)
@@ -24,10 +24,18 @@ implementation-commits: [cad3aae]
 ## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-07-16
 
 - **Phase 1: DONE** (`cad3aae`) — `min-approval-requirement` migration + new-field docs.
-- **Phase 2: DONE** (see *Phase 2 findings* below) — script surface verified, probe rule baked in.
-- **NEXT ACTION:** Phase 3 — adopt `aimaestro-trdd.sh` as a capability-probed skill
-  (`skills/maintainer-aimaestro-trdd/`), covering the write verbs + token-based `verify`.
-  Then tests + CPV `--strict` + release via `publish.py`.
+- **Phase 2: DONE** (`aab61fd`, see *Phase 2 findings*) — script surface verified, probe rule baked in.
+- **Phase 3: DONE** (`31c4fa2` → `7ff8a4e` → `093474a`) — `maintainer-aimaestro-trdd`
+  skill + command + 28 tests. Full suite **722/722**, ruff clean.
+- **NEXT ACTION:** release via `scripts/publish.py` (pushing IS the release; NON-EXEMPT —
+  needs authorization). Nothing else is pending.
+- **THE FINDING THAT MATTERS (Phase 3):** the deployed `~/.local/bin/aimaestro-trdd.sh`
+  is **330 lines / 7 verbs and LACKS `verify`**; `governance-rules` is **387 / 8** and has
+  it (`cmd_verify`). The manifest documents `verify`. So `command -v` passes and the verb
+  still fails — capability probing must be **per-VERB** (`--help | grep`), never
+  script-granular. My first cut of the skill got this wrong and taught a verb the shipped
+  CLI lacks — the Gate-0 inverse named in ai-maestro#69. Fixed in `7ff8a4e`.
+- `--tier` is a **CLAIM the server must validate by AID**, never a grant (ai-maestro#69 §2).
 - Briefing source: the ai-maestro Claude's reply on <https://github.com/Emasoft/ai-maestro/issues/67>
   (fetched 2026-07-16; canonical overlay text re-fetched from
   `rules/aimaestro/aimaestro-trdd-approval.md` @ `governance-rules` — NEVER port from the
