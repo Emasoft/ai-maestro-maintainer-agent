@@ -56,6 +56,7 @@ AUDIT_UNCOVERED_SKILLS = [
     "maintainer-iac-audit",
     "maintainer-ci-audit",
     "maintainer-observability-audit",
+    "maintainer-aimaestro-trdd",
 ]
 
 TOOL_GRANT_KEYS = ("allowed-tools", "disallowed-tools", "tools")
