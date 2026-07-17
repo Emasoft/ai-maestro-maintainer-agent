@@ -317,13 +317,16 @@ def scan_paths(
 def scan_git_recent_commits(
     since_hours: int,
     patterns: list[Pattern],
-    workers: int,
 ) -> list[Finding]:
     """Scan the last N hours of git history for secret-leak markers.
 
     Uses `git log -p --since=NN hours ago` and feeds the patch text to the
     scanner as a single virtual file. Findings have file='<git-log>' to
     distinguish from filesystem hits.
+
+    Takes no `workers`, unlike scan_paths: the whole patch is ONE virtual file,
+    so there is nothing to fan out. Accepting a worker count here would promise
+    a parallelism that cannot exist.
     """
     proc = subprocess.run(  # noqa: S603 — argv is a literal list
         ["git", "log", "-p", f"--since={since_hours} hours ago", "--all"],
@@ -381,11 +384,18 @@ def main(argv: list[str] | None = None) -> int:
 
     findings: list[Finding] = []
 
+    # Resolved once and kept: files_scanned below must report the list we
+    # ACTUALLY scanned. Re-resolving there would re-run `git rev-parse` + the
+    # glob, so a workflow added or removed mid-scan yields a count that never
+    # matches the findings — and it would bury _resolve_workflows()'s sys.exit(2)
+    # inside output serialization, discarding a completed scan's results.
+    workflows: list[Path] = []
     if args.workflows:
-        findings += scan_paths(_resolve_workflows(), patterns, args.workers)
+        workflows = _resolve_workflows()
+        findings += scan_paths(workflows, patterns, args.workers)
 
     if args.recent_commits > 0:
-        findings += scan_git_recent_commits(args.recent_commits, patterns, args.workers)
+        findings += scan_git_recent_commits(args.recent_commits, patterns)
 
     explicit = [p for p in args.files if p.is_file()]
     if explicit:
@@ -401,7 +411,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.format == "json":
         out: dict[str, Any] = {
             "patterns_in_catalog": len(patterns),
-            "files_scanned": (len(_resolve_workflows()) if args.workflows else 0) + (1 if args.recent_commits > 0 else 0) + len(explicit),
+            "files_scanned": len(workflows) + (1 if args.recent_commits > 0 else 0) + len(explicit),
             "workers": args.workers,
             "findings": [asdict(f) for f in findings],
         }
