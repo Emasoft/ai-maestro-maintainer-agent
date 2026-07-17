@@ -1377,19 +1377,6 @@ def _read_remote_version(plugin_root: Path) -> str | None:
     return None
 
 
-def _infer_bump_type(old: str, new: str) -> str | None:
-    """Classify a semver delta as 'major', 'minor', 'patch', or None."""
-    o = parse_semver(old)
-    n = parse_semver(new)
-    if o is None or n is None or n <= o:
-        return None
-    if n[0] != o[0]:
-        return "major"
-    if n[1] != o[1]:
-        return "minor"
-    return "patch"
-
-
 def _git_porcelain_clean(root: Path) -> bool:
     """True iff `git status --porcelain` is empty (working tree clean)."""
     try:
