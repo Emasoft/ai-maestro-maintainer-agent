@@ -319,6 +319,24 @@ def test_force_still_does_not_delete_someone_elses_branch(spaced_repo: Path) -> 
     assert "agent-did-this-instead" in branches, "the agent's branch holds its commits; --force discards the WORKTREE, not work we never created"
 
 
+def test_remove_never_deletes_a_branch_we_did_not_create(spaced_repo: Path) -> None:
+    """Our branch is gone, so the guard retargets — but the delete target must not follow it."""
+    wt = worktree.create_worktree(spaced_repo, "feat")
+    # The agent renames our branch away and commits: wt/feat no longer exists,
+    # and the worktree now sits on a branch we never created. The guard has to
+    # compare HEAD against THAT branch to be meaningful -- but discarding it is
+    # not ours to do.
+    _git(wt.path, "branch", "-m", "wt/feat", "agent-owns-this")
+    (wt.path / "work.txt").write_text("hours of committed work\n")
+    _git(wt.path, "add", "work.txt")
+    _git(wt.path, "commit", "-q", "-m", "agent work")
+
+    worktree.remove_worktree(spaced_repo, "feat")
+
+    branches = _git(spaced_repo, "branch", "--format=%(refname:short)").split()
+    assert "agent-owns-this" in branches, "we never created that branch, so removing the worktree must not delete it; the guard's comparison target is not the deletion target"
+
+
 def test_remove_is_idempotent(spaced_repo: Path) -> None:
     """Removing an already-removed worktree is a no-op, not an error."""
     worktree.create_worktree(spaced_repo, "feat")

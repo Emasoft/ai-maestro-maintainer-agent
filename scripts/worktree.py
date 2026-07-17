@@ -126,6 +126,26 @@ def _git(
     return proc.stdout
 
 
+def _git_ok(*args: str, cwd: Path | str | None = None) -> bool:
+    """Run git and report whether it SUCCEEDED, by return code.
+
+    Distinct from _git(), which returns STDOUT. Testing _git()'s result for
+    truthiness to detect failure is a trap: the commands that matter here
+    (`worktree remove`, `worktree prune`) print NOTHING on success, so their
+    stdout is "" — identical to the "" _git() returns on failure. That test is
+    therefore true on every call, success or not, and always takes the failure
+    branch. Only the return code separates the two.
+    """
+    proc = subprocess.run(
+        ["git", *args],
+        cwd=str(cwd) if cwd else None,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return proc.returncode == 0
+
+
 def safe_realpath(p: Path | str) -> Path:
     """Resolve symlinks, tolerating a path that does not exist.
 
@@ -612,10 +632,20 @@ def remove_worktree(
     root = safe_realpath(root)
     path = _resolve_worktree_path(root, name)
 
-    # Work out which branch we EXPECT to be there, so the guard has something to
-    # compare against. An explicit branch wins; otherwise the convention.
-    expected = branch or (f"wt/{name}" if len(Path(name).parts) == 1 else None)
-    if expected is not None and not _ref_exists(root, f"refs/heads/{expected}") and path.exists():
+    # Two DIFFERENT branches, deliberately kept apart:
+    #   `ours`     — the branch we created (or the caller explicitly named). The
+    #                ONLY thing we may ever discard.
+    #   `expected` — what the guard compares the worktree's real HEAD against.
+    # They used to be one variable, and that was a data-loss bug: when `ours`
+    # did not exist, `expected` was reassigned to whatever the agent had checked
+    # out — and that same variable was then the `branch -D` target, so we
+    # force-deleted a branch we never created. --force must discard the
+    # WORKTREE, never work we did not make (tests at test_worktree.py:310).
+    ours = branch or (f"wt/{name}" if len(Path(name).parts) == 1 else None)
+    ours_exists = ours is not None and _ref_exists(root, f"refs/heads/{ours}")
+
+    expected = ours
+    if expected is not None and not ours_exists and path.exists():
         # The conventional branch does not exist, so we cannot have created this
         # worktree under that name. Guard against whatever IS checked out instead
         # of against a name we invented.
@@ -624,7 +654,10 @@ def remove_worktree(
     assert_safe_to_destroy(path, expected, force=force)
 
     if path.exists():
-        if not _git("worktree", "remove", "--force", str(path), cwd=root, check=False):
+        # _git_ok, not _git: `git worktree remove` is SILENT on success, so its
+        # stdout is "" either way and `not _git(...)` would take the fallback on
+        # every call — rm-rf'ing a directory git had already removed cleanly.
+        if not _git_ok("worktree", "remove", "--force", str(path), cwd=root):
             # `git worktree remove` refused (a lock, a stale registration, a
             # sandbox still holding the mount). Take the directory ourselves and
             # let `prune` reconcile git's bookkeeping below.
@@ -632,12 +665,14 @@ def remove_worktree(
 
     _git("worktree", "prune", cwd=root, check=False)
 
-    if delete_branch and expected:
+    # `ours`, never `expected`: only the branch WE created is ours to discard.
+    # ours_exists is read BEFORE the removal above, which does not touch refs.
+    if delete_branch and ours and ours_exists:
         # -D not -d: the branch is by definition unmerged in the throw-it-away
         # case, and the guard above has already established that discarding it is
         # safe (or that --force was passed). check=False tolerates "not found",
         # which is the normal state on a second call.
-        _git("branch", "-D", expected, cwd=root, check=False)
+        _git("branch", "-D", ours, cwd=root, check=False)
 
 
 def recover_stale(root: Path | str, *, dry_run: bool = False) -> list[str]:
