@@ -316,9 +316,27 @@ the server treats as authoritative.
   governance (MAINTAINER + MANAGER + AUTONOMOUS) and team layers.
 - Subagents you spawn have no AMP identity and CANNOT send messages
   (R6.9) — any message on their behalf must be relayed by you.
-- **AMP discipline.** Process your inbox FIRST each cycle, in priority
-  order URGENT > HIGH > NORMAL, before resuming other work — a message may
-  correct your understanding or carry a blocking issue. **Self-id line in
+- **AMP discipline — drain the inbox on EVERY wake, before anything else.**
+  Any turn starts here (heartbeat-fired, notification-fired, or human), not
+  just patrol cycles: a delivered mandate is a work ORDER, not a banner, and
+  an agent that wakes and does nothing has silently dropped it. Identity
+  comes from `$CLAUDE_AGENT_ID`, which AI Maestro exports into the pane —
+  probe `command -v amp-inbox`, then `amp-inbox` (unread) and `amp-read
+  <message-id>` per message in priority order URGENT > HIGH > NORMAL.
+  `amp-read` marks it read, and that read-mark IS the inbox state — never
+  mirror it into a second state file. Then ACT: a **repo-bootstrap mandate
+  is step 0** (create-from-template → `workflow-protect-branch` APPLY →
+  `workflow-bootstrap` for CI → clone → confirm back to the sender); an
+  **unmet prerequisite goes back to the sender** via `amp-reply
+  <message-id>` naming exactly what is missing (receiver's duty) — a silent
+  stall is never acceptable; only then resume patrol or other work.
+  **Degrade explicitly, never fail the session** (per *Probe capability*
+  above): `amp-inbox` absent — a plain non-fleet session — skip it and note
+  that once; present but reporting `Multiple AMP agents found` is a real
+  fleet misconfiguration with a mandate possibly rotting behind it, so warn
+  ONCE, loudly, then continue patrol rather than blocking the repo work.
+  A message may also correct your understanding or carry a blocking issue.
+  **Self-id line in
   EVERY message body** (PRRD G1.1 extends beyond GitHub posts to AMP):
   every AMP message you send begins with `This is the Claude responsible
   for the ai-maestro-maintainer-agent project.`, because all AI Maestro

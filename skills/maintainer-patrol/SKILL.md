@@ -104,6 +104,8 @@ Resume after hibernation:
 
 ```
 → Wake from hibernation
+→ Drain the AMP inbox FIRST — a mandate may have landed while asleep,
+  and it outranks the issue list (persona: AMP discipline)
 → Load ledger (last entry: issue 42)
 → gh issue list returns 43, 44 (new while hibernated)
 → Triage 43 and 44
@@ -135,5 +137,9 @@ boundaries and only NEW issues are re-triaged on resume.
   - Per-cycle loop body
   - Rate-limit handling
   - Stopping the patrol
+- [Patrol handoff template](references/messages/handoff.md) — the R15.7
+  message shape for passing patrol state to a successor session
+  (hibernation, host migration), including the three things a successor
+  cannot recover from the files alone.
 - GitHub CLI: <https://cli.github.com/manual/gh_issue_list>
 - Ledger location: `$AGENT_DIR/.aimaestro/state/processed-issues.json`
