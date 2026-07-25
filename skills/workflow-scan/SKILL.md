@@ -21,7 +21,7 @@ issue comment).
 
 Wraps `uvx zizmor` (zizmorcore/zizmor), `actionlint`, and the
 bundled `scripts/sentinel_scan.py` (a Python port of the Sentinel
-scanner — 32 deterministic rules covering the structural classes
+scanner — 33 deterministic rules covering the structural classes
 zizmor does not, such as build/publish credential exposure and
 IDE-config injection) for a read-only audit of every workflow under
 `.github/workflows/`. Writes JSON + markdown reports under
@@ -116,7 +116,7 @@ is mutated.
 
 - zizmor docs: <https://docs.zizmor.sh/>
 - actionlint docs: <https://github.com/rhysd/actionlint>
-- Sentinel port: `scripts/sentinel_scan.py` (32 deterministic
+- Sentinel port: `scripts/sentinel_scan.py` (33 deterministic
   rules; `scan` + `fix` subcommands)
 - [Engine coverage](references/engine-coverage.md):
   - Division of labour

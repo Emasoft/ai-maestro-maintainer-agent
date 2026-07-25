@@ -15,6 +15,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 from sentinel.rules.dangerous_lifecycle_scripts import DangerousLifecycleScripts
+from sentinel.rules.generated_workflow_provenance import GeneratedWorkflowProvenance
 from sentinel.rules.git_config_global import GitConfigGlobal
 from sentinel.rules.ide_config_injection import IdeConfigInjection
 from sentinel.rules.jq_arg_escape import JqArgEscape
@@ -524,3 +525,48 @@ def test_jq_arg_escape_rule_name() -> None:
 def test_jq_arg_escape_severity_is_medium() -> None:
     """Rule severity is medium."""
     assert JqArgEscape().severity == "medium"
+
+
+# --------------------------------------------------------------------------
+# generated-workflow-provenance
+# --------------------------------------------------------------------------
+
+_ORDINARY_WF = "on: push\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n"
+
+
+def test_generated_workflow_provenance_flags_known_generated_filename() -> None:
+    """A workflow named copilot-setup-steps.yml is flagged once for provenance."""
+    findings = GeneratedWorkflowProvenance().check(
+        Workflow(".github/workflows/copilot-setup-steps.yml", _ORDINARY_WF)
+    )
+    assert len(findings) == 1
+    assert findings[0].rule == "generated-workflow-provenance"
+
+
+def test_generated_workflow_provenance_matches_on_basename_not_full_path() -> None:
+    """The match is on the basename, so any directory prefix still flags."""
+    assert len(GeneratedWorkflowProvenance().check(Workflow("copilot-setup-steps.yml", _ORDINARY_WF))) == 1
+
+
+def test_generated_workflow_provenance_silent_on_ordinary_workflow() -> None:
+    """An ordinary ci.yml with identical content produces no finding."""
+    assert GeneratedWorkflowProvenance().check(Workflow(".github/workflows/ci.yml", _ORDINARY_WF)) == []
+
+
+def test_generated_workflow_provenance_names_the_generating_command() -> None:
+    """The message names the package and command that emit the file."""
+    msg = GeneratedWorkflowProvenance().check(Workflow("copilot-setup-steps.yml", _ORDINARY_WF))[0].message
+    assert msg is not None
+    assert "playwright init-agents" in msg
+
+
+def test_generated_workflow_provenance_fix_directs_to_git_history() -> None:
+    """The fix tells the reader to establish authorship from git, not to delete blindly."""
+    fix = GeneratedWorkflowProvenance().check(Workflow("copilot-setup-steps.yml", _ORDINARY_WF))[0].fix
+    assert fix is not None
+    assert "git log" in fix
+
+
+def test_generated_workflow_provenance_severity_is_medium() -> None:
+    """Presence on disk is actionable, not critical — critical needs an install-time trigger."""
+    assert GeneratedWorkflowProvenance().severity == "medium"

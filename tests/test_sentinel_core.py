@@ -23,8 +23,8 @@ from sentinel.rule_engine import RuleEngine
 from sentinel.scanner import Scanner
 from sentinel.workflow import Workflow
 
-# 30 rule modules + 2 synthetic checks (missing-dependabot/zizmor) = 32 total.
-EXPECTED_RULE_COUNT = 30
+# 31 rule modules + 2 synthetic checks (missing-dependabot/zizmor) = 33 total.
+EXPECTED_RULE_COUNT = 31
 
 _CLEAN_WF = """\
 name: CI

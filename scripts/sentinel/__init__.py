@@ -2,7 +2,7 @@
 
 A faithful Python port of the Ruby `sentinel-ci` gem (v1.3.0) — the
 deterministic GitHub Actions workflow scanner from Atai Barkai's
-supply-chain-attack writeup. 32 rules, no external services, pure stdlib
+supply-chain-attack writeup. 33 rules, no external services, pure stdlib
 plus PyYAML.
 
 The maintainer Guardian invokes this as a deterministic engine alongside

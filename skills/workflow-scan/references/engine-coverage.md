@@ -27,7 +27,7 @@ always read all three sections of the report.
 |---|---|---|
 | **zizmor** | Security audits: `template-injection`, `unpinned-uses`, `excessive-permissions`, `artipacked` (credential persistence), `dangerous-triggers` | YAML schema errors, typos, dead `needs:` edges, shell bugs |
 | **actionlint** | Schema + correctness: runner labels, cron, `needs:` graph, expression types, action inputs, shell bugs via shellcheck | Supply-chain posture; it does not care that an action is unpinned |
-| **Sentinel** (`scripts/sentinel_scan.py`) | Structural classes the other two skip: build/publish credential exposure, IDE-config injection (32 rules) | Everything the other two own |
+| **Sentinel** (`scripts/sentinel_scan.py`) | Structural classes the other two skip: build/publish credential exposure, IDE-config injection, generated-workflow provenance (33 rules) | Everything the other two own |
 
 Practical consequence: a workflow can be **zizmor-clean and still
 broken** (bad cron, undefined `needs:` target, unquoted shell var), and

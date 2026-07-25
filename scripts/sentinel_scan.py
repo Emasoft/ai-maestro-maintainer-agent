@@ -6,7 +6,7 @@
 """Sentinel — deterministic GitHub Actions security scanner (Python port).
 
 A faithful Python port of the Ruby `sentinel-ci` gem (v1.3.0). Scans a
-local checkout's `.github/workflows/*.{yml,yaml}` against 32 deterministic
+local checkout's `.github/workflows/*.{yml,yaml}` against 33 deterministic
 rules, plus two repo-level checks (missing Dependabot github-actions
 config, missing zizmor workflow). The maintainer Guardian runs this as a
 deterministic engine alongside zizmor.
