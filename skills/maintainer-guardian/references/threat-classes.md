@@ -28,7 +28,7 @@ report under `$MAIN_ROOT/reports/workflow-scan/`:
 1. `uvx zizmor` (supply-chain + permission analysis).
 2. `actionlint` (YAML / shellcheck-of-`run:`-blocks / glob analysis).
 3. The bundled `scripts/sentinel_scan.py` — a faithful Python port
-   of the Sentinel scanner (32 deterministic rules). It catches the
+   of the Sentinel scanner (33 deterministic rules). It catches the
    structural classes zizmor does not, e.g. `build-publish-same-job`,
    `credential-window`, `ide-config-injection`,
    `missing-frozen-lockfile`, `dangerous-lifecycle-scripts`,
@@ -298,7 +298,12 @@ history are CRITICAL by definition; baseline is always 0.
 
 1. **AMP → MANAGER** (governance escalation, not GitHub-only): send an
    URGENT message to the host MANAGER —
-   `amp-send manager-<host> "T5 secret-leak on <repo>" "<body — begins with the self-id line>" --type alert --priority urgent`.
+   `amp-send "$MANAGER" "T5 secret-leak on <repo>" "<body — begins with the self-id line>" --type alert --priority urgent`.
+   `$MANAGER` is a **registered agent name**, resolved from the agents index —
+   `manager-<host>` is a placeholder and fails to resolve at the exact moment
+   this escalation matters. Resolve it (or fall back to `--id <uuid>`) with the
+   recipe in
+   [approval-request.md](../../maintainer-approval-gate/references/messages/approval-request.md).
    A live committed secret is a fleet-level incident (rotate + history-purge
    may span repos the maintainer does not own), so the governance layer must
    know immediately, not only the GitHub thread. The message body MUST begin

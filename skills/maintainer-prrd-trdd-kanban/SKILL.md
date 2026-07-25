@@ -51,7 +51,9 @@ scripts; this wrapper never calls those scripts directly.
    to MANAGER, no COS hop). A proposal is non-binding and never mutates the
    PRRD directly.
 7. If findings are serious, notify MANAGER over AMP:
-   `amp-send manager-<host> "Audit findings need attention" "See <path> for details" --type alert`.
+   `amp-send "$MANAGER" "Audit findings need attention" "See <path> for details" --type alert`
+   (resolve `$MANAGER` from the agents index — see
+   [approval-request.md](../maintainer-approval-gate/references/messages/approval-request.md)).
 
 ## Output
 
@@ -85,7 +87,10 @@ classify and report:
 - Classify the three outputs, then write
   `$MAIN_ROOT/reports/maintainer-audit/<TS>-<project>.md`.
 - Notify MANAGER over AMP:
-  `amp-send manager-host "Audit findings need attention" "See <report-path> for details" --type alert`.
+  `amp-send "$MANAGER" "Audit findings need attention" "See <report-path> for details" --type alert`
+  (`manager-host` is not a resolvable name — resolve `$MANAGER` from the agents
+  index per
+  [approval-request.md](../maintainer-approval-gate/references/messages/approval-request.md)).
 
 A recurring drift signal seen across several projects becomes a proposal —
 invoke `ama-prrd-propose`:

@@ -125,6 +125,8 @@ git commit -m "chore: bootstrap secure CI baseline (zizmor-clean)"
 cat <<EOF
 ok: bootstrap branch chore/bootstrap-ci is ready.
   1. Open the PR: gh pr create --base main --head chore/bootstrap-ci
+     Pass --body (or --body-file): the PR body must begin with the
+     self-id line, same as every other GitHub write you author.
   2. After merge, apply the baseline by invoking the
      workflow-protect-branch skill (APPLY mode) — it auto-detects this
      repo's CI job names, builds all THREE rulesets (history-protect,
