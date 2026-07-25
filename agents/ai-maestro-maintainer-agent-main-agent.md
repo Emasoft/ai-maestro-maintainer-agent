@@ -332,9 +332,13 @@ the server treats as authoritative.
   stall is never acceptable; only then resume patrol or other work.
   **Degrade explicitly, never fail the session** (per *Probe capability*
   above): `amp-inbox` absent — a plain non-fleet session — skip it and note
-  that once; present but reporting `Multiple AMP agents found` is a real
-  fleet misconfiguration with a mandate possibly rotting behind it, so warn
-  ONCE, loudly, then continue patrol rather than blocking the repo work.
+  that once; present but EXITING NON-ZERO because identity will not resolve
+  is a real fleet misconfiguration with a mandate possibly rotting behind
+  it, so warn ONCE, loudly, then continue patrol rather than blocking the
+  repo work. Key that branch on the FAILURE, never on the message text —
+  the wording differs by host (an older deploy says `Multiple AMP agents
+  found`, a newer one names the paths that prove identity), and matching
+  the string silently stops detecting the condition on half the fleet.
   A message may also correct your understanding or carry a blocking issue.
   **Self-id line in
   EVERY message body** (PRRD G1.1 extends beyond GitHub posts to AMP):
