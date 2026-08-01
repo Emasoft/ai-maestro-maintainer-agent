@@ -3,7 +3,7 @@ trdd-id: 4QC0DV9O
 title: Ship a test for each of the 23 components that have none — almost all of commands/
 column: backburner
 created: 2026-07-14T19:04:07+0200
-updated: 2026-07-14T19:04:07+0200
+updated: 2026-08-01T02:17:20+0200
 current-owner: ai-maestro-maintainer-agent
 task-type: audit
 release-via: publish
@@ -12,6 +12,37 @@ parent-trdd: A6NY2TJU
 ---
 
 # Ship a test for each of the 23 components that have none
+
+## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-08-01
+
+**Re-derived from CPV v2.158.0 `--strict` on 2026-08-01** (the body's figures are the
+2026-07-14 snapshot and are SUPERSEDED):
+
+| | 2026-07-14 | 2026-08-01 |
+|---|---|---|
+| untested components | 23 | **21** |
+| testable components | 56 | **63** |
+| test files CPV counts | 41 | **47** |
+
+**The gap did not close — it churned.** Three components the original list named now have
+tests (`maintainer-prrd-trdd-kanban`, the `maintainer-secrets-scan` skill, `the-skills-menu`),
+and four NEW untested components arrived in the same window:
+`skills/maintainer-worktree/SKILL.md`, `commands/maintainer-worktree.md`,
+`commands/maintainer-show-branch-rules.md`, `commands/maintainer-triage-pr.md`. Net −2 over
+18 days, while the testable surface grew by 7. **A component is still shipping without its
+test** — that is the finding, not the count.
+
+**NEXT ACTION** — unchanged and still step 1 of Approach: a table-driven contract test over
+`commands/` (16 of the 21 are commands). Re-derive the list at the time of work; it moves.
+
+**SUPERSEDED — do NOT carry forward:** "23 of 56", "suite of 41 test files", and the
+component list in `## Why` below. Re-derive, never cite them.
+
+**Found while recounting, unrelated to this TRDD** — CPV also reports
+`RC-DEP-TAG-PIPELINE`: `scripts/publish.py` tags `v{version}` but never
+`ai-maestro-maintainer-agent--v{version}`, so any plugin that depends on this one installs
+with `no-matching-tag` and is DISABLED. Advisory, invisible until someone installs clean.
+Needs its own TRDD — it is not test coverage.
 
 ## Why
 
