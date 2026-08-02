@@ -106,7 +106,7 @@ Full commands + the protected-paths list:
 ```
 maintainer-fix → planned diff: .github/workflows/validate.yml
 → approval-gate CHECK → fingerprint a1b2c3d4e5f6
-→ post comment on issue #42: "approve-protected-edit a1b2c3d4e5f6 from @owner"
+→ post comment on issue #42: "approve-protected-edit a1b2c3d4e5f6 from @<repo-owner>"
 → label awaiting-maintainer-approval
 → disposition: needs-approval → fix HALTS
 ```
