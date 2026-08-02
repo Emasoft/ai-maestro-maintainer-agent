@@ -77,7 +77,7 @@ root, citing a PR or issue number that justifies the exception:
 rules:
   unpinned-uses:
     ignore:
-      - workflow.yml:24:15  # PR #N: third-party action requires @v4
+      - workflow.yml:24:15  # PR #N: third-party action requires the v4 tag
 ```
 
 Blanket ignores are a smell.

@@ -10,13 +10,25 @@ verbatim notified a real organization about a repo it has nothing to do with.
 "Obviously fake-looking" is not a property of the handle — it is a guess about
 the namespace, and the namespace is fully populated.
 
-The rule enforced here is therefore mechanical, not taste-based: an @handle in
-shippable content must be written in the angle-bracket placeholder form
-(@<something>), which cannot resolve in ANY markdown context. A backtick code
-span is deliberately NOT accepted as sufficient on its own, because the span
-suppresses the notification only until someone copies the text out of it —
-which is exactly what an agent does when it lifts an example into a comment
-body.
+CORRECTION (2026-08-02, same day): the first version of this guard PERMITTED an
+angle-bracket placeholder `@<role-name>` and asserted it could not resolve. That
+was wrong, and the form is now banned here too. GitHub's mention extractor reads
+the RAW body, not the sanitized HTML, so the brackets protect nothing — in the
+field, `@<manager>` and `@<janitor>` paged the real `manager` and `janitor`
+accounts. Rendering the same text through GitHub's own /markdown API shows
+`@<manager>` collapsing to a bare `@` with no mention link, which is exactly why
+the form looked safe: THE RENDER IS NOT EVIDENCE OF WHO GETS NOTIFIED.
+
+So the enforced rule is the strict one — no `@` immediately followed by a name,
+in any form, anywhere in shipped content. Write the role in plain words ("the
+repo owner"), or a bare handle with no `@` (`<author>`), or, when a literal `@`
+is unavoidable (an action pin, a URL, an email), keep it attached to a preceding
+word or slash so it cannot read as a mention.
+
+A backtick span IS a real defence in a posted body, but it is not accepted here
+on its own: a span protects the text only while the text stays inside it, and
+lifting an example out of a span into a comment body is exactly what an agent
+does.
 
 NO MOCKS: this walks the real files that ship.
 """
@@ -34,15 +46,23 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # strings we are banning.
 SHIPPED_DIRS = ("skills", "commands", "agents")
 
-# An @handle: '@' not preceded by a word char, '/', a backtick, or '<', and NOT
-# followed by '.<alnum>' (an email/host tail such as `*@users.noreply.github.com`
-# or `<token>@github.com`, neither of which notifies anyone).
-#   - '/' before  guards `actions/setup-node@v4` and `pkg@1.2.3`
-#   - '<' before  guards the sanctioned placeholder form `@<repo-owner>`
-#   - a word char guards emails and the Make/Jenkins sigils
-# A trailing '.' that ENDS a sentence still counts as a mention ("ping @owner."),
-# which is why the exclusion requires an alphanumeric right after the dot.
-MENTION = re.compile(r"(?:^|[^\w/`<@.-])@([A-Za-z][A-Za-z0-9-]{0,38})\b(?!\.\w)")
+# A bare @handle: '@' not preceded by a word char, '/', '>', a backtick, or '<',
+# and NOT followed by '.<alnum>' (an email/host tail such as
+# `*@users.noreply.github.com` or `<token>@github.com`, neither of which
+# notifies anyone).
+#   - '/' or a word char before → an attached pin: `actions/checkout@v4`,
+#     `pkg@1.2.3`. Attached is safe; BARE `@v4` is not — `@v3`/`@v4`/`@v7` are
+#     real accounts, so there is no version-number allowlist here.
+#   - '>' before → a pin on a placeholder: `<action>@<tag>`, `setup-<lang>@vN`.
+# A trailing '.' that ENDS a sentence is still a mention ("ping @owner."), which
+# is why the exclusion requires an alphanumeric right after the dot.
+MENTION = re.compile(r"(?:^|[^\w/`<>@.-])@([A-Za-z][A-Za-z0-9-]{0,38})\b(?!\.\w)")
+
+# The refuted placeholder form. Banned on its own line of defence because the
+# bracket does NOT stop the notification (see the CORRECTION above). Excluded
+# only where '@' is attached to a preceding word/slash/'>' — a version pin such
+# as `actions/checkout@<sha>` or `<pkg>@<ver>`, which addresses no one.
+ANGLE_MENTION = re.compile(r"(?:^|[^\w/`>])@<")
 
 # Non-mention '@word' constructs that share the lexical shape. Each is a
 # language sigil or a package namespace, not a GitHub handle.
@@ -54,9 +74,6 @@ ALLOWED_HANDLES = frozenset(
         "aikidosec",  # npm scope in `@aikidosec/safe-chain`, not a GitHub user
     }
 )
-
-# Action/package version pins: `@v4`, and the doc placeholder `@vN`.
-_VERSION_PIN = re.compile(r"^v(\d|N$)")
 
 
 def _shipped_markdown() -> list[Path]:
@@ -77,15 +94,18 @@ def test_no_at_mentions_that_github_would_resolve() -> None:
     offenders: list[str] = []
     for path in _shipped_markdown():
         for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            rel = path.relative_to(REPO_ROOT)
             for match in MENTION.finditer(line):
                 handle = match.group(1)
-                if handle in ALLOWED_HANDLES or _VERSION_PIN.match(handle):
+                if handle in ALLOWED_HANDLES:
                     continue
-                rel = path.relative_to(REPO_ROOT)
                 offenders.append(f"{rel}:{lineno}: @{handle}  |  {line.strip()[:100]}")
+            if ANGLE_MENTION.search(line):
+                offenders.append(f"{rel}:{lineno}: @<...>  |  {line.strip()[:100]}")
 
     assert not offenders, (
-        "Shipped markdown contains @mentions that GitHub may resolve to real "
-        "accounts. Rewrite each as the placeholder form @<role-name>:\n  "
-        + "\n  ".join(offenders)
+        "Shipped content contains an '@' followed by a name. GitHub resolves that "
+        "against real accounts from the RAW body, so neither angle brackets nor a "
+        "clean HTML render make it safe. Use plain words ('the repo owner') or a "
+        "bare handle with no '@' ('<author>'):\n  " + "\n  ".join(offenders)
     )
