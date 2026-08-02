@@ -27,6 +27,10 @@ repeats. The ledger persists across hibernation.
 - Ledger directory exists at
   `$AGENT_DIR/.aimaestro/state/` (auto-created on first
   run).
+- **Frozen CLI only (IRON RULE).** Every ai-maestro interaction goes through the
+  frozen scripts — here, `amp-send`. NEVER call the ai-maestro server `/api/*`
+  directly, not even as a fallback when a script is missing: degrade explicitly
+  instead (see Error Handling). (`gh` APIs are NOT covered — keep them.)
 
 Copy this checklist and track your progress (pre-flight):
 

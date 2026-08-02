@@ -27,6 +27,11 @@ maintainer no longer waits for someone to file an issue saying
 - `gh auth token` returns a value.
 - `uvx` on PATH (for the chained `workflow-scan` zizmor run).
 - The maintained repo is checked out (working tree may be dirty).
+- **Frozen CLI only (IRON RULE).** Every ai-maestro interaction goes through the
+  frozen scripts — here, `amp-send` for the T5 escalation. NEVER call the
+  ai-maestro server `/api/*` directly, not even to raise an urgent alert when
+  `amp-send` is absent: alert the authorized user instead (threat-classes T5 →
+  Route). (`gh` APIs are NOT covered — keep them.)
 
 ## Instructions
 

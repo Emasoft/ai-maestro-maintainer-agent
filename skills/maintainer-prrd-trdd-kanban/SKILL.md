@@ -28,6 +28,11 @@ scripts; this wrapper never calls those scripts directly.
   `ama-prrd-propose` (plus the write/edit/transition/approval variants).
 - A PRRD plus a populated `design/tasks/` TRDD set in each audited project.
 - Read access to the projects under audit (the audit is read-only).
+- **Frozen CLI only (IRON RULE).** Every ai-maestro interaction goes through the
+  frozen scripts and the `ama-*` skills — here, `amp-send` and
+  `aimaestro-trdd.sh`. NEVER call the ai-maestro server `/api/*` directly, not
+  even as a fallback when a script is missing: degrade explicitly instead.
+  (`gh` APIs are NOT covered — keep them.)
 
 ## Instructions
 
