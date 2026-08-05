@@ -54,7 +54,16 @@ INLINE_SPAN = re.compile(r"`[^`\n]*`")
 # stops at '_' or '.' on its own, which is what GitHub does.
 # Not preceded by a word char, '/', '>' or '`' — those mark an ATTACHED pin
 # (`actions/checkout@v4`, `<pkg>@<ver>`), which addresses nobody.
-MENTION = re.compile(r"(?:^|[^\w/`>@-])@(?P<handle><?[A-Za-z0-9][A-Za-z0-9-]*)")
+# `tail` is captured for REPORTING ONLY and never narrows the match. The handle
+# stops at the first character GitHub cannot linkify, so `@lru_cache` pages `lru`
+# while the text on the page reads `@lru_cache`. Reporting the prefix alone names
+# a string that is not in the file and cannot be grepped for, so the offender line
+# prints both. Do NOT "resolve" that mismatch with a trailing \b: `_` is a word
+# char, the boundary fails mid-token, the match dies, and a REAL page stops being
+# detected — the owner's rule measured `@lru_cache` paging `lru` in the field.
+MENTION = re.compile(
+    r"(?:^|[^\w/`>@-])@(?P<handle><?[A-Za-z0-9][A-Za-z0-9-]*)(?P<tail>[\w.-]*)"
+)
 
 # The one case where an ATTACHED '@' still pages: an email. GitHub reads the
 # domain as a username, so `bob@gmail.com` notifies `gmail` AND leaks an address.
@@ -84,6 +93,18 @@ def _shipped_markdown() -> list[Path]:
 def _handle_of(match: re.Match[str]) -> str:
     """The account GitHub would actually page — a leading '<' is not part of it."""
     return match.group("handle").lstrip("<")
+
+
+def _written_as(match: re.Match[str]) -> str:
+    """The token as it appears in the file, so the offender can be grepped for."""
+    tail = match.groupdict().get("tail") or ""
+    return "@" + match.group("handle") + tail
+
+
+def _describe(match: re.Match[str]) -> str:
+    """Name the paged account AND the text that pages it when they differ."""
+    handle, written = _handle_of(match), _written_as(match)
+    return f"@{handle}" if written == f"@{handle}" else f"{written} (pages @{handle})"
 
 
 def _strip_code(text: str) -> str:
@@ -147,7 +168,7 @@ def test_no_at_mentions_that_github_would_resolve() -> None:
                     if handle in ALLOWED_HANDLES:
                         continue
                     offenders.append(
-                        f"{rel}:{lineno}: @{handle}  |  {line.strip()[:100]}"
+                        f"{rel}:{lineno}: {_describe(match)}  |  {line.strip()[:100]}"
                     )
 
     assert not offenders, (
