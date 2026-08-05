@@ -149,8 +149,15 @@ mode) looks for a maintainer approval comment. Does NOT:
   - Match semantics
   - CHECK commands
   - VERIFY commands
-- [AMP approval-request template](references/approval-request.md) —
-  the R15.7 shape for approvals that go to MANAGER over AMP (destructive
+- [AMP approval-request template](references/approval-request.md):
+  - When you send this
+  - Resolve the recipient BEFORE composing
+  - The message
+  - Recording the answer
+  - When the answer is "no"
+  - The protected-edit variant (human, not AMP)
+
+  The R15.7 shape for approvals that go to MANAGER over AMP (destructive
   git R19.7, baseline deviation), how to resolve the recipient, and the
   approval-log line the decision is recorded in. The protected-edit flow
   above is the human-on-the-issue variant of the same ask.

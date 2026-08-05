@@ -57,8 +57,8 @@ scripts; this wrapper never calls those scripts directly.
    PRRD directly.
 7. If findings are serious, notify MANAGER over AMP:
    `amp-send "$MANAGER" "Audit findings need attention" "See <path> for details" --type alert`
-   (resolve `$MANAGER` from the agents index — see
-   [approval-request.md](../maintainer-approval-gate/references/approval-request.md)).
+   (resolve `$MANAGER` from the agents index — see `approval-request.md` in the
+   `maintainer-approval-gate` skill's references).
 
 ## Output
 
@@ -94,8 +94,8 @@ classify and report:
 - Notify MANAGER over AMP:
   `amp-send "$MANAGER" "Audit findings need attention" "See <report-path> for details" --type alert`
   (`manager-host` is not a resolvable name — resolve `$MANAGER` from the agents
-  index per
-  [approval-request.md](../maintainer-approval-gate/references/approval-request.md)).
+  index per `approval-request.md` in the `maintainer-approval-gate` skill's
+  references).
 
 A recurring drift signal seen across several projects becomes a proposal —
 invoke `ama-prrd-propose`:

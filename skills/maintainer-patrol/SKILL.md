@@ -141,8 +141,12 @@ boundaries and only NEW issues are re-triaged on resume.
   - Per-cycle loop body
   - Rate-limit handling
   - Stopping the patrol
-- [Patrol handoff template](references/handoff.md) — the R15.7
-  message shape for passing patrol state to a successor session
+- [Patrol handoff template](references/handoff.md):
+  - What the successor actually needs
+  - The message
+  - Degrade
+
+  The R15.7 message shape for passing patrol state to a successor session
   (hibernation, host migration), including the three things a successor
   cannot recover from the files alone.
 - GitHub CLI: <https://cli.github.com/manual/gh_issue_list>
