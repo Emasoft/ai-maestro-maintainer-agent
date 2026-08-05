@@ -49,6 +49,25 @@ SHIPPED_DIRS = ("skills", "commands", "agents")
 FENCED_BLOCK = re.compile(r"```.*?```", re.S)
 INLINE_SPAN = re.compile(r"`[^`\n]*`")
 
+# AN EMITTER FENCE IS NOT INERT (hole found by the CORE plugin's guard,
+# Emasoft/ai-maestro#109, fixed there in 07db70e; adopted here 2026-08-05).
+#
+# Exempting every fence is correct about the DOCUMENT and wrong about the WORLD:
+# GitHub does not linkify inside a fence, so the block is inert WHERE IT SITS —
+# but a fence containing `gh issue comment --body "... @handle ..."` or
+# `amp-send ... "<body>"` is a COMMAND, and its OUTPUT is a comment body carrying
+# that handle bare. The doc is safe; running the doc pages a stranger.
+#
+# So a fence that emits a message body is scanned AS PROSE. Measured when this
+# landed: 20 emitter fences in the shipped corpus, 0 leaks — i.e. no live hole,
+# but nothing would have reported the first one. A wording gap that only becomes
+# a hole later is still worth closing before the hole exists.
+EMITTER_FENCE = re.compile(
+    r"\bgh\s+(?:issue|pr|api|release|gist)\b[^\n]*?(?:--body|--body-file|--field|--raw-field)"
+    r"|(?:^|\s)amp-(?:send|reply)\b",
+    re.S,
+)
+
 # A GitHub mention, per the measurements above:
 #   - '@' not preceded by a word char, '/', '>' or a backtick — those are the
 #     attached forms (`checkout@v4`, `x@janitor`, `<pkg>@<ver>`), which are inert.
@@ -87,11 +106,21 @@ def _shipped_markdown() -> list[Path]:
 
 
 def _strip_code(text: str) -> str:
-    """Blank out fenced blocks and inline spans, preserving line numbering."""
+    """Blank out inert code, preserving line numbering.
+
+    A fence that EMITS a message body (see EMITTER_FENCE) is deliberately left in
+    place — the handle inside it reaches GitHub when the command runs. Its inline
+    spans are still blanked, because a backticked handle survives into the body
+    as backticked text and GitHub does not linkify it there either.
+    """
     def blank(match: re.Match[str]) -> str:
         return re.sub(r"[^\n]", " ", match.group(0))
 
-    return INLINE_SPAN.sub(blank, FENCED_BLOCK.sub(blank, text))
+    def fence(match: re.Match[str]) -> str:
+        block = match.group(0)
+        return block if EMITTER_FENCE.search(block) else blank(match)
+
+    return INLINE_SPAN.sub(blank, FENCED_BLOCK.sub(fence, text))
 
 
 def test_shipped_markdown_exists() -> None:
@@ -125,6 +154,29 @@ def test_mention_grammar_matches_measured_github_behaviour() -> None:
         match = MENTION.search(text)
         got = match.group("handle") if match else None
         assert got == expected, f"{text!r}: expected {expected!r}, got {got!r}"
+
+
+def test_an_emitter_fence_is_scanned_but_a_plain_fence_is_not() -> None:
+    """The fence is inert where it sits; its OUTPUT is not.
+
+    Without this the guard passes a doc that instructs an agent to POST a bare
+    handle — the document is clean and the comment it produces pages a stranger.
+    """
+    emitter = 'run:\n\n```bash\ngh issue comment 1 --body "thanks @janitor"\n```\n'
+    assert "@janitor" in _strip_code(emitter), "an emitter fence was wrongly exempted"
+
+    amp = '```bash\namp-send "$M" "subj" "ping @janitor"\n```\n'
+    assert "@janitor" in _strip_code(amp), "an amp-send fence was wrongly exempted"
+
+    # A fence that emits nothing stays exempt — that is the prescribed fix for a
+    # handle you must WRITE, and a guard that flags its own remedy gets deleted.
+    plain = "```python\n@janitor\ndef f(): ...\n```\n"
+    assert "@janitor" not in _strip_code(plain), "a non-emitting fence must stay inert"
+
+    # A BACKTICKED handle inside an emitter survives into the body as backticked
+    # text, which GitHub does not linkify — so it must not be reported.
+    safe = '```bash\ngh issue comment 1 --body "thanks `@janitor`"\n```\n'
+    assert "@janitor" not in _strip_code(safe), "a backticked handle in an emitter is inert"
 
 
 def test_email_regex_catches_addresses_but_allows_reserved() -> None:

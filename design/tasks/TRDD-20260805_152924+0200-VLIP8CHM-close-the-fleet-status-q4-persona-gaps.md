@@ -39,6 +39,13 @@ relevant-rules: []
   rendered `(no docstring)`: `run-all-tests.py` keyed the lookup on the bracketed
   nodeid (`test_foo[SKILL.md]`) while the collector keys on the bare `def test_foo`.
   310 → 0.
+- **SLICE 4 — the mention guard exempted its own worst case.** `_strip_code` blanked
+  EVERY fence, so a fence containing `gh issue comment --body "… @handle …"` or
+  `amp-send … "<body>"` was treated as inert. It is inert *where it sits* and its
+  **output is a comment body carrying the handle bare**. Hole found by the CORE
+  plugin on `ai-maestro#109` (fixed there in `07db70e`); adopted here. Measured
+  first: **20 emitter fences, 0 leaks** — no live hole, but nothing would have
+  reported the first one.
 - **NEXT ACTION:** none — released, and answered on #29.
 - **THE BUG THE TESTS FOUND ON THEIR FIRST RUN:** the persona stated the mandatory
   byte-exact self-id line WRAPPED across a line break inside its backticks
