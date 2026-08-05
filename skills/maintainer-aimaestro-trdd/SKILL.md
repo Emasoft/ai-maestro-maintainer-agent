@@ -27,6 +27,16 @@ role-plugin repo, this one included.
 
 ## Prerequisites — PROBE, never assume
 
+**Frozen CLI only (IRON RULE) — and this skill is where it bites hardest.** Every
+verb below reaches the server through `aimaestro-trdd.sh`. NEVER call the ai-maestro
+server `/api/*` directly: not when a verb is missing (that is the *likely* case here —
+see the `verify` finding below), not when the script is absent, not for a route that
+merely looks read-only. When the frozen path cannot do it, **the capability does not
+exist on this host** — degrade explicitly and report the gap upstream; a direct call is
+never the fallback. This is stated as a PREREQUISITE, not in *Scope*, because a
+prerequisite is read before acting and a scope note is read after wondering. (`gh` and
+package-registry APIs are NOT covered — keep them.)
+
 **The script may not exist on this host, and that is normal.** `install.sh` clones
 ai-maestro with no `--branch`, so a provisioned host tracks `main`, which ships a
 subset of the scripts; the full surface exists only where the `governance-rules`

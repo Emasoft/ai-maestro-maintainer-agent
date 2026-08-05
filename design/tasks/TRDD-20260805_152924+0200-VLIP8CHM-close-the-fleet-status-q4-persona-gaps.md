@@ -3,7 +3,7 @@ trdd-id: VLIP8CHM
 title: Close the two remaining FLEET-STATUS Q4 persona gaps and pin the governance contract with tests
 column: dev
 created: 2026-08-05T15:29:24+0200
-updated: 2026-08-05T15:29:24+0200
+updated: 2026-08-05T15:52:00+0200
 current-owner: ai-maestro-maintainer-agent
 created-by: ai-maestro-maintainer-agent
 task-type: docs
@@ -25,8 +25,20 @@ relevant-rules: []
   and the seeded read-only `.claude/rules/aimaestro-*.md` overlays (new
   *Seeded rules are not yours to edit* Key Constraints row, with the precedence
   tie-break and the content-probe pattern).
-- **`tests/test_persona_governance.py` added — 33 tests, no mocks.** Full suite
-  **779/779**. `ruff check` + `mypy` clean.
+- **`tests/test_persona_governance.py` added — 33 tests, no mocks.** Shipped in
+  **v1.9.0**.
+- **SLICE 2 — `ai-maestro#107` clause 2 (same TRDD, second commit).** The iron rule
+  had to move from the persona into the **decision surfaces**. Measured, then fixed
+  3 real gaps: `commands/maintainer-aimaestro-trdd.md` (a command runs with NO skill
+  loaded), `skills/maintainer-aimaestro-trdd/SKILL.md` (the prohibition was a
+  *descriptive* line in `## Scope`, not a prerequisite — the skill whose whole job is
+  driving the CLI carried the weakest form), and `hooks/hooks.json` (a hook runs with
+  no skill loaded either). Guarded by `tests/test_frozen_cli_prohibition.py`
+  (147 tests). Full suite **926/926**.
+- **SLICE 3 — the results table was lying about 310 tests.** Every PARAMETRIZED row
+  rendered `(no docstring)`: `run-all-tests.py` keyed the lookup on the bracketed
+  nodeid (`test_foo[SKILL.md]`) while the collector keys on the bare `def test_foo`.
+  310 → 0.
 - **NEXT ACTION:** none — released, and answered on #29.
 - **THE BUG THE TESTS FOUND ON THEIR FIRST RUN:** the persona stated the mandatory
   byte-exact self-id line WRAPPED across a line break inside its backticks
@@ -100,6 +112,39 @@ and #29 now carries the claim explicitly so it can be corrected.
   partial regression reports *which* columns went missing rather than one opaque
   failure.
 
+## Slice 2 — where the iron rule actually has to live (`ai-maestro#107`)
+
+The USER's 2026-08-02 iron rule has two clauses, and this repo passed the first
+while quietly failing part of the second.
+
+| Clause | Measured 2026-08-05 |
+|---|---|
+| 1 — no direct `/api/*` call | **CLEAN.** Every hit is the prohibition itself, GitLab's CI-lint endpoint, crates.io, a container healthcheck on its own `localhost:8080`, or a YAML error example. Zero target ai-maestro. |
+| 2 — the SKILLS layer must *instruct* it | **3 gaps**, all fixed here. |
+
+The argument that makes clause 2 non-cosmetic is not mine — it is
+`ai-maestro-autonomous-agent`'s on `#107`: **skills load on demand and in
+isolation**, so an agent that consults one skill to decide *"may I do this?"*
+never sees the persona. A command and a hook are worse: they run with **no skill
+loaded at all**, so "no skill instructed it" is structurally true there rather
+than an oversight.
+
+Two detector traps, both adopted from that thread rather than rediscovered:
+
+- **Match the prohibition, not the vocabulary.** The MANAGER's first sweep grepped
+  `frozen CLI` and reported 3 of 10 skills compliant; re-reading the hits showed
+  two merely *used* the sanctioned path. The real number was 1. A skill that calls
+  the CLI is textually indistinguishable from one that forbids the API unless you
+  match on the forbidding.
+- **The inverse overcount is equally real.** `maintainer-trdd-adr`'s template names
+  `aimaestro-trdd.sh approve` while explaining a frontmatter field. It instructs
+  nothing, and demanding a prohibition block there is how a rule becomes furniture.
+  So the test's notion of "instructs" is an **executable position** — inside a
+  fence, at the start of a line, or behind a `command -v` probe — never mere prose.
+
+Both traps are pinned as their own tests, so the detector cannot drift into
+matching everything or nothing.
+
 ## Notes and lessons learned
 
 - **A parametrized assertion per item beats one assertion over a list.** The
@@ -112,6 +157,13 @@ and #29 now carries the claim explicitly so it can be corrected.
 - **Wrapped verbatim strings.** A literal that MUST be byte-exact should never be
   laid out where prose wrapping can break it. The persona had exactly that defect
   in the one place it defines the string for everyone else.
+- **A rule is only enforced where it is READ AT DECISION TIME.** Persona-only is
+  not enforcement for a surface that loads in isolation — and a command or hook
+  inherits nothing at all. Slice 2 is that lesson applied.
+- **A results table that says `(no docstring)` for a third of its rows is a broken
+  table, not a documentation debt.** The instinct is to go add docstrings; the
+  docstrings were there. The lookup key was wrong. Read the mechanism before
+  believing what a report says about the code.
 
 ## Approval log
 

@@ -9,6 +9,15 @@ Its write verbs became agent-usable in `d7531e53` (TRDD-K2WJH7RF), governed by t
 
 Loads skill: **maintainer-aimaestro-trdd**
 
+**Frozen CLI only (IRON RULE).** Every one of these verbs reaches the server through
+`aimaestro-trdd.sh`. NEVER reach past it to the server's `/api/*` — not when a verb is
+missing, not when the script is absent, not for a read that merely looks harmless, and
+not to "just check" a token. When the frozen path cannot do it, **the capability does
+not exist here**: degrade explicitly (below) and report the gap upstream. This binds
+this command file itself, because a command runs with **no skill loaded** — the
+prohibition has to be at the surface where the decision is actually made, not one hop
+away in a skill nobody consulted. (`gh` and package-registry APIs are NOT covered.)
+
 **Probe first — and probe the VERB, not just the script.** The CLI may be absent, and
 even when present it may lack the verb: verified 2026-07-16, the deployed copy is 330
 lines / 7 verbs while `governance-rules` is 387 / 8 — the missing one is **`verify`**
