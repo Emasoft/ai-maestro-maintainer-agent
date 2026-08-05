@@ -141,7 +141,7 @@ boundaries and only NEW issues are re-triaged on resume.
   - Per-cycle loop body
   - Rate-limit handling
   - Stopping the patrol
-- [Patrol handoff template](references/messages/handoff.md) — the R15.7
+- [Patrol handoff template](references/handoff.md) — the R15.7
   message shape for passing patrol state to a successor session
   (hibernation, host migration), including the three things a successor
   cannot recover from the files alone.

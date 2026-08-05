@@ -303,7 +303,7 @@ history are CRITICAL by definition; baseline is always 0.
    `manager-<host>` is a placeholder and fails to resolve at the exact moment
    this escalation matters. Resolve it (or fall back to `--id <uuid>`) with the
    recipe in
-   [approval-request.md](../../maintainer-approval-gate/references/messages/approval-request.md).
+   [approval-request.md](../../maintainer-approval-gate/references/approval-request.md).
    A live committed secret is a fleet-level incident (rotate + history-purge
    may span repos the maintainer does not own), so the governance layer must
    know immediately, not only the GitHub thread. The message body MUST begin

@@ -3,7 +3,16 @@
 The MAINTAINER has no CHIEF-OF-STAFF, so every approval it cannot
 self-authorize goes **directly to MANAGER** (R6/R19). This is the shape of
 that message. The sibling template is
-[handoff.md](../../../maintainer-patrol/references/messages/handoff.md).
+[handoff.md](../../maintainer-patrol/references/handoff.md).
+
+## Contents
+
+- [When you send this](#when-you-send-this)
+- [Resolve the recipient BEFORE composing](#resolve-the-recipient-before-composing)
+- [The message](#the-message)
+- [Recording the answer](#recording-the-answer)
+- [When the answer is "no"](#when-the-answer-is-no)
+- [The protected-edit variant (human, not AMP)](#the-protected-edit-variant-human-not-amp)
 
 ## When you send this
 
@@ -61,7 +70,7 @@ Use `--priority high` only when something is genuinely blocked on the answer.
 retired**: never write it, decode it only when reading a legacy card
 (`0→none, 1→chief-of-staff, 2→manager, 3→user`). Field semantics are defined
 once, in
-[trdd-template.md](../../../maintainer-trdd-adr/references/trdd-template.md) —
+[trdd-template.md](../../maintainer-trdd-adr/references/trdd-template.md) —
 this template does not restate them.
 
 ## Recording the answer
@@ -88,5 +97,5 @@ itself. Read the stated defect and the bar for acceptance, then re-propose.
 A protected-path edit is approved by `$AUTHORIZED_USER` **on the GitHub issue**,
 not over AMP — that flow, its `approve-protected-edit <fingerprint>` grammar and
 the replay-proof diff binding live in
-[protected-paths.md](../protected-paths.md). Same self-id rule applies to the
+[protected-paths.md](protected-paths.md). Same self-id rule applies to the
 comment body.

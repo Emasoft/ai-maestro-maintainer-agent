@@ -3,17 +3,23 @@
 Sent when patrol state must survive the session that produced it: hibernation,
 host migration, or handing the repo to a successor session. The sibling template
 is
-[approval-request.md](../../../maintainer-approval-gate/references/messages/approval-request.md).
+[approval-request.md](../../maintainer-approval-gate/references/approval-request.md).
 
 A handoff is a **status report about durable state**, not a work order. It names
 where the state lives so the successor reads the files rather than trusting a
 summary of them.
 
+## Contents
+
+- [What the successor actually needs](#what-the-successor-actually-needs)
+- [The message](#the-message)
+- [Degrade](#degrade)
+
 ## What the successor actually needs
 
 Most patrol state is already on disk under the agent working directory — that is
 deliberate, so AI Maestro's backups and host-to-host migration carry it (see
-[patrol-loop.md](../patrol-loop.md) for the ledger and baseline paths). The
+[patrol-loop.md](patrol-loop.md) for the ledger and baseline paths). The
 handoff points at that state and adds only what a file cannot say: what is
 half-done, and what is waiting on a human.
 
