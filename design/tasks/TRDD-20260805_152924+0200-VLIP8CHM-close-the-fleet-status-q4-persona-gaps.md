@@ -1,9 +1,9 @@
 ---
 trdd-id: VLIP8CHM
 title: Close the two remaining FLEET-STATUS Q4 persona gaps and pin the governance contract with tests
-column: dev
+column: published
 created: 2026-08-05T15:29:24+0200
-updated: 2026-08-05T16:24:00+0200
+updated: 2026-08-05T20:52:00+0200
 current-owner: ai-maestro-maintainer-agent
 created-by: ai-maestro-maintainer-agent
 task-type: docs
@@ -12,7 +12,7 @@ min-approval-requirement: none
 approved: true
 npt: []
 eht: []
-implementation-commits: []
+implementation-commits: [d5fac99, e7e3a65, 15f6348, fb059ff]
 relevant-rules: []
 ---
 
@@ -56,9 +56,13 @@ relevant-rules: []
   *repository root*: nothing fetches it. The three URLs the recipe really requests all
   return 200 (verified). "Fixing" the base would break gh install on apt AND dnf, so
   the file now carries the measurement and a DO-NOT-FIX note.
+- **CLOSED `published` 2026-08-05.** All five slices shipped across **v1.9.0 → v1.11.0**,
+  CI green on each; suite 1045/1045, CPV `--strict` 0/0/0/0. Commits in
+  `implementation-commits:`.
 - **NEXT ACTION:** none in this repo. **PR #34** (dependabot, 10/10 checks green, both
   SHAs verified against upstream tags) is `BLOCKED` solely on `REVIEW_REQUIRED` — a
-  human-approval control this agent must not satisfy itself. Handed to the USER.
+  human-approval control this agent must not satisfy itself. Handed to the USER; it is
+  NOT part of this card's scope and does not hold it open.
 - **THE BUG THE TESTS FOUND ON THEIR FIRST RUN:** the persona stated the mandatory
   byte-exact self-id line WRAPPED across a line break inside its backticks
   (`…the Claude responsible\n  for the ai-maestro-maintainer-agent…`). It is the
