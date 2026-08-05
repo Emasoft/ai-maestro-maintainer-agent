@@ -143,7 +143,7 @@ on its own.
 Clean PR — no flags:
 
 ```
-PR #42 by @owner, +12 / -3 in src/utils/, tests included
+PR #42 by <repo-owner>, +12 / -3 in src/utils/, tests included
 → 0 flags
 → comment: "AI-assisted review — no automated flags. Final
    approval requires a human reviewer."
@@ -152,7 +152,7 @@ PR #42 by @owner, +12 / -3 in src/utils/, tests included
 Multi-category red:
 
 ```
-PR #58 by @random, +600 lines, adds postinstall in package.json,
+PR #58 by <outside-contributor>, +600 lines, adds postinstall in package.json,
 touches .github/workflows/, no tests
 → flags: workflow.zizmor.new-high (Cat 1),
          lifecycle.postinstall.added (Cat 3),

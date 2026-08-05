@@ -172,6 +172,27 @@ expected outcome — it means the guard did its job.
   with it.
 - Does **not** touch a worktree it did not create, beyond listing it.
 
+## Two harness behaviours this skill has to live with (Claude Code 2.1.221)
+
+Neither is a defect here, and neither is worked around — both are places where
+the harness will refuse or redirect something these instructions ask for, and a
+silent redirect is worse than a known one.
+
+- **Run this skill from the MAIN session, not from inside an
+  `Agent(isolation: "worktree")` subagent.** Such a subagent has git redirected
+  into its OWN worktree, and 2.1.210 / 2.1.216 closed the escapes — `git -C`,
+  `--git-dir`, `GIT_DIR`, `GIT_WORK_TREE`. Every `git -C "$WT" …` below is
+  written for the main checkout and will not reach the path it names from inside
+  one. That containment is correct; it just means this skill is the wrong tool
+  there, since such an agent already has the isolation this skill exists to
+  create.
+- **`.worktrees/` is deliberately NOT `.claude/worktrees/`.** Since 2.1.206 the
+  `EnterWorktree` tool asks for confirmation before entering a worktree outside
+  `.claude/worktrees/`, so pointing it at ours prompts. Keep them separate
+  anyway: `.claude/worktrees/` is the harness's own managed area, and putting
+  ours there would let two lifecycles create and delete in the same directory.
+  Drive ours with the verbs below, not with `EnterWorktree`.
+
 ## Done when (terminating conditions)
 
 The task is complete when the verb you ran reached one of its terminal states:

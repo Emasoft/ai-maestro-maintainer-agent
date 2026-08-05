@@ -28,7 +28,7 @@ Required images:
 
 - `aimm-sandbox:node-baseline` — Node 24 + npm + git + tini
 - `aimm-sandbox:python-baseline` — Python 3.12 + uv + pip + git + tini
-- `aimm-sandbox:node-safe-chain` — node-baseline + @aikidosec/safe-chain (optional)
+- `aimm-sandbox:node-safe-chain` — node-baseline + `@aikidosec/safe-chain` (optional)
 - `aimm-sandbox:node-sfw` — node-baseline + Socket Firewall `sfw` (optional)
 - `aimm-sandbox:mitm` — mitmproxy (optional)
 

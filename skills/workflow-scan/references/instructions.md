@@ -80,7 +80,7 @@ Two preconditions worth checking once, before the loop:
 See [engine-coverage.md](engine-coverage.md) for what each engine owns
 and what it is blind to.
 
-Then run the bundled Sentinel port (32 deterministic rules; covers
+Then run the bundled Sentinel port (33 deterministic rules; covers
 the structural classes zizmor does not):
 
 ```bash

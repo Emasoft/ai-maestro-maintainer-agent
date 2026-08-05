@@ -25,17 +25,25 @@ PR's own text is NEVER substituted into shell.
 | Field | Value |
 |---|---|
 | PR | #<N> |
-| Author | @<author> |
+| Author | <author> |
 | Triage case | <A|B|C> |
 | Files changed | <count> |
 | Additions | +<N> |
 | Deletions | -<N> |
 | Flags | <count> (highest severity: <high|medium|low|none>) |
-| Reviewer (human) | @<authorized-user> |
+| Reviewer (human) | <authorized-user> |
 ```
 
 The header is constant width — the columns line up across PRs
 so the maintainer can scan a queue of review comments quickly.
+
+**Handles are rendered WITHOUT a leading `@`.** GitHub turns `@word` into a
+user mention anywhere outside a code block, and this template's fenced block is
+the template's own source — the substituted text lands in a real comment body as
+plain prose. A placeholder that survives substitution (`@` plus an unfilled
+`<author>`) then pages whoever owns that generic handle, and the short ones are
+all taken. The bare handle identifies the author just as well and notifies
+nobody who is not already a participant.
 
 ## Per-flag block
 
@@ -72,7 +80,7 @@ This is the Claude responsible for the ai-maestro-maintainer-agent project.
 ---
 
 **This is an AI-assisted review. Final approval requires a human
-reviewer (@<authorized-user>).** The `maintainer-pr-review` skill
+reviewer (the authorized maintainer).** The `maintainer-pr-review` skill
 does NOT call `gh pr review --approve` under any circumstance.
 ```
 

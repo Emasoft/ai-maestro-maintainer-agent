@@ -3,7 +3,7 @@ trdd-id: 4QC0DV9O
 title: Ship a test for each of the 23 components that have none — almost all of commands/
 column: backburner
 created: 2026-07-14T19:04:07+0200
-updated: 2026-07-14T19:04:07+0200
+updated: 2026-08-01T03:22:00+0200
 current-owner: ai-maestro-maintainer-agent
 task-type: audit
 release-via: publish
@@ -12,6 +12,42 @@ parent-trdd: A6NY2TJU
 ---
 
 # Ship a test for each of the 23 components that have none
+
+## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-08-01
+
+**Re-derived from CPV v2.158.0 `--strict` on 2026-08-01** (the body's figures are the
+2026-07-14 snapshot and are SUPERSEDED):
+
+| | 2026-07-14 | 2026-08-01 |
+|---|---|---|
+| untested components | 23 | **21** |
+| testable components | 56 | **63** |
+| test files CPV counts | 41 | **47** |
+
+**The gap did not close — it churned.** Three components the original list named now have
+tests (`maintainer-prrd-trdd-kanban`, the `maintainer-secrets-scan` skill, `the-skills-menu`),
+and four NEW untested components arrived in the same window:
+`skills/maintainer-worktree/SKILL.md`, `commands/maintainer-worktree.md`,
+`commands/maintainer-show-branch-rules.md`, `commands/maintainer-triage-pr.md`. Net −2 over
+18 days, while the testable surface grew by 7. **A component is still shipping without its
+test** — that is the finding, not the count.
+
+**NEXT ACTION** — unchanged and still step 1 of Approach: a table-driven contract test over
+`commands/` (16 of the 21 are commands). Re-derive the list at the time of work; it moves.
+
+**SUPERSEDED — do NOT carry forward:** "23 of 56", "suite of 41 test files", and the
+component list in `## Why` below. Re-derive, never cite them.
+
+**Found while recounting, and then REFUTED — do not re-open.** CPV also reports
+`RC-DEP-TAG-PIPELINE` ("publish.py tags `v{version}` but never
+`ai-maestro-maintainer-agent--v{version}`, so dependents install with `no-matching-tag`").
+**That warning is a FALSE POSITIVE on this repo.** Verified in source at HEAD `e9d7068`:
+`scripts/publish.py:1685` builds `resolver_tag = f"{get_plugin_name(root)}--v{new_ver}"`,
+`:1757` pushes it with `git push --atomic origin HEAD {tag} {resolver_tag}`, and `:302-312`
+fail-fast rather than guess the plugin name. Both tags ship, atomically. I had recorded it
+here as a real defect on CPV's word alone before reading the code — the correction is [^2].
+Hypothesis for why CPV misses it, NOT verified: the tag is built by f-string interpolation,
+so a literal scan for `<plugin-name>--v` finds nothing.
 
 ## Why
 
@@ -82,3 +118,13 @@ its subject is broken (verify by breaking it, once, deliberately).
   and pointed at nothing, and the branch ruleset sealed the repo while showing all-green.
   Lesson: the findings that matter most are the ones nothing is failing on. A non-blocking
   warning is not a lesser finding, it is an unexamined one.
+
+[^2]: [ocd:2026-08-01 lmd:2026-08-01] DO NOT record a scanner's WARNING into a TRDD (or
+  report it to the user) as an established defect before reading the code it accuses,
+  BECAUSE the warning is the tool's claim and the source is the evidence — I wrote
+  `RC-DEP-TAG-PIPELINE` into this card as a real bug needing its own TRDD, and
+  `publish.py:1685/1757` had been pushing the resolver tag atomically the whole time.
+  DO open the accused file first; one grep would have cost less than the card.
+  Note the trap is the exact mirror of `[^1]`: that lesson says a non-blocking warning
+  is an *unexamined* finding, and the fix for unexamined is to EXAMINE it — not to
+  promote it. Both failure modes are cheap to avoid and expensive to ship.

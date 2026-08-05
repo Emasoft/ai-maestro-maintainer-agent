@@ -9,16 +9,19 @@ plus the CPV coverage audit found without dedicated test coverage:
   observability-audit).
 
 No mocks. Every assertion runs against the REAL shipped SKILL.md + its
-references/ on disk. The universal contract (parametrized over all 20) checks
-each skill's frontmatter validity, the no-tool-grant-frontmatter invariant
-(ADR-0002 / PRRD S7), the presence of the core body sections, and that every
-`references/...` link in the body resolves to a real file (broken-reference
-guard). Per-skill tests add the structural invariant unique to each skill.
+references/ on disk. The universal contract (parametrized over every entry in
+AUDIT_UNCOVERED_SKILLS) checks each skill's frontmatter validity, the
+no-tool-grant-frontmatter invariant (ADR-0002 / PRRD S7), the presence of the
+core body sections, and that every `references/...` link in the body resolves
+to a real file (broken-reference guard). Per-skill tests add the structural
+invariant unique to each skill.
 
 Consistent with this repo's grouped-test convention (test_sentinel_rules_a..f
-cover many rules in one module): one table-driven module gives every one of the
-20 skills real, regression-catching coverage without 20 near-duplicate stub
-files.
+cover many rules in one module): one table-driven module gives every listed
+skill real, regression-catching coverage without a near-duplicate stub file per
+skill. The count is deliberately NOT written out here — a hardcoded total has
+to be hand-synced on every append and silently goes stale (it already read "20"
+while the table held 21); AUDIT_UNCOVERED_SKILLS is the single source of truth.
 """
 
 from __future__ import annotations
@@ -57,6 +60,13 @@ AUDIT_UNCOVERED_SKILLS = [
     "maintainer-ci-audit",
     "maintainer-observability-audit",
     "maintainer-aimaestro-trdd",
+    # Added after a coverage re-audit: these shipped later than the original
+    # table and were never appended, so they silently had no contract coverage.
+    # Append every NEW skill here — that is what keeps the universal contract
+    # whole-corpus rather than a snapshot of whichever skills existed that day.
+    "maintainer-prrd-trdd-kanban",
+    "maintainer-secrets-scan",
+    "the-skills-menu",
 ]
 
 TOOL_GRANT_KEYS = ("allowed-tools", "disallowed-tools", "tools")

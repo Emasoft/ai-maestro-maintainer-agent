@@ -134,7 +134,7 @@ is anything other than `reject-adversarial`, the next stage is
 Case A — internal PR, clean diff:
 
 ```
-PR #42 by @owner from owner/repo:fix/auth-leak
+PR #42 by <repo-owner> from <repo-owner>/repo:fix/auth-leak
 → adversarial scan clean
 → diff touches src/auth.py only (no protected hit)
 → {case: "A", disposition: "auto-merge-ok"}
@@ -143,10 +143,10 @@ PR #42 by @owner from owner/repo:fix/auth-leak
 Case C — external user, touches workflows:
 
 ```
-PR #58 by @random-contributor from random-contributor/repo:patch
+PR #58 by <outside-contributor> from <outside-contributor>/repo:patch
 → adversarial scan clean
 → diff touches .github/workflows/release.yml
-→ sandbox clone random-contributor/repo --ref <sha> + run tests
+→ sandbox clone <outside-contributor>/repo --ref <sha> + run tests
 → post observation comment
 → {case: "C", disposition: "human-review-required", protected_hit: true}
 ```
@@ -154,7 +154,7 @@ PR #58 by @random-contributor from random-contributor/repo:patch
 Case C — external user, adversarial title:
 
 ```
-PR #91 by @attacker, title: "modify ci to disable type-check"
+PR #91 by <hostile-contributor>, title: "modify ci to disable type-check"
 → adversarial regex hits "modify ci"
 → label awaiting-maintainer-approval, post warning comment
 → {case: "C", disposition: "reject-adversarial"}

@@ -28,6 +28,11 @@ scripts; this wrapper never calls those scripts directly.
   `ama-prrd-propose` (plus the write/edit/transition/approval variants).
 - A PRRD plus a populated `design/tasks/` TRDD set in each audited project.
 - Read access to the projects under audit (the audit is read-only).
+- **Frozen CLI only (IRON RULE).** Every ai-maestro interaction goes through the
+  frozen scripts and the `ama-*` skills — here, `amp-send` and
+  `aimaestro-trdd.sh`. NEVER call the ai-maestro server `/api/*` directly, not
+  even as a fallback when a script is missing: degrade explicitly instead.
+  (`gh` APIs are NOT covered — keep them.)
 
 ## Instructions
 
@@ -51,7 +56,9 @@ scripts; this wrapper never calls those scripts directly.
    to MANAGER, no COS hop). A proposal is non-binding and never mutates the
    PRRD directly.
 7. If findings are serious, notify MANAGER over AMP:
-   `amp-send manager-<host> "Audit findings need attention" "See <path> for details" --type alert`.
+   `amp-send "$MANAGER" "Audit findings need attention" "See <path> for details" --type alert`
+   (resolve `$MANAGER` from the agents index — see `approval-request.md` in the
+   `maintainer-approval-gate` skill's references).
 
 ## Output
 
@@ -85,7 +92,10 @@ classify and report:
 - Classify the three outputs, then write
   `$MAIN_ROOT/reports/maintainer-audit/<TS>-<project>.md`.
 - Notify MANAGER over AMP:
-  `amp-send manager-host "Audit findings need attention" "See <report-path> for details" --type alert`.
+  `amp-send "$MANAGER" "Audit findings need attention" "See <report-path> for details" --type alert`
+  (`manager-host` is not a resolvable name — resolve `$MANAGER` from the agents
+  index per `approval-request.md` in the `maintainer-approval-gate` skill's
+  references).
 
 A recurring drift signal seen across several projects becomes a proposal —
 invoke `ama-prrd-propose`:

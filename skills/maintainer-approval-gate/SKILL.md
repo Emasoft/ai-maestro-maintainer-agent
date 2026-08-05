@@ -27,6 +27,10 @@ user to approve on the issue; VERIFY confirms the approval landed.
 - `gh auth token` returns a value.
 - `$AUTHORIZED_USER` env var set (from `gh api user --jq .login`).
 - The issue number that triggered the fix is known to the caller.
+- **Frozen CLI only (IRON RULE).** Every ai-maestro interaction goes through the
+  frozen scripts — here, `amp-send`. NEVER call the ai-maestro server `/api/*`
+  directly, not even as a fallback when a script is missing: degrade explicitly
+  instead. (`gh` and package-registry APIs are NOT covered — keep them.)
 
 ## Instructions
 
@@ -102,7 +106,7 @@ Full commands + the protected-paths list:
 ```
 maintainer-fix → planned diff: .github/workflows/validate.yml
 → approval-gate CHECK → fingerprint a1b2c3d4e5f6
-→ post comment on issue #42: "approve-protected-edit a1b2c3d4e5f6 from @owner"
+→ post comment on issue #42: "approve-protected-edit a1b2c3d4e5f6 from <repo-owner>"
 → label awaiting-maintainer-approval
 → disposition: needs-approval → fix HALTS
 ```
@@ -145,6 +149,18 @@ mode) looks for a maintainer approval comment. Does NOT:
   - Match semantics
   - CHECK commands
   - VERIFY commands
+- [AMP approval-request template](references/approval-request.md):
+  - When you send this
+  - Resolve the recipient BEFORE composing
+  - The message
+  - Recording the answer
+  - When the answer is "no"
+  - The protected-edit variant (human, not AMP)
+
+  The R15.7 shape for approvals that go to MANAGER over AMP (destructive
+  git R19.7, baseline deviation), how to resolve the recipient, and the
+  approval-log line the decision is recorded in. The protected-edit flow
+  above is the human-on-the-issue variant of the same ask.
 - Companion: `maintainer-fix`, `maintainer-guardian`.
 - Inspiration: the build/publish-separation pattern applied at the
   agent layer.

@@ -189,7 +189,16 @@ def render_table(rows: list[dict], docs: dict[str, str]) -> str:
         path_part, _, func = nodeid.partition("::")
         mod = Path(path_part).stem
         name = f"{mod}::{func}"
-        desc = docs.get(name, "(no docstring)")
+        # A PARAMETRIZED nodeid carries its case id in brackets
+        # ("test_foo[SKILL.md]"), but `collect_test_docstrings` keys on the bare
+        # `def test_foo` it parsed out of the source — so the bracketed form never
+        # matched and EVERY parametrized row rendered "(no docstring)" (310 of
+        # them here). Strip the case id before the lookup; the docstring belongs
+        # to the function, and every case shares it.
+        desc = docs.get(name)
+        if desc is None and "[" in func:
+            desc = docs.get(f"{mod}::{func.partition('[')[0]}")
+        desc = desc or "(no docstring)"
         outcome = r["outcome"]
         # Map to status label
         status_map = {
