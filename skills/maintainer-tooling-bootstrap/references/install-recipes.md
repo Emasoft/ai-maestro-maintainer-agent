@@ -54,6 +54,22 @@ the steps in order, one per line:
 4. Register the signed apt source: `echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list`
 5. Install: `apt-get update && apt-get install -y gh`
 
+> **A link checker will report `https://cli.github.com/packages` as a dead URL
+> (HTTP 404). DO NOT "fix" it — the recipe is correct.** That path is an apt
+> *repository root*, not a page: nothing ever fetches it directly. What the steps
+> above actually fetch all return 200 — verified 2026-08-05:
+>
+> | fetched by | URL | status |
+> |---|---|---|
+> | step 2 | `…/packages/githubcli-archive-keyring.gpg` | 200 |
+> | step 4 → `apt-get update` | `…/packages/dists/stable/Release` | 200 |
+> | the `dnf` row | `…/packages/rpm/gh-cli.repo` | 200 |
+>
+> Rewriting the base to something that returns 200 in a browser would break gh
+> installation on apt **and** dnf. A 404 on a repository root is the expected
+> shape of a package repo, so probe the path a consumer really requests before
+> believing a link checker about one.
+
 ### `git` (≥ 2.30)
 
 | Platform | Command |

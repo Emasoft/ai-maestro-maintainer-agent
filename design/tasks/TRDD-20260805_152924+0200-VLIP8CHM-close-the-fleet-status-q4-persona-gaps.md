@@ -3,7 +3,7 @@ trdd-id: VLIP8CHM
 title: Close the two remaining FLEET-STATUS Q4 persona gaps and pin the governance contract with tests
 column: dev
 created: 2026-08-05T15:29:24+0200
-updated: 2026-08-05T15:52:00+0200
+updated: 2026-08-05T16:24:00+0200
 current-owner: ai-maestro-maintainer-agent
 created-by: ai-maestro-maintainer-agent
 task-type: docs
@@ -46,7 +46,19 @@ relevant-rules: []
   plugin on `ai-maestro#109` (fixed there in `07db70e`); adopted here. Measured
   first: **20 emitter fences, 0 leaks** — no live hole, but nothing would have
   reported the first one.
-- **NEXT ACTION:** none — released, and answered on #29.
+- **SLICE 5 — the command contract was unenforced.** 23 commands, and no test read
+  them; CPV names 14 as untested. `tests/test_command_contracts.py` (118) pins
+  frontmatter, description, no tool-grant keys, **`Loads skill:` resolving to a real
+  skill**, local paths resolving, and the argument-hint shape. Measured: **0 findings**
+  — closing the gap, not a break.
+- **SLICE 5b — a CPV "dead URL" that must NOT be fixed.** `cli.github.com/packages`
+  404s as a bare path and is cited 3× in the gh install recipe. It is an apt
+  *repository root*: nothing fetches it. The three URLs the recipe really requests all
+  return 200 (verified). "Fixing" the base would break gh install on apt AND dnf, so
+  the file now carries the measurement and a DO-NOT-FIX note.
+- **NEXT ACTION:** none in this repo. **PR #34** (dependabot, 10/10 checks green, both
+  SHAs verified against upstream tags) is `BLOCKED` solely on `REVIEW_REQUIRED` — a
+  human-approval control this agent must not satisfy itself. Handed to the USER.
 - **THE BUG THE TESTS FOUND ON THEIR FIRST RUN:** the persona stated the mandatory
   byte-exact self-id line WRAPPED across a line break inside its backticks
   (`…the Claude responsible\n  for the ai-maestro-maintainer-agent…`). It is the
@@ -171,6 +183,17 @@ matching everything or nothing.
   table, not a documentation debt.** The instinct is to go add docstrings; the
   docstrings were there. The lookup key was wrong. Read the mechanism before
   believing what a report says about the code.
+- **A link checker cannot tell a dead URL from a repository root.** `…/packages`
+  404s because it is not a page; the paths a consumer actually requests all
+  return 200. Probe what the CONSUMER fetches, never the base — the naive fix
+  here would have broken gh installation on two package managers while turning
+  the warning green.
+- **My own guard fired on correct writing, and I nearly "fixed" the data.**
+  `argument-hint: "[--threats T1,T2,...]"` tripped a "contains a period ⇒ prose"
+  check; `...` is an ellipsis, not a sentence. A guard that reddens on correct
+  writing gets muted, and a muted guard protects nothing — so the discriminator
+  was corrected (a word char followed by a FINAL period) and pinned in BOTH
+  directions, which is what stops the next round of loosening-until-quiet.
 
 ## Approval log
 
