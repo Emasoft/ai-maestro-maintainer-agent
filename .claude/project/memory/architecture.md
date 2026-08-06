@@ -1,8 +1,8 @@
 ---
 name: architecture
-description: "how does ai-maestro-maintainer-agent work — overview, the main parts (guardian/patrol/workflow-* skills, the main agent, publish pipeline), where the key pieces live / how does the Sentinel scanning engine behind workflow-scan work and how do I add a rule to it / what severity should a new rule use"
+description: "how does ai-maestro-maintainer-agent work — overview, the main parts (guardian/patrol/workflow-* skills, the main agent, publish pipeline), where the key pieces live / how does the Sentinel scanning engine behind workflow-scan work and how do I add a rule to it / what severity should a new rule use / I edited the main agent persona and the test suite went red — what pins the kanban columns and the frozen-CLI prohibition / the test table shows no docstring on every row"
 ocd: 2026-06-16
-lmd: 2026-06-16
+lmd: 2026-08-06
 metadata:
   node_type: memory
   type: project
@@ -63,7 +63,7 @@ Tests live in `tests/test_sentinel_rules_{a..f}.py` plus `test_sentinel_core.py`
 and `test_sentinel_autofix.py`, and the whole suite runs through
 `uv run tests/run-all-tests.py` (a runner, not plain pytest: it renders the
 per-test result table and is what the publish gate invokes). The `workflow-scan`
-skill owns the engine's user-facing contract (severity classes, report layout).
+skill owns the engine's user-facing contract (severity classes, report layout). [^1]
 
 
 ^ATOM-HP0I-YJXV [desc:"Sentinel severity is a design decision: separate CAN-do from DOES-at-install from files-ARE-present, and justify the choice in the rule's own docstring", keywords: what_severity_should_a_new_sentinel_rule_use why_does_this_rule_fire_at_medium_not_critical capability_vs_execution_vs_presence detector_severity_convention why_not_report_an_opt_in_feature_as_critical, ocd: 2026-08-06, lmd: 2026-08-06]
@@ -88,4 +88,31 @@ A new rule carries that reasoning in **its own docstring**, as the shipped ones
 do — the docstring is where the severity is justified and the first thing a
 reviewer reads.
 
+
+^ATOM-MYHQ-9JC0 [desc:"the main agent's governance sections are a TESTED contract — three test files pin the 17 kanban columns, the seeded-rules precedence row and the frozen-CLI prohibition, so editing the persona is a red", keywords: I_edited_the_main_agent_persona_and_the_test_suite_went_red why_does_a_test_assert_the_kanban_column_names where_is_the_frozen_CLI_prohibition_enforced can_I_reword_the_maintainer_persona_governance_section what_pins_the_17_column_board, type: project, ocd: 2026-08-06, lmd: 2026-08-06]
+
+**The main agent's governance prose is executable contract, not documentation.**
+`agents/ai-maestro-maintainer-agent-main-agent.md` rides every turn, so a quiet
+edit to it silently changes how this plugin governs itself. Three suites pin it:
+
+- `tests/test_persona_governance.py` — the board vocabulary, asserted **one test
+  per column** (14 lifecycle + 3 exception) so a partial regression names WHICH
+  columns went missing instead of failing as one opaque row. The expected tuple
+  is written longhand on purpose: a test that derives its expectation from the
+  file under test proves nothing.
+- `tests/test_frozen_cli_prohibition.py` — the IRON RULE that the ai-maestro
+  server's `/api/*` is never called directly, checked at every decision surface
+  that could invoke it (persona, command, skill, hooks). It distinguishes
+  *executable* positions (a fenced block, a line start, a `command -v` probe)
+  from prose that merely names a verb — prose instructs nothing.
+- `tests/test_command_contracts.py` — every `commands/*.md` has frontmatter, a
+  description, no tool-grant keys, and a `Loads skill:` that resolves to a
+  shipping skill.
+
+So a red suite after touching the persona is the contract working. Re-read what
+the failing test asserts before "fixing" either side — the assertion is usually
+the thing you meant to keep.
+
 ## Notes and lessons learned
+
+[^1]: [id:ATOM-8Q1B-MSF4, status:valid, desc:"the runner's per-test table rendered 310 blank descriptions while every docstring existed — the lookup key was wrong, not the tests", keywords:"the_test_result_table_shows_no_docstring_on_every_row parametrized_tests_have_no_description_in_the_table should_I_add_docstrings_to_these_test_functions run-all-tests_renders_blank_descriptions", ocd:2026-08-06, lmd:2026-08-06] DO NOT start adding docstrings when `run-all-tests.py`'s table renders "(no docstring)" across many rows, BECAUSE a parametrized test's pytest nodeid carries a `[params]` suffix the docstring map is not keyed on — 310 rows read blank while every docstring was already there. DO read the lookup (`tests/run-all-tests.py:198`) and strip the bracket suffix before the fallback: a table-wide blank is a key bug, a scattered one is a real missing docstring.
