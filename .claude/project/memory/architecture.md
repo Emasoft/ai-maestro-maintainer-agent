@@ -53,9 +53,17 @@ with no registry to edit. Supporting modules: `scanner.py`, `finding.py`,
 `policy.py`, `workflow.py`, `sha_resolver.py`, `autofix.py`, `local_client.py`.
 34 rule files ship today.
 
+**The CLI entry point is `scripts/sentinel_scan.py` — one level ABOVE the package,
+not inside it.** Worth stating because the natural guess is wrong: everything else
+is under `scripts/sentinel/`, so a reader looking for "how do I run a scan" searches
+the package, finds only library modules, and concludes there is no entry point. It
+is an ordinary `argparse` CLI.
+
 Tests live in `tests/test_sentinel_rules_{a..f}.py` plus `test_sentinel_core.py`
-and `test_sentinel_autofix.py`; the `workflow-scan` skill owns the engine's
-user-facing contract (severity classes, report layout).
+and `test_sentinel_autofix.py`, and the whole suite runs through
+`uv run tests/run-all-tests.py` (a runner, not plain pytest: it renders the
+per-test result table and is what the publish gate invokes). The `workflow-scan`
+skill owns the engine's user-facing contract (severity classes, report layout).
 
 
 ^ATOM-HP0I-YJXV [desc:"Sentinel severity is a design decision: separate CAN-do from DOES-at-install from files-ARE-present, and justify the choice in the rule's own docstring", keywords: what_severity_should_a_new_sentinel_rule_use why_does_this_rule_fire_at_medium_not_critical capability_vs_execution_vs_presence detector_severity_convention why_not_report_an_opt_in_feature_as_critical, ocd: 2026-08-06, lmd: 2026-08-06]
