@@ -113,6 +113,33 @@ So a red suite after touching the persona is the contract working. Re-read what
 the failing test asserts before "fixing" either side — the assertion is usually
 the thing you meant to keep.
 
+
+^ATOM-C0K0-QYLH [desc:"A second tested-contract class: tests pinning EXTERNAL upstream surfaces (Claude Code CLI, the CPV pin, cited governance), because a fact verified in another repo rots with this suite green.", keywords: why_does_this_repo_test_things_it_does_not_own upstream_surface_compliance_tests a_deprecated_Claude_Code_feature_slipped_into_a_skill detector_must_be_self-checked_in_both_directions borrowed_upstream_fact_went_stale_unnoticed test_claude_code_surface_compliance, type: project, ocd: 2026-08-07, lmd: 2026-08-07]
+
+Beyond the persona contract, this suite pins a second class: EXTERNAL surfaces
+this plugin depends on but does not own.
+
+* `tests/test_claude_code_surface_compliance.py` — removed/deprecated Claude Code
+  features, `claude plugin <verb>` taking ONE positional, agent names without
+  `:`, permission-rule spellings that warn, hook `if:` glob semantics.
+* `tests/test_cpv_pin_alignment.py` — the validator pin is defined once and the
+  workflows match it.
+* `tests/test_r42_no_agent_drive.py` — a governance prohibition this plugin
+  answered publicly.
+
+WHY they exist: a fact verified against another project keeps living there. This
+tree's checks stop at its own boundary while the upstream surface keeps moving,
+so a doc that was right when written rots with the suite green and nothing on
+either side can span the gap. Both halves happened here in one day — an
+unratified rule shipped as settled governance, and a validator pin 50 releases
+stale that was withholding the very fix needed to unblock a release.
+
+THE INVARIANT, and it is not optional: every detector is self-checked in BOTH
+directions — it must bite a real violation AND stay quiet on correct writing. A
+guard that cannot fail reports a compliance it never checked; one that reddens on
+correct code gets deleted. Both failure modes have occurred in this repo, so both
+are pinned as tests rather than trusted as discipline.
+
 ## Notes and lessons learned
 
 [^1]: [id:ATOM-8Q1B-MSF4, status:valid, desc:"the runner's per-test table rendered 310 blank descriptions while every docstring existed — the lookup key was wrong, not the tests", keywords:"the_test_result_table_shows_no_docstring_on_every_row parametrized_tests_have_no_description_in_the_table should_I_add_docstrings_to_these_test_functions run-all-tests_renders_blank_descriptions", ocd:2026-08-06, lmd:2026-08-06] DO NOT start adding docstrings when `run-all-tests.py`'s table renders "(no docstring)" across many rows, BECAUSE a parametrized test's pytest nodeid carries a `[params]` suffix the docstring map is not keyed on — 310 rows read blank while every docstring was already there. DO read the lookup (`tests/run-all-tests.py:198`) and strip the bracket suffix before the fallback: a table-wide blank is a key bug, a scattered one is a real missing docstring.
