@@ -1,9 +1,9 @@
 ---
 trdd-id: eef76adc-6e93-48f1-a197-4a1e9830f6f7
 title: CPV canonical pipeline migration — drive RC-PIPELINE-DRIFT-001 WARNINGs to 0
-column: complete
+column: completed
 created: 2026-05-23T17:50:05+0200
-updated: 2026-06-11T11:13:41+0200
+updated: 2026-08-07T12:08:37+0200
 ---
 
 ## TRDD-eef76adc — CPV canonical pipeline migration — drive RC-PIPELINE-DRIFT-001 WARNINGs to 0
