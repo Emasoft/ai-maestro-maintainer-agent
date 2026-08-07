@@ -1,10 +1,9 @@
 ---
 trdd-id: c0734bde-9d36-49c7-98a7-dcae2f83794d
 title: Supply-chain article response — close article-vector gaps GAP-1 GAP-2 GAP-4 (Phase A)
-column: complete
+column: completed
 created: 2026-05-23T17:50:01+0200
-updated: 2026-08-07T12:26:00+0200
-blocked-by: [cpv-archived-zone-false-positive]
+updated: 2026-08-07T12:34:00+0200
 ---
 
 ## TRDD-c0734bde — Supply-chain article response — close article-vector gaps GAP-1 GAP-2 GAP-4 (Phase A)
@@ -155,27 +154,26 @@ skills/workflow-fix-safe/references/instructions.md                 (MOD, +Harde
   parametrised (project-specific schedule, custom block lists).
   That work is a separate TRDD.
 
-## Why this card is NOT in `design/archived/` (2026-08-07)
+## Archival note — the detour this card caused (2026-08-07)
 
-The work is DONE — this card belongs in the archive with the other eight
-closed on 2026-08-07. It is held back by an upstream defect, recorded here so
-nobody "fixes" the board by moving it and silently breaks the release gate.
+Archiving this card briefly turned the publish gate RED, and chasing that is
+what surfaced a much larger defect, so the trail is worth keeping.
 
-**Measured, not inferred.** CPV `--strict` v2.158.0 scans `design/archived/`
-and does NOT scan `design/tasks/`. Proven by running the identical validator
-against the commit before the archival (`exit 0, NIT=0`) and after
-(`exit 4, NIT=2`) — same bytes, different folder. Archiving this card therefore
-turns a green publish gate red, and `publish.py` blocks on any NIT.
+Under CPV **v2.158.0** the security detectors fired twice on this document —
+once on the bare word `curl` in a code span, once on a line whose entire content
+is `(24h quarantine + exotic-subdep block); Python/Go repos do not.`, which has
+nothing executable on it at all. The findings appeared only in
+`design/archived/` (CPV did not scan `design/tasks/`), proven by running the
+identical validator either side of the move: `exit 0, NIT=0` before,
+`exit 4, NIT=2` after, same bytes.
 
-The findings are false positives on **prose that documents an attack**: one
-matched the bare word `curl` inside a code span (cleared by rewriting it as
-"a fetch of …", kept — it is better prose either way), and one is attributed to
-a line whose entire content is
-`(24h quarantine + exotic-subdep block); Python/Go repos do not.` — nothing
-executable to devitalize. A finding that cannot be fixed author-side is a
-detector defect, not a content defect, and the standing rule forbids clearing
-it by muting a rule or relaxing `--strict`.
+**The root cause was not this document — it was a 50-release-stale validator
+pin.** CPV v5.1.3 shipped a path-classification layer (CPV#191) built for
+exactly this class: security detectors firing on authored PROSE that describes
+the thing it documents. Measured on the same tree: v2.158.0 → NIT=2 (blocked),
+v5.3.0 → NIT=0. The pin was bumped and this card archived normally.
 
-**Move it to `archived/` only after the upstream issue is resolved** — verify
-with a `--strict` run first. Filed on the CPV tracker; see the commit that
-added this section for the issue reference.
+One edit here is deliberate and kept: the attack payload in the GAP-2 section is
+now written as prose ("a fetch of `<attacker-host>/x?t=` …") rather than a
+literal command substitution. It teaches the identical lesson without shipping a
+live-looking payload in a document that lands on every user's disk.

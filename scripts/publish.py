@@ -129,13 +129,21 @@ DIM    = "\033[2m" if _C else ""
 NC     = "\033[0m" if _C else ""
 
 # The remote CPV validator, pinned. ONE definition, because four hardcoded
-# copies is exactly how this drifted: the workflows were re-pinned to v2.158.0
-# and publish.py was left on v2.152.1, so the LOCAL push gate validated against
-# an older validator than CI — a plugin could pass the gate and fail CI, or the
-# reverse, with nothing reporting why. Keep this in lockstep with the
-# `uvx --from` lines in .github/workflows/{ci,release}.yml;
-# tests/test_cpv_pin_alignment.py fails the build if they diverge again.
-CPV_REF = "git+https://github.com/Emasoft/claude-plugins-validation@v2.158.0"
+# copies is exactly how this drifted: the workflows were re-pinned and
+# publish.py was left behind, so the LOCAL push gate validated against an older
+# validator than CI — a plugin could pass the gate and fail CI, or the reverse,
+# with nothing reporting why. Keep this in lockstep with the `uvx --from` lines
+# in .github/workflows/{ci,release}.yml; tests/test_cpv_pin_alignment.py fails
+# the build if they diverge again.
+#
+# A STALE PIN IS NOT A SAFE PIN. This sat on v2.158.0 while CPV shipped v5.3.0 —
+# roughly 50 releases, three majors. The cost was not theoretical: v5.1.3 added
+# the path-classification layer (CPV#191) that stops the security detectors
+# firing on authored PROSE, and without it, archiving a finished TRDD into
+# design/archived/ turned the gate red on a document that merely DESCRIBES an
+# attack. Measured 2026-08-07: same tree, v2.158.0 -> NIT=2 (blocked),
+# v5.3.0 -> NIT=0. Re-check the upstream release when this feels old.
+CPV_REF = "git+https://github.com/Emasoft/claude-plugins-validation@v5.3.0"
 
 
 # -- Helpers -------------------------------------------------------------------
