@@ -41,7 +41,7 @@ and is the single authoritative writer of the ruleset-config domain (PRRD S9).
 - (lateral links to other functionality hubs, once they exist)
 
 
-^ATOM-23QN-F7D8 [desc:"Sentinel is the workflow-scan engine: scripts/sentinel/ + rules/ (34 auto-discovered files) — adding a rule is adding a file, there is no registry to edit", keywords: how_does_the_sentinel_scanner_work where_do_workflow_findings_come_from how_do_I_add_a_new_sentinel_rule workflow_scan_engine_layout 34_rule_files_under_scripts_sentinel_rules, ocd: 2026-08-06, lmd: 2026-08-06]
+^ATOM-23QN-F7D8 [desc:"Sentinel is the workflow-scan engine: scripts/sentinel/ + rules/ — adding a rule is adding a FILE, there is no registry to edit; DERIVE the rule count, never quote one (three defensible numbers exist)", keywords: how_does_the_sentinel_scanner_work where_do_workflow_findings_come_from how_do_I_add_a_new_sentinel_rule workflow_scan_engine_layout how_many_sentinel_rules_are_there_right_now, ocd: 2026-08-06, lmd: 2026-08-08]
 
 **Sentinel — the scanning engine behind `workflow-scan`,** and the largest
 subsystem in the repo.
@@ -51,7 +51,9 @@ registered rule, severity-ordered, and **auto-discovers them via the `rules`
 package** — so adding a rule is adding a file under `scripts/sentinel/rules/`,
 with no registry to edit. Supporting modules: `scanner.py`, `finding.py`,
 `policy.py`, `workflow.py`, `sha_resolver.py`, `autofix.py`, `local_client.py`.
-34 rule files ship today.
+Do NOT quote a rule COUNT: three defensible numbers drift apart (2026-08-08 —
+34 files, 33 excluding `__init__.py`, 28 `Rule` subclasses). Derive the one you
+mean: `grep -rhoE "^class [A-Za-z_]+\(Rule\)" scripts/sentinel/rules/*.py | wc -l`.
 
 **The CLI entry point is `scripts/sentinel_scan.py` — one level ABOVE the package,
 not inside it.** Worth stating because the natural guess is wrong: everything else
