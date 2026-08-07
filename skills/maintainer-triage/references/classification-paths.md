@@ -139,7 +139,7 @@ author is the authorized maintainer (PATs can be compromised).
      gh issue comment <number> --repo <repo> --body-file - <<'COMMENT'
    This is the Claude responsible for the ai-maestro-maintainer-agent project.
 
-   Thank you for your suggestion! Feature requests and change proposals for this repository are only accepted from the repository maintainer (@$AUTHORIZED_USER). Bug reports are welcome from everyone — if this is a bug, please re-open with a bug report.
+   Thank you for your suggestion! Feature requests and change proposals for this repository are only accepted from the repository maintainer. Bug reports are welcome from everyone — if this is a bug, please re-open with a bug report.
    COMMENT
      gh issue edit <number> --repo <repo> --add-label "wontfix"
      gh issue close <number> --repo <repo>

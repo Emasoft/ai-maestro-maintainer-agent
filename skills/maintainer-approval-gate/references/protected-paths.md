@@ -108,6 +108,31 @@ the fix to be abandoned (the branch is left in place for manual
 review; the issue gets label `fix-rejected`). Reject needs no
 fingerprint — it abandons the fix regardless of diff.
 
+**Say WHY, in the same comment (R49 — an approver is a guide, not a
+gate).** The bare token stays valid on its own and always will: it is
+the abort path, and a gate that can jam because the parser disliked
+your prose is worse than a terse rejection. But a refusal that names
+nothing is malpractice *even when the ruling is correct*, because the
+proposer cannot tell "wrong approach" from "right approach, wrong
+moment" and simply re-proposes the same thing. So write the three
+elements after the token, as free text:
+
+```text
+reject-protected-edit — the CI job id is wrong (`validate`, not
+`Validate`), so the branch would seal on a context that never
+reports. Re-propose once the id is read from the ruleset.
+```
+
+1. the **precise defect** — what is actually wrong, not that it is;
+2. the **bar for acceptance** — what would make it approvable;
+3. an **explicit invitation to re-propose**.
+
+VERIFY still parses only the token, so this text is for the human on
+the other side, not the matcher. And note what a bare "no" does *not*
+authorize: abandoning the fix is the point of a rejection, but a
+refusal that names no defect never licenses deleting or stripping
+working code that merely depended on the proposal.
+
 ## Diff-fingerprint binding (D2 — replay prevention)
 
 An approval is bound to the EXACT planned diff it approved, not to the
@@ -205,7 +230,7 @@ $HITS
 Planned-diff fingerprint: \`$FINGERPRINT\`
 
 Per the maintainer's protected-paths policy, I will not commit this
-edit without explicit approval from @$AUTHORIZED_USER.
+edit without explicit approval from $AUTHORIZED_USER.
 
 To approve, reply to this issue with a comment containing the exact
 phrase plus this fingerprint:

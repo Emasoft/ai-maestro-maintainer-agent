@@ -124,13 +124,13 @@ This is the Claude responsible for the ai-maestro-maintainer-agent project.
 | Field | Value |
 |---|---|
 | PR | #${PR} |
-| Author | @${AUTHOR} |
+| Author | ${AUTHOR} |
 | Triage case | ${CASE} |
 | Files changed | ${CHANGED_FILES} |
 | Additions | +${ADDITIONS} |
 | Deletions | -${DELETIONS} |
 | Flags | ${FLAG_COUNT} (highest severity: ${HIGHEST}) |
-| Reviewer (human) | @${AUTHORIZED_USER} |
+| Reviewer (human) | ${AUTHORIZED_USER} |
 
 HEADER
 
@@ -141,7 +141,7 @@ cat >> "$BODY_FILE" <<FOOTER
 ---
 
 **This is an AI-assisted review. Final approval requires a human
-reviewer (@${AUTHORIZED_USER}).** The \`maintainer-pr-review\`
+reviewer (${AUTHORIZED_USER}).** The \`maintainer-pr-review\`
 skill does NOT call \`gh pr review --approve\` under any
 circumstance.
 FOOTER

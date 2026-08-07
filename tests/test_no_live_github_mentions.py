@@ -78,6 +78,23 @@ EMITTER_FENCE = re.compile(
 #     GitHub never notifies, which is how this guard cried wolf twice.
 MENTION = re.compile(r"(?:^|[^\w/`>@-])@(?P<handle>[A-Za-z0-9][A-Za-z0-9-]*)(?![\w/])")
 
+# A MENTION IN WAITING: '@' glued to a shell variable. MENTION cannot see this
+# — it requires a handle char after '@' and gets '$' — so the literal is inert
+# and the guard was right about the text in front of it. But an unquoted heredoc
+# expands the variable BEFORE the body reaches GitHub, so `@$AUTHORIZED_USER`
+# posts as `@<the owner's real handle>` and pages them, every time the template
+# fires. Shipped exactly that way in the protected-paths approval-request
+# template until 2026-08-07; the rule it broke is the one that says a template is
+# safe only if its LITERAL form is harmless. There is no legitimate use: to name
+# someone from a variable, drop the '@' — the name still substitutes, and only
+# the notification is lost.
+# The left boundary is the SAME one MENTION uses, and it is load-bearing: a
+# package spec written `$name@$ver` expands to `serde@1.0`, where a word char
+# precedes the '@' and GitHub does not linkify. Without this prefix the pattern
+# reports two correct lockfile-audit lines, and a guard that reddens on correct
+# writing is a guard somebody deletes.
+TEMPLATED_MENTION = re.compile(r"(?:^|[^\w/`>@-])(?P<var>@\$\{?[A-Za-z_][A-Za-z0-9_]*\}?)")
+
 # A raw email. NOT a mention — measured inert, an address does not page its
 # domain — but refused anyway because pasting one leaks PII into a public repo
 # whose edit history is kept.
@@ -87,8 +104,8 @@ EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 # hole, so the list stays short.
 ALLOWED_HANDLES = frozenset(
     {
-        "echo",     # Makefile recipe-silencing sigil
-        "if",       # Makefile recipe
+        "echo",  # Makefile recipe-silencing sigil
+        "if",  # Makefile recipe
         "Library",  # Jenkins shared-library annotation
     }
 )
@@ -113,6 +130,7 @@ def _strip_code(text: str) -> str:
     spans are still blanked, because a backticked handle survives into the body
     as backticked text and GitHub does not linkify it there either.
     """
+
     def blank(match: re.Match[str]) -> str:
         return re.sub(r"[^\n]", " ", match.group(0))
 
@@ -139,17 +157,17 @@ def test_strip_code_preserves_line_numbers() -> None:
 def test_mention_grammar_matches_measured_github_behaviour() -> None:
     """Each case was verified with `gh api /markdown` (user-mention class)."""
     for text, expected in [
-        ("ping @janitor now", "janitor"),        # PAGES
-        ("ping @janitor.", "janitor"),           # PAGES — trailing dot is a boundary
-        ("see (@janitor) here", "janitor"),      # PAGES — parens are boundaries
-        ("a @foo-bar b", "foo-bar"),             # PAGES — '-' is a handle char
+        ("ping @janitor now", "janitor"),  # PAGES
+        ("ping @janitor.", "janitor"),  # PAGES — trailing dot is a boundary
+        ("see (@janitor) here", "janitor"),  # PAGES — parens are boundaries
+        ("a @foo-bar b", "foo-bar"),  # PAGES — '-' is a handle char
         ("ping @staticmethod x", "staticmethod"),  # PAGES — looking technical is not inert
-        ("we use @lru_cache here", None),        # inert — '_' continues the word
-        ("a @types/node b", None),               # inert — a slash follows
-        ("pin actions/checkout@v4", None),       # inert — word char precedes
-        ("mail x@janitor today", None),          # inert — word char precedes
-        ("mail user@gmail.com", None),           # inert as a MENTION (PII, caught below)
-        ("the @<manager> role", None),           # inert — '<' is not a handle char
+        ("we use @lru_cache here", None),  # inert — '_' continues the word
+        ("a @types/node b", None),  # inert — a slash follows
+        ("pin actions/checkout@v4", None),  # inert — word char precedes
+        ("mail x@janitor today", None),  # inert — word char precedes
+        ("mail user@gmail.com", None),  # inert as a MENTION (PII, caught below)
+        ("the @<manager> role", None),  # inert — '<' is not a handle char
     ]:
         match = MENTION.search(text)
         got = match.group("handle") if match else None
@@ -197,20 +215,36 @@ def test_no_at_mentions_that_github_would_resolve() -> None:
             for match in MENTION.finditer(line):
                 if match.group("handle") in ALLOWED_HANDLES:
                     continue
-                offenders.append(
-                    f"{rel}:{lineno}: pages @{match.group('handle')}"
-                    f"  |  {line.strip()[:90]}"
-                )
+                offenders.append(f"{rel}:{lineno}: pages @{match.group('handle')}  |  {line.strip()[:90]}")
+            for match in TEMPLATED_MENTION.finditer(line):
+                offenders.append(f"{rel}:{lineno}: {match.group('var')} expands to a live handle  |  {line.strip()[:90]}")
             for match in EMAIL.finditer(line):
                 if ALLOWED_EMAIL.search(match.group(0)):
                     continue
-                offenders.append(
-                    f"{rel}:{lineno}: raw address {match.group(0)} (PII)"
-                    f"  |  {line.strip()[:90]}"
-                )
+                offenders.append(f"{rel}:{lineno}: raw address {match.group(0)} (PII)  |  {line.strip()[:90]}")
 
-    assert not offenders, (
-        "Shipped content pages a real account, or pastes a raw address. Write "
-        "the name in plain words, or wrap it in backticks; use example.com for "
-        "addresses:\n  " + "\n  ".join(offenders)
-    )
+    assert not offenders, "Shipped content pages a real account, or pastes a raw address. Write the name in plain words, or wrap it in backticks; use example.com for addresses:\n  " + "\n  ".join(offenders)
+
+
+def test_templated_mention_is_caught_where_a_literal_one_cannot_be() -> None:
+    """`@$VAR` expands to a live handle at emit time — the guard must see it.
+
+    MENTION deliberately cannot match this (it needs a handle char after '@'),
+    so without a second pattern the shape is invisible: the file reads clean and
+    every comment it emits pages a real person.
+    """
+    for shape in ("@$AUTHORIZED_USER", "@${OWNER}", "@$owner_login"):
+        assert TEMPLATED_MENTION.search(f"approval from {shape}."), shape
+        assert MENTION.search(f"approval from {shape}.") is None, f"{shape}: MENTION started matching this — the two patterns now overlap and the offender would be reported twice"
+
+    # Must NOT fire on the prescribed remedy, or the guard flags its own fix.
+    assert not TEMPLATED_MENTION.search("approval from $AUTHORIZED_USER.")
+    # ...nor on an ordinary address or a cost-per-unit '@'.
+    assert not TEMPLATED_MENTION.search("mail a@example.com")
+    assert not TEMPLATED_MENTION.search("priced @ $5 per unit")
+    # ...nor on a templated PACKAGE SPEC, which expands to an inert attached form
+    # (`serde@1.0`): a word char before '@' means GitHub does not linkify. This
+    # pair is why the pattern carries MENTION's left boundary — both lines are
+    # real, correct lockfile-audit code in maintainer-pr-review.
+    assert not TEMPLATED_MENTION.search('"Cannot verify age of $name@$ver (go.sum)"')
+    assert not TEMPLATED_MENTION.search('"$ECO:$name@$ver released $AGE_DAYS day(s)"')

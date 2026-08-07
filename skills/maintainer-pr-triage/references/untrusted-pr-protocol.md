@@ -165,7 +165,7 @@ human review:
 
 | Field | Value |
 |---|---|
-| Author | @${AUTHOR} |
+| Author | ${AUTHOR} |
 | Head repo | ${HEAD_OWNER}/${HEAD_REPO} |
 | Head SHA | \`${HEAD_SHA}\` |
 | Sandbox image | \`${IMAGE}\` |
@@ -181,7 +181,7 @@ The precheck ran with \`--network bridge\` and \`npm --ignore-scripts\`
 test suite outcome is reflected in the exit code above.
 
 **This is an AI-assisted observation, not an approval.** The
-authorized maintainer (@${AUTHORIZED_USER}) must review the diff
+authorized maintainer (${AUTHORIZED_USER}) must review the diff
 manually before merge — see the companion review comment from
 \`maintainer-pr-review\`.
 
