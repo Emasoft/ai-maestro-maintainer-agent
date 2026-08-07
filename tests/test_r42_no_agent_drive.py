@@ -1,10 +1,22 @@
 """R42: no agent may drive another agent's session — messaging is the only channel.
 
-The rule (ai-maestro governance R42, all six sub-rules currently prose-only on the
-server side): no injected command, keystroke, prompt, or queued input into another
-agent's session, by API, CLI or tmux. **No title is exempt** — MANAGER and
-CHIEF-OF-STAFF are bound identically. Self-drive stays permitted; the sole global
-carve-out is the janitor's machine-wide switches, which are not ours.
+The rule (ai-maestro governance R42): no injected command, keystroke, prompt, or
+queued input into another agent's session, by API, CLI or tmux. Self-drive stays
+permitted.
+
+**R42 is NOT absolute, and saying so would teach a false rule** (ai-maestro#129).
+Since 2026-08-05, R42.8 carves out a narrow, TITLE-SCOPED exception: MANAGER (any
+agent but an ASSISTANT) and CHIEF-OF-STAFF (own team only) may call exactly
+`block-state`, `read-prompt`, `answer`. Every other title holds none of it, and
+`inject` / `slash` / `queue` stay self-only for EVERY title because they deliver an
+arbitrary command — the caller's decision, not the target's.
+
+That exception does not loosen anything here: none of the three sanctioned verbs is
+a terminal-drive mechanism, so the ban this file enforces is unchanged. The
+distinction is kept because a correct verdict resting on a rule that has since been
+narrowed is a latent regression, not compliance — it refuses a legitimate MANAGER
+`answer` call the day that workflow is first exercised, and cannot justify the
+refusal from the ruleset.
 
 Why this file exists at all. On 2026-08-07 the ai-maestro server Claude asked this
 plugin directly, on `Emasoft/ai-maestro#67`: *"Does any maintainer skill drive
@@ -96,7 +108,9 @@ def _executable_hits(path: Path, text: str) -> list[str]:
 def test_no_shipped_surface_drives_another_session(surface: Path) -> None:
     """No shipped file can inject input into an agent session (R42)."""
     hits = _executable_hits(surface, surface.read_text(encoding="utf-8"))
-    assert not hits, f"{surface.relative_to(REPO)} carries a session-drive mechanism: {hits}. R42 makes this a violation with no title exempt — route it through AMP messaging instead. If this really is SELF-drive (permitted), narrow this test deliberately and say why here; do not widen the pattern to hide it."
+    assert not hits, (
+        f"{surface.relative_to(REPO)} carries a session-drive mechanism: {hits}. R42 forbids driving another agent's session — route it through AMP messaging instead. R42.8 does NOT cover this: its carve-out is MANAGER/CHIEF-OF-STAFF calling block-state/read-prompt/answer, none of which is a terminal driver. If this really is SELF-drive (permitted), narrow this test deliberately and say why here; do not widen the pattern to hide it."
+    )
 
 
 def test_the_drive_detector_actually_detects_a_drive() -> None:
