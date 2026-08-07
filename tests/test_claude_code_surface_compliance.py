@@ -1,0 +1,217 @@
+"""This plugin must not use Claude Code surfaces that upstream removed or changed.
+
+Every check here corresponds to a dated CHANGELOG entry, and every one was
+measured absent from this tree on 2026-08-07 against Claude Code 2.1.224. The
+file exists so that stays true without anyone re-reading a changelog.
+
+WHY A TEST RATHER THAN A NOTE. A fact verified in ANOTHER repo keeps living
+there: the check's scope stops at this tree while the surface keeps changing
+upstream, so a doc that was right when written rots with the suite green and
+nothing on either side can span the boundary to notice. That is not theoretical
+here — it happened twice in 48 hours (a governance rule narrowed the day before
+this plugin quoted it as absolute; a validator pin sat 50 releases stale while
+the fix for the finding blocking a release shipped upstream unreachable). A
+detector in the suite is the only thing local that can see it.
+
+THE DETECTORS ARE SELF-CHECKED IN BOTH DIRECTIONS. Each must bite on a real
+violation and stay quiet on correct writing. A guard that cannot fail is
+decorative; a guard that reddens on correct code gets deleted. Both failure
+modes have already happened in this repo, so both are pinned.
+
+Scope note: these check the SHIPPED surfaces an agent loads or executes.
+design/ is excluded — TRDDs are a historical record and are allowed to describe
+what the world used to look like.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+
+import pytest
+
+REPO = Path(__file__).resolve().parents[1]
+
+SHIPPED_DIRS = ("agents", "skills", "commands", "hooks")
+
+
+def _shipped_files() -> list[Path]:
+    """Every file an agent loads as instructions or the harness executes."""
+    out: list[Path] = []
+    for d in SHIPPED_DIRS:
+        root = REPO / d
+        if root.is_dir():
+            out.extend(sorted(p for p in root.rglob("*") if p.is_file() and p.suffix in {".md", ".json"}))
+    readme = REPO / "README.md"
+    if readme.is_file():
+        out.append(readme)
+    return out
+
+
+def _text(paths: list[Path]) -> list[tuple[Path, str]]:
+    return [(p, p.read_text(encoding="utf-8", errors="replace")) for p in paths]
+
+
+def test_the_shipped_file_set_is_not_empty() -> None:
+    """A scan over an empty list passes while checking nothing."""
+    assert len(_shipped_files()) > 20, f"only {len(_shipped_files())} shipped files discovered"
+
+
+# ── Removed / deprecated features ────────────────────────────────────────────
+
+# Removed in 2.1.222. Any instruction naming it sends an agent after a feature
+# that no longer exists.
+ULTRAPLAN = re.compile(r"\bultraplan\b", re.IGNORECASE)
+
+
+def test_no_reference_to_the_removed_ultraplan_feature() -> None:
+    """`ultraplan` was removed in 2.1.222 — instructions must not send agents to it."""
+    offenders = [f"{p.relative_to(REPO)}" for p, t in _text(_shipped_files()) if ULTRAPLAN.search(t)]
+    assert not offenders, f"references a removed feature (2.1.222): {offenders}"
+
+
+def test_the_ultraplan_detector_bites() -> None:
+    """Positive control — else the assertion above is vacuous."""
+    assert ULTRAPLAN.search("run /ultraplan first")
+    assert not ULTRAPLAN.search("run /plan first")
+
+
+# ── `claude plugin` takes ONE positional ─────────────────────────────────────
+
+# Reported on ai-maestro-maintainer-agent#35 and confirmed against the CLI's own
+# usage line on 2.1.224: `Usage: claude plugin install|i [options] <plugin>` —
+# ONE positional (`plugin@marketplace`). Commander SILENTLY DROPS a second one, so
+# `install foo bar` resolves `foo` and ignores the marketplace. It works by luck
+# until a plugin name is ambiguous, and then installs the wrong thing.
+_PLUGIN_CMD = re.compile(r"claude\s+plugin\s+(?:install|uninstall|update)\s+(?P<args>[^\n`|;&]+)")
+
+# Enumerated from `claude plugin install --help` / `update --help`, not assumed.
+# Everything else (-h/--help, and any flag a future release adds) is treated as
+# boolean, which is the SAFE direction: an unrecognised value-flag then makes its
+# value look like a second positional and the test reddens loudly. The inverse
+# default — assume every flag consumes the next token — is what the first draft
+# did, and it let `--yes plugin@mkt` count as ZERO positionals: a real violation
+# preceded by any boolean flag would have passed silently. A guard that
+# under-counts is decorative; one that over-counts merely argues with you.
+_VALUE_FLAGS = {"--config", "--scope", "-s"}
+
+
+def _positional_count(argstr: str) -> int:
+    """Count positionals, skipping only flags KNOWN to consume the next token."""
+    n = 0
+    skip_next = False
+    for tok in argstr.split():
+        if skip_next:
+            skip_next = False
+            continue
+        if tok.startswith("-"):
+            if "=" not in tok and tok in _VALUE_FLAGS:
+                skip_next = True
+            continue
+        n += 1
+    return n
+
+
+def test_claude_plugin_invocations_pass_a_single_positional() -> None:
+    """A second positional is silently dropped, so the marketplace never applies."""
+    offenders: list[str] = []
+    for path, text in _text(_shipped_files()):
+        for m in _PLUGIN_CMD.finditer(text):
+            if _positional_count(m.group("args")) > 1:
+                offenders.append(f"{path.relative_to(REPO)}: {m.group(0).strip()[:80]}")
+    assert not offenders, f"`claude plugin <verb>` takes ONE positional (plugin@marketplace); a second is silently dropped, so resolution works only by luck: {offenders}"
+
+
+def test_the_positional_counter_distinguishes_the_two_forms() -> None:
+    """The counter must separate the correct call from the silently-broken one."""
+    assert _positional_count("ai-maestro-maintainer-agent@ai-maestro-plugins") == 1
+    assert _positional_count("my-plugin my-marketplace") == 2  # the broken shape
+    # A real value-flag consumes its value; neither is a positional.
+    assert _positional_count("--scope user my-plugin@mkt") == 1
+    assert _positional_count("-s project my-plugin@mkt") == 1
+    assert _positional_count("--config key=value my-plugin@mkt") == 1
+    assert _positional_count("--scope=user my-plugin@mkt") == 1
+
+
+def test_a_boolean_flag_does_not_swallow_the_violation() -> None:
+    """The regression that broke the first draft — and it hid a violation, not a pass.
+
+    Assuming every flag takes a value made `--help plugin@mkt` count ZERO
+    positionals, so `--help a b` counted ONE and the broken form went unreported.
+    An unknown flag must never consume the token after it.
+    """
+    assert _positional_count("--help my-plugin@mkt") == 1
+    assert _positional_count("--some-future-boolean a b") == 2  # still caught
+
+
+# ── Agent names may not contain ':' (2.1.218) ────────────────────────────────
+
+
+def test_agent_names_carry_no_colon() -> None:
+    """':' is reserved for plugin namespacing; such agent files are rejected."""
+    offenders: list[str] = []
+    checked: list[str] = []
+    for path in sorted((REPO / "agents").glob("*.md")):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.startswith("name:"):
+                name = line.partition(":")[2].strip()
+                checked.append(name)
+                if ":" in name:
+                    offenders.append(f"{path.relative_to(REPO)}: {name}")
+                break
+    # Without this the whole check passes by finding no agents to check.
+    assert checked, "no agent declared a name: — the glob or the frontmatter key moved"
+    assert not offenders, f"agent names must not contain ':' (2.1.218): {offenders}"
+
+
+# ── Permission-rule forms that now warn at startup (2.1.210) ─────────────────
+
+# `Write(path)`, `NotebookEdit(path)` and `Glob(path)` emit a startup warning —
+# the supported spellings are `Edit(path)` and `Read(path)`.
+WARNED_PERM_RULE = re.compile(r"\b(?:Write|NotebookEdit|Glob)\(\s*[^)\s]+\s*\)")
+
+
+def test_no_permission_rules_in_the_warned_forms() -> None:
+    """Write()/NotebookEdit()/Glob() rules warn at startup — use Edit()/Read()."""
+    offenders: list[str] = []
+    for path, text in _text(_shipped_files()):
+        for m in WARNED_PERM_RULE.finditer(text):
+            offenders.append(f"{path.relative_to(REPO)}: {m.group(0)}")
+    assert not offenders, f"permission rules that warn at startup (2.1.210): {offenders}"
+
+
+def test_the_permission_rule_detector_cuts_both_ways() -> None:
+    """It must catch the warned forms and leave the prescribed ones alone."""
+    assert WARNED_PERM_RULE.search("Write(src/**)")
+    assert WARNED_PERM_RULE.search("Glob(**/*.py)")
+    assert not WARNED_PERM_RULE.search("Edit(src/**)")
+    assert not WARNED_PERM_RULE.search("Read(docs/**)")
+    # Prose naming the tools is not a permission rule.
+    assert not WARNED_PERM_RULE.search("use the Write tool, then Glob for files")
+
+
+# ── Hook `if:` path semantics changed (2.1.214) ──────────────────────────────
+
+# A single-segment `dir/**` in a hook `if:` condition now matches ONLY `<cwd>/dir`.
+# Any-depth matching must be spelled `**/dir/**`. A condition written under the
+# old semantics silently stops firing rather than erroring.
+SINGLE_SEGMENT_GLOB = re.compile(r"^(?!\*\*/)[A-Za-z0-9_.-]+/\*\*$")
+
+
+def test_hook_if_conditions_use_explicit_any_depth_globs() -> None:
+    """`dir/**` now means <cwd>/dir only; any-depth must be `**/dir/**` (2.1.214)."""
+    hooks = REPO / "hooks" / "hooks.json"
+    if not hooks.is_file():
+        pytest.skip("this plugin ships no hooks.json")
+    blob = json.dumps(json.loads(hooks.read_text(encoding="utf-8")))
+    offenders = [c for c in re.findall(r'"if"\s*:\s*"([^"]+)"', blob) if SINGLE_SEGMENT_GLOB.match(c)]
+    assert not offenders, f"hook `if:` conditions using a single-segment `dir/**` match only <cwd>/dir since 2.1.214 and silently stop firing elsewhere; write `**/dir/**`: {offenders}"
+
+
+def test_the_single_segment_glob_detector_cuts_both_ways() -> None:
+    """Catches the narrowed form, accepts the explicit any-depth spelling."""
+    assert SINGLE_SEGMENT_GLOB.match("src/**")
+    assert SINGLE_SEGMENT_GLOB.match("scripts/**")
+    assert not SINGLE_SEGMENT_GLOB.match("**/src/**")  # the prescribed fix
+    assert not SINGLE_SEGMENT_GLOB.match("src/lib/**")  # already multi-segment
