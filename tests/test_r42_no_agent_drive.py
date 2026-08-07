@@ -4,19 +4,29 @@ The rule (ai-maestro governance R42): no injected command, keystroke, prompt, or
 queued input into another agent's session, by API, CLI or tmux. Self-drive stays
 permitted.
 
-**R42 is NOT absolute, and saying so would teach a false rule** (ai-maestro#129).
-Since 2026-08-05, R42.8 carves out a narrow, TITLE-SCOPED exception: MANAGER (any
-agent but an ASSISTANT) and CHIEF-OF-STAFF (own team only) may call exactly
-`block-state`, `read-prompt`, `answer`. Every other title holds none of it, and
-`inject` / `slash` / `queue` stay self-only for EVERY title because they deliver an
-arbitrary command — the caller's decision, not the target's.
+**R42 IS ABSOLUTE AS PUBLISHED. An amendment is REQUESTED, not ratified.** Measured
+2026-08-07 against the authoritative artifact — `Emasoft/ai-maestro`
+`docs/GOVERNANCE-RULES.md`, branch `governance-rules`: it carries R42.1 through
+R42.7 and NO R42.8. The probe was proven live before the absence was believed (1929
+lines, 14 `R42` hits), because a wrong path had already produced a 0 that looked
+identical to a real negative. Both relevant issues are OPEN: #125 "R42 amendment
+request", and #129, which asserts "R42.8 alignment landed here" and urges every
+role-plugin to stop calling R42 absolute.
 
-That exception does not loosen anything here: none of the three sanctioned verbs is
-a terminal-drive mechanism, so the ban this file enforces is unchanged. The
-distinction is kept because a correct verdict resting on a rule that has since been
-narrowed is a latent regression, not compliance — it refuses a legitimate MANAGER
-`answer` call the day that workflow is first exercised, and cannot justify the
-refusal from the ruleset.
+This file briefly taught that amendment as settled governance on the strength of
+#129 alone, and that was wrong. It is the exact failure the compliance tests in this
+repo exist to prevent: a fact asserted in ANOTHER repo, adopted here without opening
+the artifact it claims to describe. **An open issue saying a rule landed is a claim
+about the ruleset, not the ruleset.** A peer plugin caught it; the correction is
+kept rather than quietly reverted, because the reasoning is the reusable part.
+
+The verdict below is unchanged either way, which is why the error was survivable:
+the proposed carve-out covers `block-state` / `read-prompt` / `answer`, and none of
+the three is a terminal-drive mechanism. `inject` / `slash` / `queue` remain
+self-only for every title under both readings, because they deliver an arbitrary
+command — the caller's decision, not the target's. The distinction is recorded so
+that IF R42.8 is ratified later, this file's refusal can be re-justified from the
+ruleset instead of from memory.
 
 Why this file exists at all. On 2026-08-07 the ai-maestro server Claude asked this
 plugin directly, on `Emasoft/ai-maestro#67`: *"Does any maintainer skill drive
@@ -109,7 +119,7 @@ def test_no_shipped_surface_drives_another_session(surface: Path) -> None:
     """No shipped file can inject input into an agent session (R42)."""
     hits = _executable_hits(surface, surface.read_text(encoding="utf-8"))
     assert not hits, (
-        f"{surface.relative_to(REPO)} carries a session-drive mechanism: {hits}. R42 forbids driving another agent's session — route it through AMP messaging instead. R42.8 does NOT cover this: its carve-out is MANAGER/CHIEF-OF-STAFF calling block-state/read-prompt/answer, none of which is a terminal driver. If this really is SELF-drive (permitted), narrow this test deliberately and say why here; do not widen the pattern to hide it."
+        f"{surface.relative_to(REPO)} carries a session-drive mechanism: {hits}. R42 forbids driving another agent's session — route it through AMP messaging instead. The PROPOSED R42.8 (ai-maestro#125, still OPEN and absent from the published ruleset as of 2026-08-07) would not cover this either: its carve-out is MANAGER/CHIEF-OF-STAFF calling block-state/read-prompt/answer, none of which is a terminal driver. If this really is SELF-drive (permitted), narrow this test deliberately and say why here; do not widen the pattern to hide it."
     )
 
 
