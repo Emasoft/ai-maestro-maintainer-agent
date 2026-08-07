@@ -128,6 +128,15 @@ BOLD   = "\033[1m" if _C else ""
 DIM    = "\033[2m" if _C else ""
 NC     = "\033[0m" if _C else ""
 
+# The remote CPV validator, pinned. ONE definition, because four hardcoded
+# copies is exactly how this drifted: the workflows were re-pinned to v2.158.0
+# and publish.py was left on v2.152.1, so the LOCAL push gate validated against
+# an older validator than CI — a plugin could pass the gate and fail CI, or the
+# reverse, with nothing reporting why. Keep this in lockstep with the
+# `uvx --from` lines in .github/workflows/{ci,release}.yml;
+# tests/test_cpv_pin_alignment.py fails the build if they diverge again.
+CPV_REF = "git+https://github.com/Emasoft/claude-plugins-validation@v2.158.0"
+
 
 # -- Helpers -------------------------------------------------------------------
 
@@ -610,7 +619,7 @@ def install_branch_rules(root: Path) -> int:
             [
                 "uvx",
                 "--from",
-                "git+https://github.com/Emasoft/claude-plugins-validation@v2.152.1",
+                CPV_REF,
                 "--with",
                 "pyyaml",
                 "cpv-setup-branch-rules",
@@ -830,7 +839,7 @@ def run_gate(root: Path) -> int:
         return 1
     ve = subprocess.run(
         ["uvx", "--from",
-         "git+https://github.com/Emasoft/claude-plugins-validation@v2.152.1",
+         CPV_REF,
          "--with", "pyyaml",
          "cpv-remote-validate", "plugin", ".", "--strict"],
         cwd=str(root), timeout=600).returncode
@@ -1062,8 +1071,8 @@ def stage_validate(root: Path) -> None:
 
     Cornerstone rule: a plugin cannot be pushed unless validation passes
     with 0 issues (WARNING allowed). The validator is ALWAYS fetched from
-    GitHub (git+https://github.com/Emasoft/claude-plugins-validation@v2.152.1) via
-    uvx so a local tampered copy cannot weaken the rules. No exceptions.
+    GitHub (see CPV_REF) via uvx so a local tampered copy cannot weaken the
+    rules. No exceptions.
 
     Order: runs AFTER lint + tests so behavioral regressions fail fast
     before the structural validator even looks at the manifest.
@@ -1077,7 +1086,7 @@ def stage_validate(root: Path) -> None:
     # on CRITICAL(1), MAJOR(2), MINOR(3), NIT(4); WARNING(5+) passes.
     run([
         "uvx", "--from",
-        "git+https://github.com/Emasoft/claude-plugins-validation@v2.152.1",
+        CPV_REF,
         "--with", "pyyaml",
         "cpv-remote-validate", "plugin", ".", "--strict",
     ], cwd=root)
