@@ -142,6 +142,33 @@ guard that cannot fail reports a compliance it never checked; one that reddens o
 correct code gets deleted. Both failure modes have occurred in this repo, so both
 are pinned as tests rather than trusted as discipline.
 
+
+^ATOM-YFJ6-OFHC [desc:"scripts/governance_drift.py watches 6 hub artifacts by BLOB sha (never branch sha) — exit 0 clean / 3 drift / 4 cannot-determine.", keywords: how_do_I_know_when_the_hub_governance_rules_changed did_GOVERNANCE-RULES.md_move governance_drift_detector why_blob_sha_and_not_branch_sha the_overlays_have_no_version_field, type: project, ocd: 2026-08-08, lmd: 2026-08-08]
+
+`scripts/governance_drift.py` detects change in the hub governance artifacts this
+plugin is bound by. Baseline in `design/governance-baseline.json`; refresh with
+`--update`.
+
+WATCHES SIX, not one: `docs/GOVERNANCE-RULES.md` plus the five `rules/aimaestro/`
+DEP overlays. The catalog carries a `spec-version`, but the overlays carry NO
+version field, so an overlay-only edit moves no number anywhere and a
+version-based check would miss it in silence.
+
+BY BLOB SHA, NEVER THE BRANCH SHA. The hub's `3-pillars-spec.md` clause
+`3P-VER-05` forbids the branch commit sha as a change signal: it moves on every
+unrelated commit, so a consumer polls, sees movement, refetches a byte-identical
+document and records "checked, current" — manufacturing confidence instead of
+information. A blob sha changes iff those bytes change.
+
+EXIT CODES ARE THE INTERFACE: `0` clean · `3` drift · `4` cannot-determine. The
+4 is deliberate and load-bearing — reporting "clean" from a failed fetch is the
+false negative the tool exists to prevent.
+
+Only the pure `compare()` is tested; the fetch half shells out to `gh`, and a
+mocked hub would only assert that the fake returns what it was told. Shipped
+v1.13.0 after three sessions in one day each cited a governance rule that had
+moved underneath them.
+
 ## Notes and lessons learned
 
 [^1]: [id:ATOM-8Q1B-MSF4, status:valid, desc:"the runner's per-test table rendered 310 blank descriptions while every docstring existed — the lookup key was wrong, not the tests", keywords:"the_test_result_table_shows_no_docstring_on_every_row parametrized_tests_have_no_description_in_the_table should_I_add_docstrings_to_these_test_functions run-all-tests_renders_blank_descriptions", ocd:2026-08-06, lmd:2026-08-06] DO NOT start adding docstrings when `run-all-tests.py`'s table renders "(no docstring)" across many rows, BECAUSE a parametrized test's pytest nodeid carries a `[params]` suffix the docstring map is not keyed on — 310 rows read blank while every docstring was already there. DO read the lookup (`tests/run-all-tests.py:198`) and strip the bracket suffix before the fallback: a table-wide blank is a key bug, a scattered one is a real missing docstring.
