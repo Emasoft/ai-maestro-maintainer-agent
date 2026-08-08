@@ -148,7 +148,7 @@ jobs:
           PLUGIN_SKIP_GITHUB_INTEGRITY: "1"
         run: |
           set +e
-          # WHY: pin CPV to release tag v2.152.1 (aligned with release.yml + publish.py) so the local
+          # WHY: pin CPV to the SAME release tag as release.yml + publish.py's CPV_REF so the local
           # gate, this CI validate, and the post-hoc release gate all run the SAME pinned validator —
           # one coherent, reproducible supply-chain posture with zero version skew across callsites.
           uvx --from git+https://github.com/Emasoft/claude-plugins-validation@v5.3.0 \

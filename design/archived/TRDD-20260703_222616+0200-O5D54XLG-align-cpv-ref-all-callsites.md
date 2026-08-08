@@ -1,9 +1,10 @@
 ---
 trdd-id: O5D54XLG
 title: Align CPV validator ref to @v2.152.1 across all pipeline callsites
-column: complete
+column: superseded
 created: 2026-07-03T22:26:16+0200
-updated: 2026-07-03T22:26:16+0200
+updated: 2026-08-08T10:55:40+0200
+superseded-by: [3e705c0, 4a54465]
 current-owner: ai-maestro-maintainer-agent
 task-type: infra
 release-via: publish

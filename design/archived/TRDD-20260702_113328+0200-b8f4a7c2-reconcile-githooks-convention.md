@@ -1,9 +1,9 @@
 ---
 trdd-id: b8f4a7c2
 title: Reconcile .githooks vs git-hooks push-protection convention — keep .githooks, fix install_hook
-column: complete
+column: published
 created: 2026-07-02T11:33:28+0200
-updated: 2026-07-02T15:14:30+0200
+updated: 2026-08-08T10:55:40+0200
 current-owner: maintainer-agent
 assignee: maintainer-agent
 priority: 4
