@@ -11,7 +11,8 @@ and the rule says that carve-out "is not a power to direct". Those are the STABL
 claims and they have held through every revision below.
 
 **THE VERB LIST IS VOLATILE — treat the line below as a DATED READING, not a fact.**
-Read 2026-08-08 08:23Z at tip `6ef06442` (1953 lines, 21 `R42` hits, row 1543):
+Read 2026-08-08 at `docs/GOVERNANCE-RULES.md` BLOB `a13bed73fa9e` (1953 lines, 21
+`R42` hits, row 1543):
 **`block-state`, `read-prompt` and `answer` ONLY**; `inject`, `slash` and `queue`
 are named as NOT exception verbs because they deliver an arbitrary command — so
 they carry the CALLER's decision, which is the actual dividing line, not
@@ -22,9 +23,19 @@ v5.3.2 (05:51Z), then restored in v5.3.3 (06:03Z) — twelve minutes — after t
 checked the SERVER (`lib/sudo-guard.ts` routes `block-state` through the same
 `unblock-prompt` action) rather than the doc. This file shipped the two-verb version
 for exactly that window. **Before citing these verbs anywhere load-bearing, re-read
-the row — fetching the tip and reading the row are two different acts, and three
-sessions were early on this file in three days.** Nothing in this suite ASSERTS the
-list, deliberately: a guard pinning a volatile value enforces yesterday's omission.
+the ROW** — three sessions were early on this file in three days.
+
+Poll the per-file BLOB sha above, never the branch commit sha. The hub's
+`3-pillars-spec.md` clause `3P-VER-05` forbids the branch sha as a change signal
+because it fails in the dangerous direction: it moves on every unrelated commit, so
+a consumer polls, sees movement, refetches an identical document and records
+"checked, current" — manufacturing confidence instead of information. A blob sha
+changes iff those bytes change. Verify with:
+
+    gh api "repos/Emasoft/ai-maestro/contents/docs/GOVERNANCE-RULES.md?ref=governance-rules" --jq .sha
+
+Nothing in this suite ASSERTS the list, deliberately: a guard pinning a volatile
+value enforces yesterday's omission.
 
 THE HISTORY, kept because the reasoning is the reusable part and because getting it
 wrong twice in opposite directions is the whole lesson. This file first taught R42.8
