@@ -15,10 +15,10 @@ itself triages bug reports from any author; the same applies to human
 review.
 
 **Feature requests / change proposals** — accepted only from
-`@Emasoft` (the repository owner). This mirrors the agent's R19.6
+`Emasoft` (the repository owner). This mirrors the agent's R19.6
 constraint that feature requests come only from the authorized GitHub
 user. If you would like a feature, please open a Discussion or file an
-issue using the feature-request template and tag `@Emasoft`. The
+issue using the feature-request template and name `Emasoft`. The
 owner may choose to author or sponsor the work, or to mark it as
 `wontfix`.
 
@@ -60,7 +60,7 @@ parity is enforced; if your change passes locally it will pass in CI.
 | Branch prefix | Meaning |
 |---|---|
 | `fix/<issue-number>-<slug>` | Bug fix tied to a specific issue |
-| `feat/<short-slug>` | New feature (author = `@Emasoft` only) |
+| `feat/<short-slug>` | New feature (author = `Emasoft` only) |
 | `docs/<slug>` | Documentation-only change |
 | `chore/<slug>` | Tooling / CI / hygiene |
 | `refactor/<slug>` | Behaviour-preserving restructure |
@@ -120,7 +120,7 @@ Consequences. The PR template asks for the ADR number when relevant.
 ## Approval-gate-protected paths
 
 The agent itself refuses to edit any of these without an
-`approve-protected-edit` reply from `@Emasoft` on the originating
+`approve-protected-edit` reply from `Emasoft` on the originating
 issue. Human contributors are expected to follow the same convention
 — if your PR touches any of these, call out the *why* in the PR
 description explicitly:
@@ -183,7 +183,7 @@ We *will* review PRs that:
 We *will not* merge PRs that:
 
 - Add new skills, new threat classes, or new public API surface
-  without a prior TRDD authored by `@Emasoft`.
+  without a prior TRDD authored by `Emasoft`.
 - Bypass the publish pipeline (no manual tag pushes; always
   `uv run python scripts/publish.py`).
 - Skip the test suite (`--no-verify` on commits; `if: never()` in

@@ -13,7 +13,7 @@ pass.
 ## Type of change
 
 - [ ] Bug fix (closes #<issue-number>)
-- [ ] New feature (author = `@Emasoft` only per R19.6)
+- [ ] New feature (author = `Emasoft` only per R19.6)
 - [ ] Documentation only
 - [ ] Refactor / cleanup / chore
 - [ ] Test addition / fix
