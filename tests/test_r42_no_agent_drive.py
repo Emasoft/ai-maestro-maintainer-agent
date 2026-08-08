@@ -4,19 +4,27 @@ The rule (ai-maestro governance R42): no injected command, keystroke, prompt, or
 queued input into another agent's session, by API, CLI or tmux. Self-drive stays
 permitted.
 
-**R42.1 IS ABSOLUTE, AND R42.8 IS RATIFIED AND PUBLISHED.** Measured 2026-08-08
-against `Emasoft/ai-maestro` `docs/GOVERNANCE-RULES.md`, branch `governance-rules`
-at tip `cdee1ddd`: 1952 lines, 20 `R42` hits, subsections R42.0 through R42.8.
-R42.8 (line 1542) lets a MANAGER or CHIEF-OF-STAFF UNBLOCK an agent stalled on a
-permission / `AskUserQuestion` prompt — **`read-prompt` and `answer` ONLY**.
-`inject`, `slash` and `queue` are named as NOT exception verbs: they deliver an
-arbitrary command, so they express the CALLER's decision and stay self-only for
-every title. R42.1 stays ABSOLUTE and R42.2 still says no title is exempt from it;
-the carve-out "is not a power to direct".
+**R42.1 IS ABSOLUTE, AND R42.8 IS RATIFIED AND PUBLISHED.** R42.1 stays ABSOLUTE
+and R42.2 still says no title is exempt from it; R42.8 lets a MANAGER or
+CHIEF-OF-STAFF UNBLOCK an agent stalled on a permission / `AskUserQuestion` prompt,
+and the rule says that carve-out "is not a power to direct". Those are the STABLE
+claims and they have held through every revision below.
 
-**`block-state` is NOT in the ratified text.** A summary naming
-`block-state`/`read-prompt`/`answer` circulated the fleet and this file repeated it.
-Read the rule row, not a summary of it — including this one.
+**THE VERB LIST IS VOLATILE — treat the line below as a DATED READING, not a fact.**
+Read 2026-08-08 08:23Z at tip `6ef06442` (1953 lines, 21 `R42` hits, row 1543):
+**`block-state`, `read-prompt` and `answer` ONLY**; `inject`, `slash` and `queue`
+are named as NOT exception verbs because they deliver an arbitrary command — so
+they carry the CALLER's decision, which is the actual dividing line, not
+read-versus-write.
+
+That list changed FOUR times in one day: `block-state` was present, then dropped in
+v5.3.2 (05:51Z), then restored in v5.3.3 (06:03Z) — twelve minutes — after the hub
+checked the SERVER (`lib/sudo-guard.ts` routes `block-state` through the same
+`unblock-prompt` action) rather than the doc. This file shipped the two-verb version
+for exactly that window. **Before citing these verbs anywhere load-bearing, re-read
+the row — fetching the tip and reading the row are two different acts, and three
+sessions were early on this file in three days.** Nothing in this suite ASSERTS the
+list, deliberately: a guard pinning a volatile value enforces yesterday's omission.
 
 THE HISTORY, kept because the reasoning is the reusable part and because getting it
 wrong twice in opposite directions is the whole lesson. This file first taught R42.8
@@ -129,7 +137,7 @@ def test_no_shipped_surface_drives_another_session(surface: Path) -> None:
     """No shipped file can inject input into an agent session (R42)."""
     hits = _executable_hits(surface, surface.read_text(encoding="utf-8"))
     assert not hits, (
-        f"{surface.relative_to(REPO)} carries a session-drive mechanism: {hits}. R42.1 forbids driving another agent's session — route it through AMP messaging instead. R42.8 (ratified 2026-08-05, published 2026-08-08) does NOT cover this: it lets only a MANAGER or CHIEF-OF-STAFF call read-prompt/answer to unblock a stalled prompt, and neither is a terminal driver. inject/slash/queue are named in the rule as NOT exception verbs and stay self-only for every title. If this really is SELF-drive (permitted), narrow this test deliberately and say why here; do not widen the pattern to hide it."
+        f"{surface.relative_to(REPO)} carries a session-drive mechanism: {hits}. R42.1 forbids driving another agent's session — route it through AMP messaging instead. R42.8 (ratified 2026-08-05, published 2026-08-08) does NOT cover this: it lets only a MANAGER or CHIEF-OF-STAFF unblock a stalled prompt, and no verb it sanctions is a terminal driver. inject/slash/queue are named in the rule as NOT exception verbs and stay self-only for every title. The exact verb list is volatile — see the module docstring; do not re-derive it from this message. If this really is SELF-drive (permitted), narrow this test deliberately and say why here; do not widen the pattern to hide it."
     )
 
 
