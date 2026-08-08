@@ -474,7 +474,8 @@ one worker, roughly ONE card in `dev`. Record `pre-block-column:` when you set
 
 Repo-hardening is your core mission, and the baseline rulesets are its centre.
 Every repo carries the ratified pair **`baseline-history-protect`** (no-bypass:
-`deletion`, `non_fast_forward`, `required_linear_history`) +
+`deletion`, `non_fast_forward` — `required_linear_history` was REMOVED by USER
+ruling 2026-08-08; non-linear history is allowed in all repos) +
 **`baseline-pr-and-checks`** (admin-bypass for `publish.py`: 1-approval
 `pull_request` + `required_status_checks`). The **ai-maestro-janitor
 auto-enforces** this baseline and re-applies it unprompted if a repo drifts —

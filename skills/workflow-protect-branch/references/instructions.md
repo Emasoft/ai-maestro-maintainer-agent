@@ -30,7 +30,7 @@ SPLIT the protection into two rulesets on `~DEFAULT_BRANCH`:
 
 | Ruleset | rules | `bypass_actors` | Effect |
 |---|---|---|---|
-| `baseline-history-protect` | `[deletion, non_fast_forward, required_linear_history]` | `[]` | force-push, branch-deletion, and non-linear (merge-commit) history blocked for EVERYONE incl. admin. A normal fast-forward push is NOT a force-push and adds no merge commit, so it is not blocked. |
+| `baseline-history-protect` | `[deletion, non_fast_forward]` | `[]` | force-push and branch-deletion blocked for EVERYONE incl. admin. A normal fast-forward push is NOT a force-push, so it is not blocked. Merge commits are ALLOWED — `required_linear_history` was removed from the baseline by USER ruling 2026-08-08. |
 | `baseline-pr-and-checks` | `[pull_request, required_status_checks]` (strict, the CI job ids) | `[{actor_id:5, actor_type:"RepositoryRole", bypass_mode:"always"}]` | admin (publish.py) direct-push bypasses BOTH the PR requirement and the checks; outside-contributor PRs are still gated by review + checks. |
 
 Result: publish.py's normal push succeeds (admin bypasses checks; a
@@ -269,8 +269,7 @@ cat > "$TMP_HIST" <<JSON
   },
   "rules": [
     { "type": "deletion" },
-    { "type": "non_fast_forward" },
-    { "type": "required_linear_history" }
+    { "type": "non_fast_forward" }
   ],
   "bypass_actors": []
 }
@@ -354,10 +353,11 @@ entire (PR-and-checks) ruleset — that is exactly what lets `publish.py`
 push straight to the default branch.
 
 The admin bypass lives ONLY on Body B. Body A's `bypass_actors` is
-`[]` so force-push, deletion, and non-linear (merge-commit) history
-stay blocked for everyone, including admin — a linear fast-forward push
-(what publish.py does) adds no merge commit, so it satisfies
-`required_linear_history`. See [Why two rulesets](#why-two-rulesets-not-one).
+`[]` so force-push and deletion stay blocked for everyone, including
+admin. Merge commits are allowed: `required_linear_history` was removed
+from the baseline by USER ruling 2026-08-08 ("an unrealistic requirement
+nobody was ever able to follow"), so a merge-commit push is no longer
+refused here. See [Why two rulesets](#why-two-rulesets-not-one).
 
 ## Step 4: Discover all existing rulesets
 
@@ -481,14 +481,14 @@ HIST_BYPASS="$(gh api "repos/$REPO/rulesets/$HIST_NEW_ID" \
 }
 
 # Confirm the ratified rule set actually landed — a partial apply can
-# leave a ruleset present-by-name but missing required_linear_history or
+# leave a ruleset present-by-name but missing non_fast_forward or
 # the pull_request rule, silently weakening the baseline.
 HIST_RULES="$(gh api "repos/$REPO/rulesets/$HIST_NEW_ID" \
   --jq '[.rules[].type] | sort | join(",")')"
 CHECKS_RULES="$(gh api "repos/$REPO/rulesets/$CHECKS_NEW_ID" \
   --jq '[.rules[].type] | sort | join(",")')"
-[ "$HIST_RULES" = "deletion,non_fast_forward,required_linear_history" ] || {
-  echo "VERIFY FAIL: history rules = [$HIST_RULES], want deletion,non_fast_forward,required_linear_history" >&2
+[ "$HIST_RULES" = "deletion,non_fast_forward" ] || {
+  echo "VERIFY FAIL: history rules = [$HIST_RULES], want deletion,non_fast_forward" >&2
   exit 67
 }
 [ "$CHECKS_RULES" = "pull_request,required_status_checks" ] || {
@@ -622,7 +622,7 @@ schema change. The three relevant entries look like:
     "target": "branch",
     "enforcement": "active",
     "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
-    "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}, {"type": "required_linear_history"}],
+    "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}],
     "bypass_actors": []
   },
   {
@@ -676,8 +676,7 @@ For SHOW mode the disposition lists both:
   "rulesets": {
     "baseline-history-protect": {
       "id": 16946501, "enforcement": "active",
-      "deletion": true, "non_fast_forward": true,
-      "required_linear_history": true, "bypass_actors": 0
+      "deletion": true, "non_fast_forward": true, "bypass_actors": 0
     },
     "baseline-pr-and-checks": {
       "id": 17025842, "enforcement": "active",

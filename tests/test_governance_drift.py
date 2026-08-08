@@ -62,15 +62,21 @@ def test_only_the_changed_path_is_reported_among_many() -> None:
     assert WATCHED[3] in findings[0]
 
 
-def test_the_watch_set_covers_the_catalog_and_all_five_overlays() -> None:
-    """Six blobs are the complete fingerprint.
+def test_the_watch_set_covers_the_spec_the_catalog_and_all_five_overlays() -> None:
+    """Seven blobs are the complete fingerprint, and the SPEC is one of them.
 
     The overlays carry NO version field, so watching only the versioned catalog
     would miss an overlay-only edit with nothing anywhere reporting a change.
+
+    And the spec is not optional: it is NORMATIVE while `docs/GOVERNANCE-RULES.md`
+    is its provenance (ruled 2026-08-08, ai-maestro#37). Watching only the doc
+    watches the record of a decision rather than the decision, so the norm can
+    move while the detector reports clean.
     """
-    assert len(WATCHED) == 6
+    assert len(WATCHED) == 7
     assert sum(1 for p in WATCHED if p.startswith("rules/aimaestro/")) == 5
     assert "docs/GOVERNANCE-RULES.md" in WATCHED
+    assert "design/specs/governance-spec.md" in WATCHED
 
 
 def test_the_comparison_is_order_independent() -> None:

@@ -24,7 +24,7 @@ rulesets):
 
 | Ruleset | `target` | Rules | `bypass_actors` |
 |---|---|---|---|
-| `baseline-history-protect` | branch | `deletion`, `non_fast_forward`, `required_linear_history` | `[]` (nobody, incl. admin) |
+| `baseline-history-protect` | branch | `deletion`, `non_fast_forward` | `[]` (nobody, incl. admin) |
 | `baseline-pr-and-checks` | branch | `pull_request`, `required_status_checks` (strict) | admin RepositoryRole, `always` |
 | `baseline-tag-protect` | tag | `deletion`, `update` (scope `refs/tags/v*.*.*`) | `[]` (nobody) |
 
@@ -32,8 +32,11 @@ The two branch rulesets are split (not combined) because `bypass_actors`
 applies to the WHOLE ruleset, never per-rule: a single combined ruleset
 with an admin bypass would also let admin force-push/delete. The split
 lets `publish.py`'s direct push bypass the PR + checks gate (checks are
-un-greenable before a push → `GH013`) while force-push, deletion, and
-non-linear history stay blocked for all. The tag ruleset is independent
+un-greenable before a push → `GH013`) while force-push and deletion stay
+blocked for all. Non-linear history is ALLOWED — `required_linear_history`
+was removed from the baseline by USER ruling 2026-08-08 as "an unrealistic
+requirement nobody was ever able to follow", and stripped from all 8 live
+carriers the same day. The tag ruleset is independent
 (`target: tag`): `[deletion, update]` makes published `v*.*.*` tags
 immutable (no move, no delete) while leaving tag *creation* open, so
 publish.py still cuts releases — no bypass actor needed.
@@ -113,7 +116,7 @@ rulesets (`baseline-history-protect` + `baseline-pr-and-checks` +
 - Touch environment- or org-level rulesets — repo-level only.
 - Push, commit, or modify the entrusted repo's working tree.
 - Manage rules beyond the ratified baseline — `deletion`,
-  `non_fast_forward`, `required_linear_history` (history),
+  `non_fast_forward` (history),
   `pull_request` + `required_status_checks` (pr-and-checks),
   `deletion` + `update` (tag-protect).
 - Add bypass actors beyond admin RepositoryRole on the pr-and-checks

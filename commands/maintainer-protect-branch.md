@@ -9,10 +9,10 @@ release-tag) protection on `<owner/repo>`.
 Three rulesets are applied (see **workflow-protect-branch** for why the
 two branch rulesets must be split on a direct-push repo):
 
-- `baseline-history-protect` — `deletion` + `non_fast_forward` +
-  `required_linear_history`, no bypass → force-push, deletion, and
-  non-linear (merge-commit) history blocked for EVERYONE, including
-  admin.
+- `baseline-history-protect` — `deletion` + `non_fast_forward`, no
+  bypass → force-push and deletion blocked for EVERYONE, including
+  admin. Merge commits are allowed (`required_linear_history` removed
+  by USER ruling 2026-08-08).
 - `baseline-pr-and-checks` — `pull_request` (1 approval) +
   `required_status_checks` (strict; every PR-applicable CI job name
   must pass — push-only jobs like release/notify are excluded so they

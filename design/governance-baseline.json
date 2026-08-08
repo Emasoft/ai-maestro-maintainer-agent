@@ -1,8 +1,9 @@
 {
+  "design/specs/governance-spec.md": "b1ffe599896698c59e57ee146f2094749f6fb51e",
   "docs/GOVERNANCE-RULES.md": "a13bed73fa9e64a15038facec254681584f52176",
-  "rules/aimaestro/aimaestro-agent-rules.md": "9b191a9c13a567cabbe09f8662f6ce363a34913a",
+  "rules/aimaestro/aimaestro-agent-rules.md": "83de54de39107a39ccb48c53b7e1d828eb9fb116",
   "rules/aimaestro/aimaestro-kanban-multiagent.md": "2fdc9bd9c80923e32c7c72a0ec5527aa851193da",
-  "rules/aimaestro/aimaestro-manager-approval-defaults.md": "92c3159ff965a3d183e98f1ea98833c7a0438feb",
+  "rules/aimaestro/aimaestro-manager-approval-defaults.md": "77be0d49dae9acd4cbccbb3b12d0a5f993167602",
   "rules/aimaestro/aimaestro-prrd-governance.md": "17eca23cf9faded1a254fb990918c784a7fd4580",
   "rules/aimaestro/aimaestro-trdd-approval.md": "ed1bc35310f6fa1a24bbef750a51ed39bf276d61"
 }

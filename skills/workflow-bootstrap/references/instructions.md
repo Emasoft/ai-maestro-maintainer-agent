@@ -51,7 +51,7 @@ Files in this directory:
 | `templates/zizmor-job.yml` | The `workflow-security` job (appended to every CI workflow) |
 | `templates/dependabot.yml` | Weekly `github-actions` Dependabot config (always seeded) |
 | `templates/npmrc-hardened` | `.npmrc` with 24h quarantine + exotic-subdep block (nodejs only) |
-| `templates/ruleset-no-force-no-delete.json` | History-protect ruleset (`deletion` + `non_fast_forward` + `required_linear_history`, no bypass) — consumed by `workflow-protect-branch` post-merge |
+| `templates/ruleset-no-force-no-delete.json` | History-protect ruleset (`deletion` + `non_fast_forward`, no bypass) — consumed by `workflow-protect-branch` post-merge |
 | `templates/ruleset-required-checks.json` | PR-and-checks ruleset (`pull_request` + `required_status_checks`, strict, admin RepositoryRole bypass) — consumed by `workflow-protect-branch` post-merge |
 | `templates/ruleset-tag-protect.json` | Tag-protect ruleset (`deletion` + `update` on `refs/tags/v*.*.*`, no bypass) — consumed by `workflow-protect-branch` post-merge |
 

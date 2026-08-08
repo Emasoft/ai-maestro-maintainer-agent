@@ -136,7 +136,7 @@ byte-identical with `workflow-protect-branch`:
 
 | name | target | enforcement | rule types | bypass |
 |---|---|---|---|---|
-| `baseline-history-protect` | branch | active | `deletion, non_fast_forward, required_linear_history` | none |
+| `baseline-history-protect` | branch | active | `deletion, non_fast_forward` | none |
 | `baseline-pr-and-checks` | branch | active | `pull_request, required_status_checks` | RepositoryRole Admin (id 5) |
 | `baseline-tag-protect` | tag | active | `deletion, update` | none |
 
@@ -153,7 +153,6 @@ repo is visible in the snapshot itself, not just in later deltas:
       "enforcement": "active",
       "deletion": true,
       "non_fast_forward": true,
-      "required_linear_history": true,
       "bypass_actors": 0
     },
     "baseline-pr-and-checks": {

@@ -46,6 +46,12 @@ REF = "governance-rules"
 # The rule catalog plus the five DEP overlays. The overlays carry no version
 # field, which is precisely why they are watched by blob rather than by version.
 WATCHED = (
+    # NORMATIVE first (ruled 2026-08-08, ai-maestro#37): the spec's granular
+    # renderings are the norm and `docs/GOVERNANCE-RULES.md` is its PROVENANCE.
+    # Watching only the doc meant watching the record of the decision rather than
+    # the decision — the doc can lag the spec, and a consumer polling the lagging
+    # copy sees nothing while the norm has already moved.
+    "design/specs/governance-spec.md",
     "docs/GOVERNANCE-RULES.md",
     "rules/aimaestro/aimaestro-agent-rules.md",
     "rules/aimaestro/aimaestro-kanban-multiagent.md",

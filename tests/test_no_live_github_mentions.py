@@ -42,9 +42,20 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # Directories whose content is loaded into an agent's context or copied into
-# GitHub bodies. design/ and tests/ are excluded: TRDDs quote real upstream
-# threads on purpose, and test data must be free to contain what we ban.
-SHIPPED_DIRS = ("skills", "commands", "agents")
+# GitHub bodies. tests/ is excluded (test data must be free to contain what we
+# ban), and so is MOST of design/ — TRDDs and archived cards quote real upstream
+# threads on purpose, and rewriting a historical quote falsifies the record.
+#
+# `design/requirements/` IS scanned, and the distinction is the whole point:
+# a TRDD is a RECORD of something someone else said, while the PRRD is a LIVE
+# COPY-SOURCE — the project constitution, whose byline template exists to be
+# pasted into real GitHub bodies. Excluding all of design/ let a literal paging
+# handle sit in PRRD G1.2's byline template while this very file asserted the
+# same literal must never ship in skills/commands/agents (ai-maestro#37). The
+# guard was right and its SCOPE was wrong, which is the harder half to notice:
+# every test passed, and the one document most likely to be copied verbatim was
+# the one nothing checked.
+SHIPPED_DIRS = ("skills", "commands", "agents", "design/requirements")
 
 FENCED_BLOCK = re.compile(r"```.*?```", re.S)
 INLINE_SPAN = re.compile(r"`[^`\n]*`")
