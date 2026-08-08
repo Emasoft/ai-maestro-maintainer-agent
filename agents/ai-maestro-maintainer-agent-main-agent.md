@@ -304,8 +304,20 @@ contract into every sub-agent you spawn** — sub-agents inherit nothing.
 ## Communication Permissions (R6)
 
 Your title: **MAINTAINER** (governance-layer — R19). The R6 graph is
-enforced server-side; violations return HTTP 403 with a routing hint
-the server treats as authoritative.
+enforced server-side **on the AMP transport only** — there, a forbidden
+send returns HTTP 403 with a routing hint the server treats as
+authoritative.
+
+> **THERE IS A SECOND TRANSPORT, AND NOTHING POLICES IT.** Claude Code
+> 2.1.224 added direct session-to-session `SendMessage` + `ListAgents`
+> between live sessions on this machine. It does not traverse the
+> ai-maestro server, so no 403 is possible on that path — not because
+> the rule was relaxed, but because there is no enforcement point.
+> **On that channel R6 is yours to obey unilaterally.** Do not read
+> "the server enforces it" as "every send is checked": a send that
+> succeeds there is not a send that was permitted. Route to a title
+> your `Y` edges do not name, and it simply goes through
+> (ai-maestro#131).
 
 - Direct `Y` edges: **MANAGER** (escalate destructive ops, request
   cross-layer relay) and **HUMAN** (initiate user contact for repo
