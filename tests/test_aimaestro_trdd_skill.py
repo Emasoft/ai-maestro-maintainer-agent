@@ -4,7 +4,7 @@ command (TRDD-27IG72GX, Phase 3 — SCRIPT-MANIFEST §5.4 adoption).
 
 The universal skill contract (frontmatter validity, no-tool-grant keys, core
 body sections, local references resolve) is covered for this skill by
-`test_skill_contracts.py`, which lists it in AUDIT_UNCOVERED_SKILLS. This
+`test_skill_contracts.py`, which globs every shipped skill. This
 module adds the invariants unique to THIS skill — every one of them a fact
 that, if it silently rotted out of the doc, would make an agent do something
 wrong on a real host:

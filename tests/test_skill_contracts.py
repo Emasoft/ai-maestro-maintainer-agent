@@ -1,27 +1,26 @@
 """
-Skill-doc contract tests for the 20 skills the fleet-readiness audit (#10 M12)
-plus the CPV coverage audit found without dedicated test coverage:
-
-  patrol, triage, fix, pr-triage, pr-review, workflow-scan, workflow-fix-safe,
-  workflow-pin-actions, workflow-protect-branch, detect-stack, tooling-bootstrap,
-  config-lint, generate-docs, trdd-adr, and the six cc-devops-skills distillations
-  (k8s-audit, dockerfile-audit, shell-audit, iac-audit, ci-audit,
-  observability-audit).
+Skill-doc contract tests for EVERY skill this plugin ships.
 
 No mocks. Every assertion runs against the REAL shipped SKILL.md + its
-references/ on disk. The universal contract (parametrized over every entry in
-AUDIT_UNCOVERED_SKILLS) checks each skill's frontmatter validity, the
-no-tool-grant-frontmatter invariant (ADR-0002 / PRRD S7), the presence of the
-core body sections, and that every `references/...` link in the body resolves
-to a real file (broken-reference guard). Per-skill tests add the structural
-invariant unique to each skill.
+references/ on disk. The universal contract (parametrized over `SHIPPED_SKILLS`,
+which is globbed from `skills/*/SKILL.md`) checks each skill's frontmatter
+validity, the no-tool-grant-frontmatter invariant (ADR-0002 / PRRD S7), the
+presence of the core body sections, and that every `references/...` link in the
+body resolves to a real file (broken-reference guard). Per-skill tests below add
+the structural invariant unique to each skill.
 
 Consistent with this repo's grouped-test convention (test_sentinel_rules_a..f
-cover many rules in one module): one table-driven module gives every listed
-skill real, regression-catching coverage without a near-duplicate stub file per
-skill. The count is deliberately NOT written out here — a hardcoded total has
-to be hand-synced on every append and silently goes stale (it already read "20"
-while the table held 21); AUDIT_UNCOVERED_SKILLS is the single source of truth.
+cover many rules in one module): one table-driven module gives every skill real,
+regression-catching coverage without a near-duplicate stub file per skill.
+
+NEITHER THE COUNT NOR THE MEMBERSHIP IS WRITTEN OUT HERE, and both omissions are
+the same lesson learned twice. A hardcoded total went stale first (it read "20"
+while the table held 21), so the count was deleted and the hand-maintained list
+was declared the source of truth. The list then went stale too — 24 names against
+32 skills on disk — leaving eight skills with no contract coverage and nothing to
+report it, because a parametrized test over a short list passes exactly like a
+complete one. The scope of a whole-corpus guard has to be DERIVED, or it decays
+into a snapshot of the day it was written.
 """
 
 from __future__ import annotations
@@ -35,39 +34,23 @@ from conftest import REPO_ROOT
 
 SKILLS_ROOT = REPO_ROOT / "skills"
 
-# Skills the audit flagged as uncovered, plus the six DevOps-audit skills
-# distilled from the cc-devops-skills corpus (each new skill gets the universal
-# contract assertions — no-tool-grant-keys, SKILL.md present, references resolve).
-AUDIT_UNCOVERED_SKILLS = [
-    "maintainer-patrol",
-    "maintainer-triage",
-    "maintainer-fix",
-    "maintainer-pr-triage",
-    "maintainer-pr-review",
-    "workflow-scan",
-    "workflow-fix-safe",
-    "workflow-pin-actions",
-    "workflow-protect-branch",
-    "maintainer-detect-stack",
-    "maintainer-tooling-bootstrap",
-    "maintainer-config-lint",
-    "maintainer-generate-docs",
-    "maintainer-trdd-adr",
-    "maintainer-k8s-audit",
-    "maintainer-dockerfile-audit",
-    "maintainer-shell-audit",
-    "maintainer-iac-audit",
-    "maintainer-ci-audit",
-    "maintainer-observability-audit",
-    "maintainer-aimaestro-trdd",
-    # Added after a coverage re-audit: these shipped later than the original
-    # table and were never appended, so they silently had no contract coverage.
-    # Append every NEW skill here — that is what keeps the universal contract
-    # whole-corpus rather than a snapshot of whichever skills existed that day.
-    "maintainer-prrd-trdd-kanban",
-    "maintainer-secrets-scan",
-    "the-skills-menu",
-]
+# EVERY skill that ships, discovered from disk. Never a hand-maintained list.
+#
+# It WAS a hand-maintained list, with a comment instructing the next author to
+# append to it. That instruction was followed once and then missed eight times:
+# by 2026-08-11 the table held 24 names while 32 skills shipped, so
+# maintainer-approval-gate, -commit-msg-why, -guardian, -macos-notarize, -redact,
+# -sandbox, -worktree and workflow-bootstrap had NO contract coverage — silently,
+# because a parametrized test over a short list is green in exactly the way a
+# complete one is.
+#
+# The module docstring already recorded this failure one level down: a hardcoded
+# COUNT went stale ("20" while the table held 21), and the fix was to delete the
+# count and call the list the single source of truth. The list was the same bug
+# with a slower clock. A test whose SCOPE is hand-maintained decays toward
+# testing whatever existed the day it was written, and nothing reports the decay
+# — so the scope has to come from the filesystem.
+SHIPPED_SKILLS = sorted(p.parent.name for p in SKILLS_ROOT.glob("*/SKILL.md"))
 
 TOOL_GRANT_KEYS = ("allowed-tools", "disallowed-tools", "tools")
 
@@ -87,10 +70,39 @@ def _skill_text(skill: str) -> str:
     return p.read_text(encoding="utf-8")
 
 
+# ─────────────────────── the scope guard (read this first) ───────────────────────
+
+
+def test_the_contract_scope_is_derived_and_covers_every_shipped_skill() -> None:
+    """The parametrized corpus must equal what is on disk, re-derived here.
+
+    This is the test that was missing for the eight skills that shipped without
+    contract coverage. It is deliberately NOT `assert SHIPPED_SKILLS ==
+    SHIPPED_SKILLS`: it walks the filesystem again, independently, so the
+    assertion still bites if someone replaces the glob with a literal list —
+    which is exactly how the coverage was lost the first time. A hand-written
+    list can be correct on the day it lands; what it cannot be is self-maintaining.
+
+    It also refuses an EMPTY corpus. A glob that stops matching (a moved skills/
+    root, a renamed SKILL.md) would make all four parametrized contracts vacuous
+    and every one of them would still report green — the failure mode that makes
+    a broken guard indistinguishable from a satisfied one.
+    """
+    on_disk = {p.parent.name for p in SKILLS_ROOT.glob("*/SKILL.md")}
+    assert on_disk, f"no skills discovered under {SKILLS_ROOT} — every contract below is vacuous"
+    assert len(on_disk) >= 25, f"only {len(on_disk)} skills found; the glob has probably stopped matching"
+    missing = sorted(on_disk - set(SHIPPED_SKILLS))
+    assert not missing, (
+        f"{len(missing)} shipped skill(s) are outside the contract's scope: {missing}. "
+        "If SHIPPED_SKILLS was turned back into a hand-maintained list, that is the bug — "
+        "derive it from the filesystem instead of appending."
+    )
+
+
 # ─────────────────────────── universal contract ───────────────────────────
 
 
-@pytest.mark.parametrize("skill", AUDIT_UNCOVERED_SKILLS)
+@pytest.mark.parametrize("skill", SHIPPED_SKILLS)
 def test_frontmatter_valid_with_nonempty_description(skill: str) -> None:
     """Every skill's frontmatter parses as YAML and carries a non-empty description."""
     fm, _ = _split_frontmatter(_skill_text(skill))
@@ -98,7 +110,7 @@ def test_frontmatter_valid_with_nonempty_description(skill: str) -> None:
     assert str(fm["description"]).strip(), f"{skill}: empty description"
 
 
-@pytest.mark.parametrize("skill", AUDIT_UNCOVERED_SKILLS)
+@pytest.mark.parametrize("skill", SHIPPED_SKILLS)
 def test_no_tool_grant_frontmatter(skill: str) -> None:
     """No skill declares allowed-tools/disallowed-tools/tools (ADR-0002 / PRRD S7).
 
@@ -110,7 +122,7 @@ def test_no_tool_grant_frontmatter(skill: str) -> None:
     assert not present, f"{skill}: forbidden tool-grant frontmatter key(s): {present}"
 
 
-@pytest.mark.parametrize("skill", AUDIT_UNCOVERED_SKILLS)
+@pytest.mark.parametrize("skill", SHIPPED_SKILLS)
 def test_has_core_body_sections(skill: str) -> None:
     """Each skill documents at least an Overview/Instructions plus a Scope or Resources."""
     _, body = _split_frontmatter(_skill_text(skill))
@@ -120,7 +132,7 @@ def test_has_core_body_sections(skill: str) -> None:
     assert h_lower & {"scope", "resources", "output"}, f"{skill}: no Scope/Resources/Output section"
 
 
-@pytest.mark.parametrize("skill", AUDIT_UNCOVERED_SKILLS)
+@pytest.mark.parametrize("skill", SHIPPED_SKILLS)
 def test_referenced_files_resolve(skill: str) -> None:
     """Every STANDALONE-LOCAL `references/<file>.md` link in the SKILL body exists.
 

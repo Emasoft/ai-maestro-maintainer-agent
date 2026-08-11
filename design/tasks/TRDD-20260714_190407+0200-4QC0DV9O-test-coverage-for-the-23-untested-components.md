@@ -1,9 +1,9 @@
 ---
 trdd-id: 4QC0DV9O
 title: Ship a test for each of the 23 components that have none — almost all of commands/
-column: backburner
+column: dev
 created: 2026-07-14T19:04:07+0200
-updated: 2026-08-01T03:22:00+0200
+updated: 2026-08-11T20:35:00+0200
 current-owner: ai-maestro-maintainer-agent
 task-type: audit
 release-via: publish
@@ -34,6 +34,54 @@ test** — that is the finding, not the count.
 
 **NEXT ACTION** — unchanged and still step 1 of Approach: a table-driven contract test over
 `commands/` (16 of the 21 are commands). Re-derive the list at the time of work; it moves.
+
+### 2026-08-11 — step 1 SHIPPED, and the pass criterion is unreachable BY DESIGN
+
+**Step 1 is done.** `tests/test_command_contracts.py` landed 2026-08-05: 23 commands ×
+6 parametrized assertions (frontmatter valid, no tool-grant keys, `Loads skill: **x**`
+resolves to a real skill, backticked local paths resolve, `argument-hint` is a slot list),
+plus 2 calibration tests and an orphan-skill counter. The STATE above predated it and kept
+asserting it as pending — the second stale card found today.
+
+**Re-derived from CPV v5.3.0 `--strict`, 2026-08-11:** `RC-TEST-COVERAGE` = **16 of 64**
+untested (was 21 of 63). Fifteen are commands — *including all the ones
+`test_command_contracts.py` covers.* So shipping step 1 moved the number by zero.
+
+**Why: the metric matches a component's NAME as a literal string inside test sources.**
+Measured, with perfect separation across all 23 commands:
+
+| | literal name in some `tests/*.py` | CPV verdict |
+|---|---|---|
+| the 8 unflagged commands | yes, all 8 | "tested" |
+| `protect-branch`, `commit-msg-hook`, `redact-text`, `worktree` | no, none | "untested" |
+
+It is wrong in **both** directions, and each half is checkable:
+
+- **OVER-CREDIT.** `commands/maintainer-config-lint.md` counts as tested. The only literal
+  occurrence of that string in `tests/` is `test_skill_contracts.py:53`, which never reads
+  `commands/` at all — it reads `skills/maintainer-config-lint/references/…`. The command is
+  credited for a test of the same-named SKILL that cannot fail if the command breaks.
+- **UNDER-CREDIT.** `test_command_contracts.py` covers every one of the 23 by globbing, so
+  it names none of them literally, and earns credit for none.
+
+**The Approach and the Pass criteria below therefore contradict each other:** step 1
+prescribes a table-driven test, and a table-driven test can never clear the warning. That
+conflict was invisible until the test was written and the number did not move.
+
+**REVISED PASS CRITERION** (the old one is SUPERSEDED — do not carry it forward): every
+command has an assertion that fails when *that* command breaks, verified by breaking one
+deliberately. **Silencing `RC-TEST-COVERAGE` is explicitly NOT the goal** — the cheap way to
+clear it is to spell each name in a string, which buys a number and no safety. That is the
+gaming this plugin refuses when it audits others.
+
+**Genuinely remaining**, after removing what the metric mis-reports: per-command EXECUTION
+tests where a real fixture is cheap (the second half of step 1; `test_protect_branch_contexts.py`
+is the reference shape — it extracts the recipe from the shipped doc and RUNS it), and
+`skills/maintainer-worktree/SKILL.md`. Steps 2 and 3 are largely absorbed:
+`cpv_network_resilience` has `test_network_resilience_classifiers.py`, and the card's own
+body already notes `maintainer-redact` / `maintainer-sandbox` were mis-listed.
+
+The metric defect is CPV's, not mine — reported upstream rather than worked around here.
 
 **SUPERSEDED — do NOT carry forward:** "23 of 56", "suite of 41 test files", and the
 component list in `## Why` below. Re-derive, never cite them.
