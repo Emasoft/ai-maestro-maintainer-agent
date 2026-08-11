@@ -3,8 +3,8 @@ trdd-id: 4QC0DV9O
 title: Ship a test for each of the 23 components that have none — almost all of commands/
 column: todo
 created: 2026-07-14T19:04:07+0200
-updated: 2026-08-11T20:55:00+0200
-implementation-commits: [d98ebab]
+updated: 2026-08-11T21:20:00+0200
+implementation-commits: [d98ebab, eedc3e8, 7974049]
 current-owner: ai-maestro-maintainer-agent
 task-type: audit
 release-via: publish
@@ -101,11 +101,32 @@ Note what that says about the metric: the ONE genuine coverage hole in this repo
 surface `RC-TEST-COVERAGE` reported as fine, and it surfaced from reading the test source,
 not the warning.
 
-**NEXT ACTION (supersedes the one above, which is now DONE):** per-command EXECUTION tests,
-starting with the commands that embed a runnable recipe. `tests/test_protect_branch_contexts.py`
-is the shape — extract the recipe from the shipped doc and RUN it, so an edit to the markdown
-is executed rather than pattern-matched. Do NOT chase the CPV warning; work the revised pass
-criterion above.
+**SHIPPED v1.13.7, commit `eedc3e8` — the execution half, with the reference shape corrected.**
+`tests/test_command_cli_contracts.py`: every `uv run scripts/*.py [verb] [--flags]` a command
+doc prints is checked against that script's REAL `--help` (argparse's own `{a,b,c}` set), so a
+renamed subcommand or dropped flag fails here instead of at the user's prompt. Both sides
+derived; 4 invocations across 3 scripts today. Controls: a typo'd verb and a fabricated flag are
+both rejected, and an empty extraction fails rather than passing vacuously.
+
+**Correction to this card's own Approach, found by trying it.** `test_protect_branch_contexts.py`
+was named as the shape to copy — extract the recipe from the doc and RUN it. That works on a
+SKILL reference, which ships executable recipes. It does NOT transfer to `commands/`: of the four
+commands with a bash fence, three hold a usage synopsis (`precheck <pkg-spec>`,
+`--ecosystem npm|pypi`) or a slash-command example, and only one is a literal runnable line.
+Executing those would be executing placeholders. What IS executable on a command doc is the
+CLI CONTRACT — the verb and flags it advertises — which is what shipped.
+
+**Also fixed while the release gate caught it (v1.13.7, `7974049`):** the publish blocked on a
+leaked sandbox container, which turned out to be two defects — `_kill_orphans` swallowed a failed
+`docker rm -f` (fire-and-forget, `check=False`), and the guard for it raced the asynchronous
+`--rm` teardown. Both fixed with a control. Not in this card's scope; recorded here because the
+card's own pass criterion is "every new test fails when its subject is broken", and this is what
+that criterion looks like when it fires on the OLD tests.
+
+**NEXT ACTION:** the remaining named component is `skills/maintainer-worktree/SKILL.md`, which
+v1.13.6 already brought under the globbed skill contract — so re-derive before assuming there is
+work left. If CPV still names it, that is CPV#207's name-matching, not a coverage gap; confirm by
+reading the contract's parametrization, not the warning.
 
 **SUPERSEDED — do NOT carry forward:** "23 of 56", "suite of 41 test files", and the
 component list in `## Why` below. Re-derive, never cite them.
