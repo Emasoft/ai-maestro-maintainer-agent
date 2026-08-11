@@ -1,9 +1,10 @@
 ---
 trdd-id: 4QC0DV9O
 title: Ship a test for each of the 23 components that have none — almost all of commands/
-column: dev
+column: todo
 created: 2026-07-14T19:04:07+0200
-updated: 2026-08-11T20:35:00+0200
+updated: 2026-08-11T20:55:00+0200
+implementation-commits: [d98ebab]
 current-owner: ai-maestro-maintainer-agent
 task-type: audit
 release-via: publish
@@ -81,7 +82,30 @@ is the reference shape — it extracts the recipe from the shipped doc and RUNS 
 `cpv_network_resilience` has `test_network_resilience_classifiers.py`, and the card's own
 body already notes `maintainer-redact` / `maintainer-sandbox` were mis-listed.
 
-The metric defect is CPV's, not mine — reported upstream rather than worked around here.
+The metric defect is CPV's, not mine — reported upstream as **CPV#207** rather than worked
+around here.
+
+**SHIPPED THIS PASS — v1.13.6, commit `d98ebab`.** Re-deriving the coverage question found a
+hole the metric never mentioned, on the SKILL side: `test_skill_contracts.py` parametrized
+over a hand-maintained `AUDIT_UNCOVERED_SKILLS` holding **24 names while 32 skills shipped**,
+so `maintainer-approval-gate`, `-commit-msg-why`, `-guardian`, `-macos-notarize`, `-redact`,
+`-sandbox`, `-worktree` and `workflow-bootstrap` had no contract coverage at all — and the
+file reported green, because a parametrized test over a short list passes exactly like a
+complete one. The scope is now globbed from `skills/*/SKILL.md` (135 tests, up from 96; all
+eight newly-covered skills pass, so this closed a prospective hole, not a live break), and
+`test_the_contract_scope_is_derived_and_covers_every_shipped_skill` re-walks the filesystem
+independently so it still bites if the glob is replaced by a list. Control: fed the exact
+pre-fix 24-name list, it fails naming all eight.
+
+Note what that says about the metric: the ONE genuine coverage hole in this repo was on a
+surface `RC-TEST-COVERAGE` reported as fine, and it surfaced from reading the test source,
+not the warning.
+
+**NEXT ACTION (supersedes the one above, which is now DONE):** per-command EXECUTION tests,
+starting with the commands that embed a runnable recipe. `tests/test_protect_branch_contexts.py`
+is the shape — extract the recipe from the shipped doc and RUN it, so an edit to the markdown
+is executed rather than pattern-matched. Do NOT chase the CPV warning; work the revised pass
+criterion above.
 
 **SUPERSEDED — do NOT carry forward:** "23 of 56", "suite of 41 test files", and the
 component list in `## Why` below. Re-derive, never cite them.
