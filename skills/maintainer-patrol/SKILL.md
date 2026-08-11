@@ -108,8 +108,9 @@ Resume after hibernation:
 
 ```
 → Wake from hibernation
-→ Drain the AMP inbox FIRST — a mandate may have landed while asleep,
-  and it outranks the issue list (persona: AMP discipline)
+→ Drain ALL THREE inbounds FIRST — AMP, direct session messages, and
+  GitHub threads awaiting a reply. A mandate may have landed while asleep
+  on any of them, and it outranks the issue list (persona: Inbound discipline)
 → Load ledger (last entry: issue 42)
 → gh issue list returns 43, 44 (new while hibernated)
 → Triage 43 and 44

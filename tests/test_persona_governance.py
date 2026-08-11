@@ -192,6 +192,51 @@ def test_persona_requires_draining_the_amp_inbox_on_every_wake(persona: str) -> 
     assert "amp-inbox" in persona, "no concrete inbox command — prose without a mechanism"
 
 
+def _inbound_bullet(persona: str) -> str:
+    """The single "Inbound discipline" bullet, sliced at the next section heading.
+
+    Scoped deliberately rather than searched whole-persona: `SendMessage` already
+    appears further up, in the Communication-Permissions transport note. A
+    whole-persona search would therefore pass against the pre-fix, AMP-only
+    bullet and assert nothing — the decorative-guard failure this file exists to
+    avoid.
+    """
+    start = persona.index("**Inbound discipline")
+    rest = persona[start:]
+    nxt = re.search(r"\n#{1,3} ", rest)
+    return rest[: nxt.start()] if nxt else rest
+
+
+def test_persona_enumerates_every_inbound_channel_not_just_amp(persona: str) -> None:
+    """A wake-up rule is only as complete as the channel list it enumerates.
+
+    The bullet's duty — "a delivered mandate is a work ORDER; an agent that wakes
+    and does nothing has silently dropped it" — was correct while its channel list
+    named exactly one inbox, `amp-inbox`. Two others carry mandates today:
+
+      2. the direct session channel (Claude Code 2.1.224+), whose messages arrive
+         mid-turn and are NEVER in `amp-inbox` because they never reach the
+         ai-maestro server — the same asymmetry that makes a 403 impossible there
+         (ai-maestro#131), one layer down;
+      3. GitHub issue and PR threads, which the USER named explicitly ("not all
+         communications are made via sendMessage") and which notify nobody, so a
+         thread waiting on a reply is invisible until someone looks.
+
+    The failure this pins is not a wrong instruction but a complete-sounding one:
+    an agent drains AMP, finds it empty, reports the inbox clear, and two live
+    directives keep waiting. Silence on those channels is indistinguishable from
+    absence, which is why the enumeration — not the duty — is what a test has to
+    hold in place.
+    """
+    bullet = _inbound_bullet(persona)
+    assert "amp-inbox" in bullet, "channel 1 (AMP) lost its concrete command"
+    assert "SendMessage" in bullet, "channel 2 is unnamed: an agent draining only amp-inbox never learns that peer-session messages exist elsewhere"
+    assert re.search(r"(?i)never\b[^.]{0,40}in\s+`?amp-inbox", bullet), "the bullet does not say peer-session messages are ABSENT from amp-inbox, so a reader assumes one drain covers both"
+    assert re.search(r"(?i)gh issue list", bullet), "channel 3 has no concrete command — prose without a mechanism"
+    assert re.search(r"(?i)github cannot notify you|nothing arrives unless you look", bullet), "the bullet omits WHY GitHub must be polled; without it, an agent waits for a notification that never comes"
+    assert re.search(r"(?i)never call the inbox clear on the strength of one channel", bullet), "no guard against reporting a one-channel drain as a clear inbox — the specific way this failure gets reported as success"
+
+
 def test_persona_forbids_direct_api_calls_with_no_escape_hatch(persona: str) -> None:
     """The frozen-CLI rule is an IRON RULE: no fallback, no tagged exception.
 

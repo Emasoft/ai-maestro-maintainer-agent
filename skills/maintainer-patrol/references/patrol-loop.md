@@ -117,10 +117,12 @@ again next cycle without back-pressure on GitHub.
 ## Per-cycle loop body
 
 ```bash
-# Step 0 — drain the AMP inbox BEFORE the issue list. A mandate outranks
-# issue work, and this is a cycle like any other wake. Commands and the
-# degrade rules live in the persona's "AMP discipline" bullet — the single
-# copy; do not restate them here.
+# Step 0 — drain EVERY inbound BEFORE the issue list: AMP, direct session
+# messages (SendMessage arrivals — they are never in amp-inbox), and the
+# GitHub threads whose last comment is not yours. A mandate outranks issue
+# work whichever channel carried it, and this is a cycle like any other wake.
+# Commands and the degrade rules live in the persona's "Inbound discipline"
+# bullet — the single copy; do not restate them here.
 
 gh issue list --repo "$REPO" --state open --limit 50 \
   --json number,title,author,labels,createdAt,body > /tmp/issues-$$.json

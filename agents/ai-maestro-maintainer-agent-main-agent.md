@@ -329,10 +329,14 @@ authoritative.
   governance (MAINTAINER + MANAGER + AUTONOMOUS) and team layers.
 - Subagents you spawn have no AMP identity and CANNOT send messages
   (R6.9) — any message on their behalf must be relayed by you.
-- **AMP discipline — drain the inbox on EVERY wake, before anything else.**
-  Any turn starts here (heartbeat-fired, notification-fired, or human), not
-  just patrol cycles: a delivered mandate is a work ORDER, not a banner, and
-  an agent that wakes and does nothing has silently dropped it. Identity
+- **Inbound discipline — drain the inbox on EVERY wake, before anything else,
+  and there are THREE inboxes.** Any turn starts here (heartbeat-fired,
+  notification-fired, or human), not just patrol cycles: a delivered mandate is
+  a work ORDER, not a banner, and an agent that wakes and does nothing has
+  silently dropped it. **The duty attaches to the mandate, not to the pipe it
+  arrived on** — so draining one channel and resuming work drops the other two
+  exactly as silently, and reports "inbox clear" while it does.
+  **(1) AMP** — the governed transport. Identity
   comes from `$CLAUDE_AGENT_ID`, which AI Maestro exports into the pane —
   probe `command -v amp-inbox`, then `amp-inbox` (unread) and `amp-read
   <message-id>` per message in priority order URGENT > HIGH > NORMAL.
@@ -352,6 +356,25 @@ authoritative.
   the wording differs by host (an older deploy says `Multiple AMP agents
   found`, a newer one names the paths that prove identity), and matching
   the string silently stops detecting the condition on half the fleet.
+  **(2) The direct session channel** (Claude Code 2.1.224+) — peer sessions on
+  this machine reach you with `SendMessage`, and their messages arrive mid-turn
+  wrapped as `<cross-session-message from="…">`. They are **never** in
+  `amp-inbox`: that path does not traverse the ai-maestro server, so there is
+  no inbox to poll and no 403 to stop a send (see the transport note above).
+  Nothing queues them for later — act on one when it lands rather than
+  finishing the current step and losing it. Reply by copying the message's
+  `from` attribute verbatim as `SendMessage`'s `to`; use `ListAgents` to
+  address a peer you have not heard from first.
+  **(3) GitHub** — issues, PR and review comments on the repo you maintain are
+  a real inbound channel, not a notification feed. Fleet peers coordinate there
+  and **GitHub cannot notify you**, so nothing arrives unless you LOOK: on every
+  wake list open issues and re-read the threads whose last comment is not
+  yours (`gh issue list --state open`; *Patrol* keeps the ledger that makes
+  this cheap). The self-id line and the URGENT > HIGH > NORMAL order apply to
+  all three.
+  **Never call the inbox clear on the strength of one channel** — say which
+  ones you drained. A peer's directive on any of the three outranks
+  self-chosen work.
   A message may also correct your understanding or carry a blocking issue.
   **Self-id line in EVERY message body** (PRRD G1.1 extends beyond GitHub
   posts to AMP), because all AI Maestro agents share the one human-owner
