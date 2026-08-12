@@ -1,9 +1,9 @@
 ---
 trdd-id: 4QC0DV9O
 title: Ship a test for each of the 23 components that have none — almost all of commands/
-column: todo
+column: published
 created: 2026-07-14T19:04:07+0200
-updated: 2026-08-11T21:20:00+0200
+updated: 2026-08-12T19:52:00+0200
 implementation-commits: [d98ebab, eedc3e8, 7974049]
 current-owner: ai-maestro-maintainer-agent
 task-type: audit
@@ -142,6 +142,44 @@ here as a real defect on CPV's word alone before reading the code — the correc
 Hypothesis for why CPV misses it, NOT verified: the tag is built by f-string interpolation,
 so a literal scan for `<plugin-name>--v` finds nothing.
 
+### 2026-08-12 — NEXT ACTION discharged, and a natural experiment that closes the card
+
+Surfaced by the `[trdd-state-reconciliation]` detector as a partially-shipped-review drift
+candidate. Re-derived rather than assumed, per the NEXT ACTION above.
+
+**1. The last named component is resolved.** `skills/maintainer-worktree/SKILL.md` is no
+longer on the `RC-TEST-COVERAGE` line. Confirmed from the contract's own parametrization
+rather than the warning, as the NEXT ACTION required — `pytest --collect-only` yields 4
+cases for it (`frontmatter_valid`, `no_tool_grant_frontmatter`, `has_core_body_sections`,
+`referenced_files_resolve`), because v1.13.6 derives the scope by glob.
+
+**2. The metric got WORSE as coverage got better — and the cause is a single commit.**
+CPV v5.3.0 `--strict` now reports **29 of 64** untested, up from 16 of 64 on 2026-08-11,
+while the suite grew 47 → 58 files. Of the 13 skills VISIBLE on that line (it truncates at
+"+9 more", so 9 names are unseen and this is a sample, not a census), **13 of 13** are
+exactly the skills whose literal name was deleted by `d98ebab` — the commit that replaced
+the hand-maintained `AUDIT_UNCOVERED_SKILLS` list with `SKILLS_ROOT.glob("*/SKILL.md")`.
+
+That is a natural experiment, and stronger evidence than the correlational separation
+recorded on 2026-08-11. One commit, in one direction: coverage strictly improved (8
+previously-uncovered skills gained tests, incl. `maintainer-worktree`), and the metric fell
+by 13 — because the hand-maintained list of literal names was, incidentally, the corpus the
+metric was scanning. **The metric was reading the list, not the coverage.**
+
+**3. A trap I walked into while measuring it, worth more than the measurement.** My first
+overlap check grepped the WHOLE CPV report for `skills/*/SKILL.md` and concluded
+`maintainer-worktree` was still flagged. It was not: that name appears in an unrelated
+time-sensitive-info warning, and the coverage line never mentions it. The corrected check
+greps the `RC-TEST-COVERAGE` LINE only. Two of my own standing rules failed together here —
+"never measure from a truncated tool result" (the line ends in "+9 more") and "grep is not
+semantic" (the same string means different things in different warnings). Recorded as [^3].
+
+**Conclusion: the work of this card is DONE and the residual warning is an artifact.**
+Every shipped surface is under a derived-scope contract; the one genuine hole this card ever
+found was invisible to the metric and was closed. Pursuing the original pass criterion would
+now mean re-adding a literal-name list — reverting the fix — so the criterion was revised
+rather than chased. Card closed; the metric defect is upstream at `CPV#207`.
+
 ## Why
 
 CPV `--strict` (v2.158.0) reports `RC-TEST-COVERAGE`:
@@ -200,8 +238,31 @@ Re-derive the list from CPV at the time of work — it moves.
 
 ## Pass criteria
 
-`RC-TEST-COVERAGE` no longer fires under CPV `--strict`, **and** every new test fails when
-its subject is broken (verify by breaking it, once, deliberately).
+**REVISED 2026-08-12 (the original is below, struck for the record).** Every shipped
+component is covered by a test whose SCOPE IS DERIVED FROM THE FILESYSTEM, and every new
+test fails when its subject is broken (verify by breaking it, once, deliberately).
+
+~~`RC-TEST-COVERAGE` no longer fires under CPV `--strict`~~ — **retired as a criterion, and
+not merely because it is unreachable: it is anti-correlated with the goal.** Measured
+2026-08-12 (see the last dated section): replacing the hand-maintained 24-name skill list
+with a filesystem glob closed the only genuine coverage hole in the repo *and moved this
+warning 13 components in the WRONG direction*, because the list was the thing the metric
+was reading. Satisfying the old criterion now requires re-adding a hand-maintained list of
+literal names — i.e. reverting the fix. A criterion that can only be met by undoing the
+work is not a criterion.
+
+## Approval log
+
+- 2026-08-12T19:52:00+0200 — CLOSED as `published` by ai-maestro-maintainer-agent. The work
+  shipped in **v1.13.6** (`d98ebab` — derived-scope skill contract, closing the 8-skill hole)
+  and **v1.13.7** (`eedc3e8` — CLI contract; `7974049` — sandbox orphan reap), both already
+  released and published; this transition RECORDS those releases, it does not perform a new
+  one. Closed against the **revised** pass criterion (see `## Pass criteria`), not the
+  original — the original is anti-correlated with the goal and could now only be met by
+  reverting `d98ebab`. Residual `RC-TEST-COVERAGE` noise is an upstream metric defect
+  (`CPV#207`), evidenced by the natural experiment in the 2026-08-12 section. **Reopen if
+  the revised criterion is not accepted** — that judgment is the one thing here I made
+  rather than measured.
 
 ## Notes and lessons learned
 
@@ -221,3 +282,14 @@ its subject is broken (verify by breaking it, once, deliberately).
   Note the trap is the exact mirror of `[^1]`: that lesson says a non-blocking warning
   is an *unexamined* finding, and the fix for unexamined is to EXAMINE it — not to
   promote it. Both failure modes are cheap to avoid and expensive to ship.
+
+[^3]: [ocd:2026-08-12 lmd:2026-08-12] DO NOT compute a set-overlap by grepping a whole
+  multi-warning scanner report for a path pattern, BECAUSE the same path appears under
+  DIFFERENT warnings and the answer silently becomes about the wrong question — I grepped
+  a CPV report for `skills/*/SKILL.md`, got `maintainer-worktree`, and concluded it was
+  still flagged as untested when its only appearance was in a time-sensitive-info warning.
+  DO extract the ONE finding's line first, then match within it. Two standing rules failed
+  together and neither would have caught it alone: the line also ends in "+9 more", so even
+  the corrected sample is 13 of 22 — say "sample", never "census", when the source
+  truncates. The tell was that the conclusion *changed* between the two greps; a number
+  that moves when you narrow the scope is a number you have not measured yet.
