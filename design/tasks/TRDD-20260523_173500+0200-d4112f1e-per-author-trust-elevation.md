@@ -2,8 +2,9 @@
 trdd-id: d4112f1e-c932-4461-a3ed-869961655b09
 title: Per-author trust elevation for maintainer-approval-gate protected paths
 column: backburner
+review-after: 2026-11-13
 created: 2026-05-23T17:35:00+0200
-updated: 2026-06-11T11:13:41+0200
+updated: 2026-08-13T12:40:00+0200
 ---
 
 ## TRDD-d4112f1e — Per-author trust elevation for maintainer-approval-gate protected paths
@@ -111,9 +112,28 @@ real maintainer-on-the-ground need surfaces. Justification:
    implementation is a copy-paste away — but until that request
    exists, the codepath would be dead weight in the gate.
 
-The TRDD remains `status: not-started` (not `superseded` or `failed`)
-to keep the design ready. If a maintainer requests the feature in the
-future, change `status: in-progress`, follow §6 below, and ship.
+The TRDD stays on the board at `column: backburner` (not `superseded`
+or `failed`) to keep the design ready. If a maintainer requests the
+feature, set `column: todo`, follow §6 below, and ship.
+
+**Parked explicitly, 2026-08-13 — `review-after: 2026-11-13`.** The
+`[trdd-drift]` detector flagged this card at 63 days untouched, which
+was a fair signal about the BOARD even though the deferral itself is
+correct: a card that is waiting on an external trigger is
+indistinguishable, from the outside, from one that silently stalled.
+`review-after:` is a snooze, not a mute — it suppresses the drift
+warning until the date and then lets it fire again, which is the
+behaviour wanted here. **The real trigger remains a maintainer asking
+for the feature, not the date.** If that request arrives first, act on
+it and ignore the date; if the date arrives first, re-confirm the
+DEFER above still holds (§3's reasoning is about a single-maintainer
+repo — re-check that premise) and re-park it.
+
+*Field note for whoever picks this up:* this card predates TRDD v2, and
+paragraphs above still say `status:`. There is no `status:` field in
+this card's frontmatter — the state machine is `column:`. Read every
+`status: X` in this body as a historical spelling of the column, and
+change `column:` when you act.
 
 ## 4. Specification (deferred, but fully described)
 
