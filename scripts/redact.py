@@ -149,6 +149,24 @@ def _secret_rules() -> list[Rule]:
             pattern=r"\bghr_[A-Za-z0-9]{36}\b",
             replacement="ghr_<REDACTED>",
         ),
+        # GitLab ROUTABLE tokens — the two families whose bare value grants
+        # API/repo access from anywhere, mirroring Claude Code 2.1.232's own
+        # "full redaction of routable glpat-/gldt- tokens". The other nine
+        # gl* families are DETECTED by security_catalog.json but not redacted
+        # here: redaction is for prose an agent posts outward, where these
+        # two are the ones that turn a paste into a breach. 20+ chars, not
+        # exactly 20 — newer GitLab tokens append a CRC suffix, and a rule
+        # anchored at {20} would leave the tail of a longer token visible.
+        Rule(
+            name="gitlab-pat",
+            pattern=r"\bglpat-[A-Za-z0-9_\-]{20,}\b",
+            replacement="glpat-<REDACTED>",
+        ),
+        Rule(
+            name="gitlab-deploy-token",
+            pattern=r"\bgldt-[A-Za-z0-9_\-]{20,}\b",
+            replacement="gldt-<REDACTED>",
+        ),
         # Anthropic API keys. Variable suffix length; we anchor on prefix.
         # The audit map specifies `[A-Za-z0-9_-]+` (one-or-more) — Anthropic
         # has shipped keys of varying lengths over time, so the rule does

@@ -167,12 +167,13 @@ fatal: 'wt/hotfix-auth' is already used by worktree at '.../worktrees/hotfix-aut
 This is git protecting you, not an error to route around. Operate on the branch
 **inside** its worktree (`git -C "$WT" …`), not from the main checkout.
 
-`git -C` here assumes the MAIN session. Inside an `Agent(isolation: "worktree")`
-subagent it does not reach `$WT`: Claude Code 2.1.210 / 2.1.216 redirect git into
-that agent's own worktree and closed `git -C`, `--git-dir`, `GIT_DIR` and
-`GIT_WORK_TREE` as escapes. So the fallback there is not a different flag — it is
-that this skill does not belong in such an agent, which already has its own
-isolation.
+`git -C` here assumes the MAIN session. Inside a worktree-isolated context it
+does not reach `$WT`: Claude Code 2.1.210 / 2.1.216 redirect git into that
+context's own worktree and closed `git -C`, `--git-dir`, `GIT_DIR` and
+`GIT_WORK_TREE` as escapes, and 2.1.222 extended the containment to file edits
+and Bash in every session type — not only `Agent(isolation: "worktree")`
+subagents. So the fallback there is not a different flag — it is that this skill
+does not belong in such a context, which already has its own isolation.
 
 ## Report
 

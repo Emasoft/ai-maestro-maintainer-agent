@@ -1,5 +1,5 @@
 ---
-description: Audit, install, or print install-recipes for the maintainer agent's required tools (gh, git, uv, zizmor, actionlint, docker, trufflehog, gitleaks) — cross-platform (macOS / Linux / WSL2).
+description: Audit, install, or print install-recipes for the maintainer agent's required tools (gh, git, uv, zizmor, actionlint, docker, trufflehog) — cross-platform (macOS / Linux / WSL2).
 argument-hint: "[audit|install|recipe]"
 ---
 
@@ -28,8 +28,9 @@ Optional tools (per skill):
 - `actionlint` — workflow YAML linter (Go binary)
 - `jq` — JSON in shell
 - `docker` — maintainer-sandbox harness
-- `trufflehog` — maintainer-secrets-scan preferred backend
-- `gitleaks` — maintainer-secrets-scan secondary backend
+- `trufflehog` — maintainer-secrets-scan preferred backend (the
+  bundled `scripts/fast_security_scan.py` is the fallback; no
+  second external scanner is installed)
 
 Platform detection:
 - macOS (any arch) → `brew install <pkg>`

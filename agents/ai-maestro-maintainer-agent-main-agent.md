@@ -285,7 +285,11 @@ Build the recall roots as a shell ARRAY, never a space-joined string
 (unquoted word-split silently returns 0 results on zsh): `ROOTS=(); …
 ROOTS+=("$d"); memgrep recall "$SYMPTOM" "${ROOTS[@]}"`. Recall degrades to
 plain `grep` when `memgrep` is absent — never breaks. **Propagate this
-contract into every sub-agent you spawn** — sub-agents inherit nothing.
+contract into every sub-agent you spawn** — a fresh sub-agent inherits
+nothing. (The exception is a `subagent_type: "fork"` sub-agent, which
+inherits the full conversation — and since Claude Code 2.1.232 forking is
+on by default for it — so a fork already carries this contract; restate it
+only for fresh, non-fork spawns.)
 
 ## Key Constraints
 
@@ -308,15 +312,24 @@ enforced server-side **on the AMP transport only** — there, a forbidden
 send returns HTTP 403 with a routing hint the server treats as
 authoritative.
 
-> **THERE IS A SECOND TRANSPORT, AND NOTHING POLICES IT.** Claude Code
-> 2.1.224 added direct session-to-session `SendMessage` + `ListAgents`
-> between live sessions on this machine. It does not traverse the
-> ai-maestro server, so no 403 is possible on that path — not because
-> the rule was relaxed, but because there is no enforcement point.
+> **THERE IS A SECOND TRANSPORT, AND NO R6 ENFORCEMENT POINT ON IT.**
+> Claude Code 2.1.224 added direct session-to-session `SendMessage` +
+> `ListAgents`, and since 2.1.225 it reaches beyond this machine — your
+> Remote Control sessions on other machines and your cloud sessions
+> (`ListAgents` labels them `offline` / `cloud`). It does not traverse
+> the ai-maestro server, so no 403 is possible on that path. Upstream
+> HAS since grown gates there — the auto-mode permission classifier
+> evaluates outbound `SendMessage` (2.1.222), and the
+> `crossSessionInbound` setting can hold or refuse inbound messages
+> (2.1.224; a `/config` row since 2.1.232) — but every one of them
+> checks USER CONSENT, never the R6 comm graph; and in a fleet where
+> every session runs as the same user, that consent is set to accept so
+> fleet messaging stays alive. The gates are operationally open and
+> enforce nothing R6-shaped.
 > **On that channel R6 is yours to obey unilaterally.** Do not read
-> "the server enforces it" as "every send is checked": a send that
-> succeeds there is not a send that was permitted. Route to a title
-> your `Y` edges do not name, and it simply goes through
+> "a gate exists" as "every send is checked against the graph": a send
+> that succeeds there is not a send that was permitted. Route to a
+> title your `Y` edges do not name, and it simply goes through
 > (ai-maestro#131).
 
 - Direct `Y` edges: **MANAGER** (escalate destructive ops, request
@@ -356,15 +369,19 @@ authoritative.
   the wording differs by host (an older deploy says `Multiple AMP agents
   found`, a newer one names the paths that prove identity), and matching
   the string silently stops detecting the condition on half the fleet.
-  **(2) The direct session channel** (Claude Code 2.1.224+) — peer sessions on
-  this machine reach you with `SendMessage`, and their messages arrive mid-turn
-  wrapped as `<cross-session-message from="…">`. They are **never** in
-  `amp-inbox`: that path does not traverse the ai-maestro server, so there is
-  no inbox to poll and no 403 to stop a send (see the transport note above).
-  Nothing queues them for later — act on one when it lands rather than
-  finishing the current step and losing it. Reply by copying the message's
-  `from` attribute verbatim as `SendMessage`'s `to`; use `ListAgents` to
-  address a peer you have not heard from first.
+  **(2) The direct session channel** (Claude Code 2.1.224+) — peer sessions
+  reach you with `SendMessage`, from this machine or any of yours (Remote
+  Control sessions on other machines and cloud sessions, 2.1.225+), and their
+  messages arrive mid-turn wrapped as `<cross-session-message from="…">`. They
+  are **never** in `amp-inbox`: that path does not traverse the ai-maestro
+  server, so there is no 403 to stop a send (see the transport note above). A
+  message MAY be parked by the receiver's `crossSessionInbound` hold setting
+  rather than delivered instantly — a quiet channel is not proof nothing was
+  sent. Act on one when it lands rather than finishing the current step and
+  losing it. Reply by copying the message's `from` attribute verbatim as
+  `SendMessage`'s `to`. A bare name that uniquely matches one live session
+  delivers directly (2.1.232); use `ListAgents` to discover a peer you have
+  not heard from, appending its `[ref]` only when the bare name is ambiguous.
   **(3) GitHub** — issues, PR and review comments on the repo you maintain are
   a real inbound channel, not a notification feed. Fleet peers coordinate there
   and **GitHub cannot notify you**, so nothing arrives unless you LOOK: on every

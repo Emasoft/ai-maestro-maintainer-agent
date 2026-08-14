@@ -202,15 +202,9 @@ execute a remote stream directly). Run the steps in order, one per line:
    `less /tmp/trufflehog-install.sh`
 3. Execute the reviewed local file: `sh /tmp/trufflehog-install.sh -b /usr/local/bin`
 
-### `gitleaks` (≥ 8.x) — optional fallback for `maintainer-secrets-scan`
-
-| Platform | Command |
-|----------|---------|
-| `macos`  | `brew install gitleaks` |
-| `apt`    | Download release binary from `https://github.com/gitleaks/gitleaks/releases/latest` |
-| `dnf`    | Download release binary |
-| `pacman` | AUR: `yay -S gitleaks` |
-| `apk`    | Download release binary |
+(`maintainer-secrets-scan` needs no second external scanner — its
+fallback is the bundled `scripts/fast_security_scan.py`, which
+always ships with the plugin.)
 
 ## Verification snippets
 
@@ -231,7 +225,6 @@ yamllint --version    # "yamllint 1.35.1"
 hadolint --version    # "Haskell Dockerfile Linter 2.12.0-no-git"
 plutil -lint /dev/null 2>&1 | head -n1   # macOS: "/dev/null: OK"
 trufflehog --version  # "trufflehog 3.85.1"
-gitleaks version      # "v8.21.2"
 ```
 
 Use `command -v <tool>` before the version probe — it returns `0` if
@@ -248,7 +241,6 @@ which serves the canonical version):
 | `actionlint`| <https://github.com/rhysd/actionlint/releases/latest> |
 | `hadolint`  | <https://github.com/hadolint/hadolint/releases/latest> |
 | `trufflehog`| <https://github.com/trufflesecurity/trufflehog/releases/latest> |
-| `gitleaks`  | <https://github.com/gitleaks/gitleaks/releases/latest> |
 | `gh`        | <https://github.com/cli/cli/releases/latest> |
 | `uv`        | <https://github.com/astral-sh/uv/releases/latest> |
 
@@ -269,6 +261,6 @@ user to install manually.
 | `maintainer-guardian`       | (mandatory only)                         |
 | `maintainer-triage`         | (mandatory only)                         |
 | `maintainer-config-lint`    | `yamllint`, `hadolint` (optional `plutil` on macOS) |
-| `maintainer-secrets-scan`*  | `trufflehog` OR `gitleaks`               |
+| `maintainer-secrets-scan`*  | `trufflehog` (bundled scanner as fallback) |
 
 `*` = future skill; listed for completeness.

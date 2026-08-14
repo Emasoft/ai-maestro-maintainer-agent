@@ -1,5 +1,5 @@
 ---
-description: Scan the maintained repo for committed secrets via trufflehog / gitleaks / fast_security_scan. Three modes — scan / pre-publish / audit.
+description: Scan the maintained repo for committed secrets via trufflehog / fast_security_scan. Three modes — scan / pre-publish / audit.
 argument-hint: "[scan|pre-publish|audit]"
 ---
 
@@ -12,16 +12,15 @@ tree + last 50 commits. Three modes:
 - `pre-publish` — hook for publish.py-style pipelines. Exits 0 if
   clean; exits 1 if any HIGH/CRITICAL → block publish.
 - `audit` — diagnose: which scanners are installed (trufflehog /
-  gitleaks / fast_security_scan), what versions, what's missing.
-  Print install hints (`brew install trufflehog`,
-  `brew install gitleaks`, etc.).
+  fast_security_scan), what versions, what's missing. Print
+  install hints (`brew install trufflehog`, etc.).
 
 Loads skill: **maintainer-secrets-scan**
 
 Tool fallback chain: prefer `trufflehog` (most authoritative) →
-`gitleaks` (faster) → bundled `scripts/fast_security_scan.py`
-(re2-based, no external install, smaller pattern set). At least
-the bundled scanner is always available.
+bundled `scripts/fast_security_scan.py` (re2-based, no external
+install, smaller pattern set). At least the bundled scanner is
+always available.
 
 Severity:
 - **CRITICAL** — private keys, full PATs, AWS root access keys

@@ -1,7 +1,7 @@
 # Per-tool invocation, JSON schema, and severity mapping
 
 Source-of-truth for how `maintainer-secrets-scan` shells out to
-the three supported scanners. The skill orchestrates; this
+the two supported scanners. The skill orchestrates; this
 document records the exact invocation each scanner expects, the
 output shape we normalise to, and the severity translation table.
 
@@ -9,7 +9,6 @@ output shape we normalise to, and the severity translation table.
 
 - [Tool detection chain](#tool-detection-chain)
 - [trufflehog invocation](#trufflehog-invocation)
-- [gitleaks invocation](#gitleaks-invocation)
 - [fast_security_scan.py invocation](#fast_security_scanpy-invocation)
 - [Severity mapping](#severity-mapping)
 - [Output schema](#output-schema)
@@ -26,12 +25,14 @@ The skill always uses **exactly one** scanner per scan invocation
    via the issuing service when `--only-verified` is set. Slow on
    first run (model warm-up) but the only tool that distinguishes
    "looks like a secret" from "is a working secret".
-2. **gitleaks** — fast, regex-based; large built-in pattern set
-   focused on dev-time credentials. No live-verification step.
-3. **bundled `scripts/fast_security_scan.py`** — always available;
-   smaller pattern set than gitleaks but covers the headline
-   token families (AWS, GitHub, GitLab, Slack, Anthropic, OpenAI,
-   Stripe, PEM keys).
+2. **bundled `scripts/fast_security_scan.py`** — always available;
+   re2-based and parallel; covers the headline token families
+   (AWS, GitHub, GitLab, Slack, Anthropic, OpenAI, Stripe, PEM
+   keys).
+
+(There is deliberately no third scanner: the single-threaded,
+single-process, file-count-capped repository scanners were banned
+by the USER on 2026-08-14 as too slow to be useful.)
 
 Detection probe:
 
@@ -39,9 +40,6 @@ Detection probe:
 detect_tool() {
   if command -v trufflehog >/dev/null 2>&1; then
     echo "trufflehog"; return 0
-  fi
-  if command -v gitleaks >/dev/null 2>&1; then
-    echo "gitleaks"; return 0
   fi
   # Bundled fallback — the script lives next to this skill's plugin.
   if [ -f "$AGENT_DIR/scripts/fast_security_scan.py" ]; then
@@ -94,35 +92,6 @@ trufflehog \
   >> "$RAW_JSON"
 ```
 
-## gitleaks invocation
-
-```bash
-gitleaks \
-  detect \
-  --source="$REPO_PATH" \
-  --report-format=json \
-  --report-path="$RAW_JSON" \
-  --log-opts="-n 50" \
-  --exit-code=0
-```
-
-`--exit-code=0` is important: gitleaks defaults to exit 1 on any
-finding, but the skill wants the JSON file produced regardless
-and decides block/no-block based on severity buckets, not on the
-tool's exit code.
-
-Output JSON is a top-level array. Key fields per entry:
-
-| Field | Meaning |
-|---|---|
-| `RuleID` | Internal rule (e.g. `aws-access-token`) |
-| `Description` | Human label |
-| `Secret` | Matched body (DO NOT echo) |
-| `File` | Path relative to `--source` |
-| `StartLine` | Line number |
-| `Commit` | Commit SHA (only set for history hits) |
-| `Date` | Commit date (history hits only) |
-
 ## fast_security_scan.py invocation
 
 ```bash
@@ -161,8 +130,6 @@ mode can apply a single threshold.
 | trufflehog | `Verified=true` AND less-critical detector (low-blast-radius vendor) | `HIGH` |
 | trufflehog | `Verified=false` AND known-critical detector | `HIGH` |
 | trufflehog | `Verified=false` AND less-critical | `MEDIUM` |
-| gitleaks | RuleID matches a CRITICAL pattern list (AWS, GitHub, GitLab, Slack, PEM) | `CRITICAL` |
-| gitleaks | otherwise | `HIGH` |
 | fast_security_scan | reads `severity` directly from the catalog | passthrough |
 
 The CRITICAL pattern list lives in
@@ -182,7 +149,7 @@ The skill writes TWO files per scan; both live under
 ```json
 {
   "mode": "scan",
-  "tool_used": "trufflehog | gitleaks | bundled",
+  "tool_used": "trufflehog | bundled",
   "tool_version": "1.2.3",
   "ts": "2026-05-27T13:45:01+0200",
   "repo_path": "$PROJECT_DIR",
@@ -246,7 +213,6 @@ Markdown table on stdout:
 | Tool                 | Installed | Version |
 |----------------------|-----------|---------|
 | trufflehog           | yes       | 3.81.10 |
-| gitleaks             | no        | (brew install gitleaks) |
 | bundled (fast_scan)  | yes       | always  |
 ```
 
@@ -263,9 +229,4 @@ trufflehog not installed. To install:
   curl -fsSLo /tmp/trufflehog-install.sh https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh
   less /tmp/trufflehog-install.sh
   sh /tmp/trufflehog-install.sh -b /usr/local/bin
-
-gitleaks not installed. To install:
-  brew install gitleaks
-  # or:
-  go install github.com/gitleaks/gitleaks/v8@latest
 ```

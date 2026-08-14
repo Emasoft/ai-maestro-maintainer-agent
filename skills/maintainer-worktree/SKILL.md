@@ -172,20 +172,23 @@ expected outcome — it means the guard did its job.
   with it.
 - Does **not** touch a worktree it did not create, beyond listing it.
 
-## Two harness behaviours this skill has to live with (Claude Code 2.1.221)
+## Two harness behaviours this skill has to live with (Claude Code 2.1.232)
 
 Neither is a defect here, and neither is worked around — both are places where
 the harness will refuse or redirect something these instructions ask for, and a
 silent redirect is worse than a known one.
 
-- **Run this skill from the MAIN session, not from inside an
-  `Agent(isolation: "worktree")` subagent.** Such a subagent has git redirected
-  into its OWN worktree, and 2.1.210 / 2.1.216 closed the escapes — `git -C`,
-  `--git-dir`, `GIT_DIR`, `GIT_WORK_TREE`. Every `git -C "$WT" …` below is
-  written for the main checkout and will not reach the path it names from inside
-  one. That containment is correct; it just means this skill is the wrong tool
-  there, since such an agent already has the isolation this skill exists to
-  create.
+- **Run this skill from the MAIN session, not from inside a worktree-isolated
+  agent or session.** A worktree-isolated context has git redirected into its
+  OWN worktree: 2.1.210 / 2.1.216 closed the escapes — `git -C`, `--git-dir`,
+  `GIT_DIR`, `GIT_WORK_TREE` — and 2.1.222 extended the containment to file
+  edits and Bash in EVERY session type (not only `Agent(isolation: "worktree")`
+  subagents; worktree-isolated sessions and their subagents could previously
+  still run destructive git against the main checkout). Every `git -C "$WT" …`
+  below is written for the main checkout and will not reach the path it names
+  from inside one. That containment is correct; it just means this skill is the
+  wrong tool there, since such a context already has the isolation this skill
+  exists to create.
 - **`.worktrees/` is deliberately NOT `.claude/worktrees/`.** Since 2.1.206 the
   `EnterWorktree` tool asks for confirmation before entering a worktree outside
   `.claude/worktrees/`, so pointing it at ours prompts. Keep them separate

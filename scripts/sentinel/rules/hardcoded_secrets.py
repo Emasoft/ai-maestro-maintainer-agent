@@ -18,6 +18,10 @@ if TYPE_CHECKING:
     from sentinel.workflow import Workflow
 
 # label -> compiled pattern (mirrors the Ruby PATTERNS hash, same order).
+# Deliberately NOT extended with the GitLab gl*- token families that
+# scripts/security_catalog.json carries: this file is a faithful port of the
+# Ruby rule and adding families here would silently fork it from upstream.
+# Catalog-only families are still caught by fast_security_scan.py.
 PATTERNS: dict[str, "re.Pattern[str]"] = {
     "AWS access key": re.compile(r"AKIA[0-9A-Z]{16}"),
     "GitHub personal access token": re.compile(r"ghp_[A-Za-z0-9]{36}"),

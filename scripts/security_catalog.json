@@ -41,8 +41,68 @@
     {
       "name": "gitlab-pat",
       "severity": "CRITICAL",
-      "description": "GitLab personal access token",
-      "regex": "\\bglpat-[0-9a-zA-Z\\-_]{20}\\b"
+      "description": "GitLab personal access token (routable — a leak grants API access as the user)",
+      "regex": "\\bglpat-[0-9a-zA-Z\\-_]{20,}\\b"
+    },
+    {
+      "name": "gitlab-deploy-token",
+      "severity": "CRITICAL",
+      "description": "GitLab deploy token (routable — grants repo/registry read, sometimes write)",
+      "regex": "\\bgldt-[0-9a-zA-Z\\-_]{20,}\\b"
+    },
+    {
+      "name": "gitlab-runner-token",
+      "severity": "CRITICAL",
+      "description": "GitLab runner registration/authentication token",
+      "regex": "\\bglrt-[0-9a-zA-Z\\-_]{20,}\\b"
+    },
+    {
+      "name": "gitlab-oauth-app-secret",
+      "severity": "CRITICAL",
+      "description": "GitLab OAuth application secret",
+      "regex": "\\bgloas-[0-9a-zA-Z\\-_]{20,}\\b"
+    },
+    {
+      "name": "gitlab-agent-token",
+      "severity": "CRITICAL",
+      "description": "GitLab Kubernetes agent token",
+      "regex": "\\bglagent-[0-9a-zA-Z\\-_]{20,}\\b"
+    },
+    {
+      "name": "gitlab-service-account-token",
+      "severity": "CRITICAL",
+      "description": "GitLab service-account token",
+      "regex": "\\bglsoat-[0-9a-zA-Z\\-_]{20,}\\b"
+    },
+    {
+      "name": "gitlab-ci-build-token",
+      "severity": "CRITICAL",
+      "description": "GitLab CI job (build) token",
+      "regex": "\\bglcbt-[0-9a-zA-Z\\-_]{20,}\\b"
+    },
+    {
+      "name": "gitlab-pipeline-trigger-token",
+      "severity": "HIGH",
+      "description": "GitLab pipeline trigger token",
+      "regex": "\\bglptt-[0-9a-zA-Z\\-_]{20,}\\b"
+    },
+    {
+      "name": "gitlab-incoming-mail-token",
+      "severity": "HIGH",
+      "description": "GitLab incoming mail token",
+      "regex": "\\bglimt-[0-9a-zA-Z\\-_]{20,}\\b"
+    },
+    {
+      "name": "gitlab-feed-token",
+      "severity": "HIGH",
+      "description": "GitLab feed token (private feed/calendar access)",
+      "regex": "\\bglft-[0-9a-zA-Z\\-_]{20,}\\b"
+    },
+    {
+      "name": "gitlab-feature-flags-client-token",
+      "severity": "HIGH",
+      "description": "GitLab feature-flags client token",
+      "regex": "\\bglffct-[0-9a-zA-Z\\-_]{20,}\\b"
     },
     {
       "name": "slack-token",

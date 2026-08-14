@@ -54,6 +54,51 @@ def test_scanner_finds_aws_and_github_secrets(tmp_path: Path):
     assert "github-personal-access-token" in rules
 
 
+def test_scanner_finds_the_gitlab_token_families(tmp_path: Path):
+    """Every gl*- family added for Claude Code 2.1.232 parity is detected, incl. a CRC-suffixed PAT."""
+    lines = [
+        "a = 'glpat-" + "A" * 20 + "-" + "b" * 7 + "'",  # CRC-suffixed PAT
+        "b = 'gldt-" + "B" * 20 + "'",
+        "c = 'glrt-" + "C" * 20 + "'",
+        "d = 'gloas-" + "D" * 20 + "'",
+        "e = 'glagent-" + "E" * 20 + "'",
+        "f = 'glsoat-" + "F" * 20 + "'",
+        "g = 'glcbt-" + "G" * 20 + "'",
+        "h = 'glptt-" + "H" * 20 + "'",
+        "i = 'glimt-" + "I" * 20 + "'",
+        "j = 'glft-" + "J" * 20 + "'",
+        "k = 'glffct-" + "K" * 20 + "'",
+    ]
+    fixture = tmp_path / "gitlab_blob.txt"
+    fixture.write_text("\n".join(lines) + "\n")
+    rc, out, _err = _run_scanner("--format", "json", "--severity", "LOW", str(fixture))
+    assert rc == 1, f"expected rc=1 (findings present), got {rc}"
+    rules = {f["rule"] for f in json.loads(out)["findings"]}
+    expected = {
+        "gitlab-pat",
+        "gitlab-deploy-token",
+        "gitlab-runner-token",
+        "gitlab-oauth-app-secret",
+        "gitlab-agent-token",
+        "gitlab-service-account-token",
+        "gitlab-ci-build-token",
+        "gitlab-pipeline-trigger-token",
+        "gitlab-incoming-mail-token",
+        "gitlab-feed-token",
+        "gitlab-feature-flags-client-token",
+    }
+    assert expected <= rules, f"missing: {expected - rules}"
+
+
+def test_scanner_gitlab_rules_ignore_prose_prefixes(tmp_path: Path):
+    """The bare prefixes in prose (short suffixes) must NOT trigger — negative control."""
+    fixture = tmp_path / "prose.md"
+    fixture.write_text("Rotate any glpat- token you find; a gldt-short string is not a token.\n")
+    rc, out, _err = _run_scanner("--format", "json", "--severity", "LOW", str(fixture))
+    gitlab_hits = [f for f in json.loads(out)["findings"] if f["rule"].startswith("gitlab-")]
+    assert rc == 0 and not gitlab_hits, f"prose prefix false-positive: {gitlab_hits}"
+
+
 def test_scanner_no_findings_on_clean_file_returns_zero(tmp_path: Path):
     """A file with no patterns produces rc=0 and an empty findings list."""
     clean = tmp_path / "clean.py"

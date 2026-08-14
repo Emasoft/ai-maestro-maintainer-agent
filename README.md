@@ -80,7 +80,7 @@ Once the agent session is running:
 | Skill | Trigger |
 |-------|---------|
 | `maintainer-redact` | "redact host paths", "sanitize agent output", "strip secrets from this text" |
-| `maintainer-secrets-scan` | "scan for secrets", "trufflehog this repo", "gitleaks audit", "pre-publish secret gate" |
+| `maintainer-secrets-scan` | "scan for secrets", "trufflehog this repo", "secret audit", "pre-publish secret gate" |
 | `maintainer-pr-triage` | "triage PR #N", "classify pull request", "review fork PR" |
 | `maintainer-pr-review` | "review PR #N", "check this diff", "audit PR for protected paths" |
 | `maintainer-commit-msg-why` | "install commit-msg WHY hook", "audit commit messages", "enforce WHY paragraphs" |

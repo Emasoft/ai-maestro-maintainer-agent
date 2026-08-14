@@ -1,8 +1,11 @@
 """This plugin must not use Claude Code surfaces that upstream removed or changed.
 
 Every check here corresponds to a dated CHANGELOG entry, and every one was
-measured absent from this tree on 2026-08-07 against Claude Code 2.1.224. The
-file exists so that stays true without anyone re-reading a changelog.
+measured absent from this tree on 2026-08-07 against Claude Code 2.1.224, then
+re-measured on 2026-08-15 against Claude Code 2.1.233 (auditing the 2.1.225 →
+2.1.232 changelog; the CLI claims below were re-run against the live binary,
+not re-dated). The file exists so that stays true without anyone re-reading a
+changelog.
 
 WHY A TEST RATHER THAN A NOTE. A fact verified in ANOTHER repo keeps living
 there: the check's scope stops at this tree while the surface keeps changing
@@ -77,10 +80,62 @@ def test_the_ultraplan_detector_bites() -> None:
     assert not ULTRAPLAN.search("run /plan first")
 
 
+# Deprecated in 2.1.222 when `/review` folded into `/code-review`; `/code-review
+# ultra` is the surface now and `/ultrareview` is a legacy alias. Matched as the
+# WHOLE word `ultrareview` only — never bare `review`, which legitimately appears
+# in paths like `references/review-checklist.md` (a guard that reddens on correct
+# writing gets deleted).
+ULTRAREVIEW = re.compile(r"\bultrareview\b", re.IGNORECASE)
+
+
+def test_no_reference_to_the_deprecated_ultrareview_alias() -> None:
+    """`/ultrareview` is a deprecated alias (2.1.222) — name `/code-review ultra`."""
+    offenders = [f"{p.relative_to(REPO)}" for p, t in _text(_shipped_files()) if ULTRAREVIEW.search(t)]
+    assert not offenders, f"references the deprecated /ultrareview alias (2.1.222 — use /code-review ultra): {offenders}"
+
+
+def test_the_ultrareview_detector_bites() -> None:
+    """Positive control, both directions — bare `/review` must NOT match."""
+    assert ULTRAREVIEW.search("run /ultrareview on the branch")
+    assert not ULTRAREVIEW.search("run /code-review ultra on the branch")
+    assert not ULTRAREVIEW.search("see references/review-checklist.md")
+
+
+# ── gitleaks is banned (USER directive 2026-08-14) ───────────────────────────
+
+# Single-threaded, single-process, and capped on file count — too slow to be
+# useful at repo scale, so the USER banned it outright: no shipped instruction
+# may send an agent to it (TruffleHog and the bundled fast_security_scan.py
+# cover detection). Scope is wider than the other detectors because the ban
+# also covers root config/docs that reference scanners.
+GITLEAKS = re.compile(r"\bgitleaks\b", re.IGNORECASE)
+
+
+def _gitleaks_scope() -> list[Path]:
+    extra = [REPO / n for n in (".mega-linter.yml", "CONTRIBUTING.md", "SECURITY.md", "ACKNOWLEDGMENTS.md")]
+    return _shipped_files() + [p for p in extra if p.is_file()]
+
+
+def test_no_reference_to_the_banned_gitleaks_scanner() -> None:
+    """gitleaks is banned (USER, 2026-08-14) — no shipped file may name it."""
+    offenders = [f"{p.relative_to(REPO)}" for p, t in _text(_gitleaks_scope()) if GITLEAKS.search(t)]
+    assert not offenders, f"references the banned gitleaks scanner (USER directive 2026-08-14 — use trufflehog or the bundled scanner): {offenders}"
+
+
+def test_the_gitleaks_detector_bites() -> None:
+    """Positive control — and the replacement scanners must not trip it."""
+    assert GITLEAKS.search("fall back to gitleaks detect")
+    assert GITLEAKS.search("write a .gitleaks.toml allowlist")
+    assert not GITLEAKS.search("fall back to trufflehog filesystem")
+    assert not GITLEAKS.search("run fast_security_scan.py --workflows")
+
+
 # ── `claude plugin` takes ONE positional ─────────────────────────────────────
 
 # Reported on ai-maestro-maintainer-agent#35 and confirmed against the CLI's own
-# usage line on 2.1.224: `Usage: claude plugin install|i [options] <plugin>` —
+# usage line on 2.1.224, re-confirmed on 2.1.233 (the new `-y/--yes` flag is
+# boolean, which the counter already treats safely):
+# `Usage: claude plugin install|i [options] <plugin>` —
 # ONE positional (`plugin@marketplace`). Commander SILENTLY DROPS a second one, so
 # `install foo bar` resolves `foo` and ignores the marketplace. It works by luck
 # until a plugin name is ambiguous, and then installs the wrong thing.

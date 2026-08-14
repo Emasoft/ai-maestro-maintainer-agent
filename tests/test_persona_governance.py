@@ -232,6 +232,15 @@ def test_persona_enumerates_every_inbound_channel_not_just_amp(persona: str) -> 
     assert "amp-inbox" in bullet, "channel 1 (AMP) lost its concrete command"
     assert "SendMessage" in bullet, "channel 2 is unnamed: an agent draining only amp-inbox never learns that peer-session messages exist elsewhere"
     assert re.search(r"(?i)never\b[^.]{0,40}in\s+`?amp-inbox", bullet), "the bullet does not say peer-session messages are ABSENT from amp-inbox, so a reader assumes one drain covers both"
+    # 2.1.225 extended the direct channel past this machine (Remote Control on
+    # other machines, cloud sessions). A bullet that still says "this machine"
+    # under-states the reach, and a reader treats a cross-machine directive as
+    # impossible rather than pending.
+    assert re.search(r"(?i)other machines", bullet), "channel 2's reach is under-stated: since 2.1.225 SendMessage arrives from Remote Control sessions on OTHER machines and cloud sessions, not just this one"
+    # 2.1.224 lets the receiver's crossSessionInbound setting PARK a message.
+    # The old bullet said "nothing queues them for later" — now false, and the
+    # dangerous reading is that a quiet channel proves nothing was sent.
+    assert re.search(r"(?i)parked|held", bullet) and "crossSessionInbound" in bullet, "the bullet must say a message MAY be parked by crossSessionInbound — 'nothing queues them' is false since 2.1.224, and silence is not proof of no mandate"
     assert re.search(r"(?i)gh issue list", bullet), "channel 3 has no concrete command — prose without a mechanism"
     assert re.search(r"(?i)github cannot notify you|nothing arrives unless you look", bullet), "the bullet omits WHY GitHub must be polled; without it, an agent waits for a notification that never comes"
     assert re.search(r"(?i)never call the inbox clear on the strength of one channel", bullet), "no guard against reporting a one-channel drain as a clear inbox — the specific way this failure gets reported as success"
@@ -254,7 +263,7 @@ def test_persona_mandates_the_self_id_line_verbatim(persona: str) -> None:
 
 
 def test_persona_does_not_claim_403_covers_every_transport(persona: str) -> None:
-    """R6's 403 is AMP-only — the direct session channel has no enforcement point.
+    """R6's 403 is AMP-only — the direct session channel has no R6 enforcement point.
 
     Claude Code 2.1.224 added session-to-session `SendMessage`/`ListAgents`, which
     does not traverse the ai-maestro server. Every role-plugin persona in the fleet
@@ -262,13 +271,46 @@ def test_persona_does_not_claim_403_covers_every_transport(persona: str) -> None
     violations return 403" — true of AMP, and a complete-sounding account of a
     surface that is now half unpoliced.
 
-    The danger is not a weakened rule, it is a persona that reads as though every
-    send is checked: an agent then routes around its own comm graph believing the
-    server has it covered, and a send that SUCCEEDS is mistaken for a send that was
-    PERMITTED. This asserts the persona keeps both halves — the 403 claim scoped to
-    the transport that can produce one, and the unpoliced channel named.
+    Since then upstream grew gates on that channel — the auto-mode permission
+    classifier on outbound SendMessage (2.1.222) and the crossSessionInbound
+    accept/hold/refuse setting (2.1.224; /config row in 2.1.232). None of them
+    checks the R6 comm graph: they gate USER CONSENT, and in a fleet where every
+    session runs as the same user that consent is open. So the OLD absolute claim
+    ("nothing polices it") became false while the danger it warned about stayed
+    exactly as real — the persona must now state BOTH: gates exist, and no gate
+    checks the graph. This test pins the scoped claim; asserting the old regex
+    (`no enforcement point|nothing polices`) would hold a false absolute in place,
+    and merely relaxing it would pass against an unedited persona and assert
+    nothing.
     """
-    para = persona[persona.index("Communication Permissions") :][:2500]
+    para = persona[persona.index("Communication Permissions") :][:3500]
     assert "403" in para, "the AMP 403 claim vanished — it is still true on that transport"
     assert re.search(r"(?i)AMP transport only|on the AMP transport", para), "the 403 claim is unscoped, so it reads as covering every transport"
-    assert re.search(r"(?i)SendMessage", para) and re.search(r"(?i)no enforcement point|nothing polices", para), "the persona does not name the direct session channel as unpoliced, so an agent reading only this section believes every send is server-checked"
+    assert re.search(r"(?i)no R6 enforcement point", para), "the persona no longer names the direct session channel as unpoliced BY R6 — the claim must be scoped to R6, not absolute (upstream consent gates exist since 2.1.222/2.1.224)"
+    assert re.search(r"(?i)user consent,? never the R6 comm graph", para), "the persona must state the consent-vs-graph distinction: upstream's gates (auto-mode classifier, crossSessionInbound) check user consent, never the R6 comm graph — without it a reader mistakes a consent gate for graph enforcement"
+    # The note is a `> ` blockquote, so any phrase can wrap across a "\n> "
+    # boundary; flatten before matching multi-word phrases or the assertion
+    # depends on where a rewording happens to break its lines.
+    flat = re.sub(r"\s*\n>?\s*", " ", para)
+    assert re.search(r"(?i)send that succeeds there is not a send that was permitted", flat), "the success≠permission warning is the load-bearing sentence and must survive every rewording"
+    # Two-way self-check: the OLD absolute wording must now FAIL this test —
+    # if it passes, the test never forced the correction it exists to hold.
+    old = "no 403 is possible on that path — not because the rule was relaxed, but because there is no enforcement point"
+    assert old not in flat, "the pre-2.1.232 absolute wording is back — 'there is no enforcement point' is false (consent gates exist); scope the claim to R6"
+
+
+def test_persona_scopes_the_subagent_inheritance_claim_to_fresh_spawns(persona: str) -> None:
+    """"Sub-agents inherit nothing" became half-false in Claude Code 2.1.232.
+
+    A `subagent_type: "fork"` inherits the FULL conversation (and forking is now
+    the default for it), so the unqualified claim sends an agent re-stating a
+    contract a fork already carries — wasted tokens — while a reader who learns
+    forks exist concludes the persona is wrong about spawns generally and stops
+    trusting the propagation duty, which fresh spawns still need. The fix keeps
+    the duty and scopes the premise: FRESH sub-agents inherit nothing; forks
+    inherit everything. This pins the scoped form and rejects the absolute one.
+    """
+    assert re.search(r"(?i)fresh sub-agent inherits\s+nothing", persona), "the inheritance claim lost its 'fresh' qualifier — unqualified, it is false for forks (2.1.232)"
+    assert 'subagent_type: "fork"' in persona, "the fork exception is unnamed — a reader cannot know which spawns already carry the contract"
+    # Two-way: the old absolute sentence must be gone, not merely supplemented.
+    assert not re.search(r"sub-agents inherit nothing", persona), "the unqualified 'sub-agents inherit nothing' claim is back — false since 2.1.232 for subagent_type: \"fork\""
