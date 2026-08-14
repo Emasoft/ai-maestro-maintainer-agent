@@ -1,9 +1,9 @@
 ---
 trdd-id: M9FXC82B
 title: Align shipped surfaces to Claude Code 2.1.232 and ban gitleaks
-column: dev
+column: published
 created: 2026-08-15T00:35:55+0200
-updated: 2026-08-15T00:35:55+0200
+updated: 2026-08-15T00:45:00+0200
 current-owner: maintainer-session
 task-type: docs
 release-via: publish
@@ -64,3 +64,9 @@ single-process, file-count capped — too slow to be useful).
 - [x] memgrep validate + lint clean on the new USER page
 
 ## Approval log
+
+- 2026-08-15T00:45:00+0200 — PUBLISHED as v1.13.8 (release
+  <https://github.com/Emasoft/ai-maestro-maintainer-agent/releases/tag/v1.13.8>,
+  commit 5ad8d2e + publish bump 519f79e). Tier-0 work; the release itself was
+  USER-approved this session ("Commit + publish a release"). Closed same-session
+  per the drain rule.
