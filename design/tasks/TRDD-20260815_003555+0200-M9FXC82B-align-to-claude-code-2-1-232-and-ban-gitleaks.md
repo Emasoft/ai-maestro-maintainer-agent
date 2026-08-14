@@ -9,7 +9,7 @@ task-type: docs
 release-via: publish
 approval-tier: 0
 relevant-rules: [3, 5, 7]
-implementation-commits: []
+implementation-commits: [5ad8d2e]
 ---
 
 # Align shipped surfaces to Claude Code 2.1.232 and ban gitleaks
