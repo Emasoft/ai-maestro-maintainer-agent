@@ -154,6 +154,7 @@ def cprint(msg: str) -> None:
 
 def run(
     cmd: list[str], cwd: Path | None = None, *, check: bool = True, capture: bool = False,
+    timeout: int = 300,
 ) -> subprocess.CompletedProcess[str]:
     """Run a command, stream output, fail-fast on error."""
     cprint(f"  {BLUE}$ {' '.join(cmd)}{NC}")
@@ -162,9 +163,9 @@ def run(
     # every other failure path uses. Catch it and exit 1.
     try:
         result = subprocess.run(cmd, cwd=str(cwd) if cwd else None, text=True,
-                                capture_output=capture, timeout=300)
+                                capture_output=capture, timeout=timeout)
     except subprocess.TimeoutExpired:
-        cprint(f"  {RED}Command timed out after 300s: {' '.join(cmd)}{NC}")
+        cprint(f"  {RED}Command timed out after {timeout}s: {' '.join(cmd)}{NC}")
         sys.exit(1)
     if check and result.returncode != 0:
         cprint(f"  {RED}Command failed (exit {result.returncode}){NC}")
@@ -1058,7 +1059,12 @@ def stage_tests(root: Path) -> None:
         sys.exit(1)
     baseline_browser_pids = _snapshot_browser_pids()
     try:
-        r = run(["uv", "run", "pytest", "tests/", "-x", "-q", "--tb=short"], cwd=root, check=False)
+        # TRDD-2O3VYG1D: the full suite honestly measures 375s (971s under
+        # contention), so the default 300s cap killed a PASSING suite. 1200s
+        # fits even a contended run while still bounding a real hang, and
+        # stays under CI's 25-minute ceiling (ci.yml timeout-minutes: 25).
+        r = run(["uv", "run", "pytest", "tests/", "-x", "-q", "--tb=short"], cwd=root,
+                check=False, timeout=1200)
     finally:
         killed = _cleanup_browser_orphans(baseline_browser_pids)
         if killed:
