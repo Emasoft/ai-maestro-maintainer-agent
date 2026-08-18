@@ -244,7 +244,7 @@ in `skills/<name>/` is the authoritative spec for behaviour and flags.
 | **maintainer-guardian** | BASELINE / SCAN — snapshots T1-T6 at session start; diffs every patrol cycle; routes critical deltas to auto-fix / issue / alert |
 | **maintainer-approval-gate** | CHECK / VERIFY — gates protected-path commits on `approve-protected-edit` from `$AUTHORIZED_USER` |
 | **workflow-bootstrap** | First-time CI scaffold + dependabot.yml + ruleset spec on freshly-entrusted repos |
-| **workflow-scan** | Read-only zizmor + actionlint + bundled Sentinel port (32 deterministic rules) |
+| **workflow-scan** | Read-only zizmor + actionlint + bundled Sentinel port (31 deterministic rules) |
 | **workflow-fix-safe** | `zizmor --fix=safe` + idempotent hardening (permissions, concurrency, timeouts, jq `--arg` trap) |
 | **workflow-pin-actions** | Resolve `uses: name@vN` to 40-char commit SHA + semver comment |
 | **workflow-protect-branch** | SHOW / APPLY default-branch ruleset via Rulesets API |

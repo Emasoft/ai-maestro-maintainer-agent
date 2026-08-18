@@ -6,7 +6,7 @@ argument-hint: "[--issue <issue-number>]"
 Run a read-only security audit of every workflow under
 `.github/workflows/` on the maintained repo. Loads the
 `workflow-scan` skill, which runs the three engines (zizmor +
-actionlint + `scripts/sentinel_scan.py` — 32 deterministic rules)
+actionlint + `scripts/sentinel_scan.py` — 31 deterministic rules)
 and merges the findings into a per-severity report.
 
 The optional `--issue <N>` argument posts the report as a comment

@@ -47,8 +47,9 @@ Copy this checklist and track your progress (pre-flight):
    if missing. If
    `$AGENT_DIR/.aimaestro/state/guardian-baseline.json`
    is also missing, invoke **maintainer-guardian** in baseline
-   mode first (the SessionStart hook normally does this, but
-   patrol is the backstop).
+   mode first (the SessionStart hook only prints a nudge — a
+   command hook cannot invoke a skill — so patrol IS the
+   mechanism that baselines).
 3. Compute `$POLL_SECONDS` from `MAINTAINER_POLL_INTERVAL_MS`
    (default 300, floor 10, ceiling 3600).
 4. **Pre-cycle Guardian scan** — invoke **maintainer-guardian**

@@ -216,19 +216,22 @@ design folders (`design/proposals|tasks|refused|archived`). Full model:
   and any ecosystem extensions) dynamically at agent-spawn time, so the
   available toolset can grow without per-skill edits (see
   `design/adrs/ADR-0002`). If you want to reduce permission prompts when
-  running unattended, invoke the bundled `/fewer-permission-prompts`
-  skill once at the start of the session — it scans your transcripts and
-  adds the observed safe tool patterns to `.claude/settings.json` at the
-  user or project scope.
+  running unattended, invoke Claude Code's built-in
+  `/fewer-permission-prompts` skill once at the start of the session
+  (harness-provided, not bundled with this plugin) — it scans your
+  transcripts and adds the observed safe tool patterns to
+  `.claude/settings.json` at the user or project scope.
 - **Observability** (Claude Code ≥ 2.1.145). `claude agents --json` emits a
   machine-readable view of every running agent (including this one), and
   OTEL spans for agent activity expose `agent_id` / `parent_agent_id` so
   you can correlate patrol cycles in your observability backend.
 - **Guardian Mode.** The maintainer is the **guardian of the repo**,
   not merely a reactive issue-fixer. At session start, the SessionStart
-  hook fires the `maintainer-guardian` skill in BASELINE mode to
+  hook prints a Guardian Mode nudge (a command hook cannot invoke a
+  skill); the patrol skill then runs `maintainer-guardian` in BASELINE
+  mode — auto-baselining whenever the snapshot is missing — to
   snapshot **six** threat classes — T1 zizmor/actionlint **plus the
-  bundled Sentinel port (`scripts/sentinel_scan.py`, 32 deterministic
+  bundled Sentinel port (`scripts/sentinel_scan.py`, 31 deterministic
   rules)** findings, T2 stale SHA pins, T3 branch-rule state, T4
   protected-path activity, T5 secret-leak markers in recent commits,
   T6 package-manager safety-config drift (`.npmrc` / `pnpm-workspace.yaml` /
@@ -302,7 +305,7 @@ design folders (`design/proposals|tasks|refused|archived`). Full model:
   [zizmor](https://github.com/zizmorcore/zizmor), `actionlint`, and
   the bundled **Sentinel port** (`scripts/sentinel_scan.py` — a
   faithful Python port of [jpr5/sentinel](https://sentinel.copilotkit.dev),
-  32 deterministic rules with 6 mechanical auto-fixers; pure stdlib +
+  31 deterministic rules with 6 mechanical auto-fixers; pure stdlib +
   PyYAML, run via `uv run`). zizmor + actionlint come via `uvx` /
   Homebrew — no manual install needed:
     - `workflow-bootstrap` — first-time scaffold for a repo with no
