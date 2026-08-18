@@ -4,6 +4,8 @@ title: Per-author trust elevation for maintainer-approval-gate protected paths
 column: backburner
 review-after: 2026-11-13
 created: 2026-05-23T17:35:00+0200
+current-owner: maintainer-agent-session
+task-type: security
 updated: 2026-08-13T12:40:00+0200
 ---
 

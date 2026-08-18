@@ -1,9 +1,9 @@
 ---
 trdd-id: WHDSR4HM
 title: Align README and skill docs to the shipped surfaces (audit C1-1 C1-2 C1-3)
-column: todo
+column: completed
 created: 2026-08-18T19:55:21+0200
-updated: 2026-08-18T19:55:21+0200
+updated: 2026-08-18T20:02:00+0200
 current-owner: maintainer-agent-session
 task-type: docs
 approval-tier: 0
@@ -33,11 +33,19 @@ One atomic task: make the docs state only what the plugin actually ships.
 
 ## Acceptance
 
-- [ ] `grep -rn "fewer-permission-prompts" README.md` → no bundling claim
-- [ ] README rule count reads 31 at both former sites (and nowhere still says 32)
-- [ ] README and maintainer-patrol SKILL.md describe the SessionStart hook as a
+- [x] `grep -rn "fewer-permission-prompts" README.md` → no bundling claim
+      (now "Claude Code's built-in … harness-provided, not bundled")
+- [x] README rule count reads 31 at both former sites; count re-verified
+      first-hand: 31 classes extend `Rule` in `scripts/sentinel/rules/`
+      (4 via `(Rule, GuardPatterns)`)
+- [x] README and maintainer-patrol SKILL.md describe the SessionStart hook as a
       command/echo nudge, not a skill invocation
-- [ ] full-repo grep for each corrected string finds no stale copy
-      (check-all-files-after-breaking-change)
+- [x] full-repo sweep found TWO stale copies beyond the audit's sites —
+      `agents/ai-maestro-maintainer-agent-main-agent.md:247` and
+      `commands/maintainer-scan-workflows.md:9` (both said 32) — corrected
 
 ## Approval log
+
+- 2026-08-18T20:02:00+0200 — COMPLETED by maintainer-agent-session under the
+  hub's Phase-2 GO (Tier-0 docs remediation). All four acceptance checks
+  verified by grep after edit.

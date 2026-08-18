@@ -3,6 +3,8 @@ trdd-id: ea33f618-90ad-4bdc-840d-7f9baa747945
 title: Evaluate Renovate as Dependabot replacement for github-actions
 column: completed
 created: 2026-05-23T17:30:00+0200
+current-owner: maintainer-agent-session
+task-type: spike
 updated: 2026-08-07T12:08:37+0200
 ---
 
