@@ -30,7 +30,7 @@ SPLIT the protection into two rulesets on `~DEFAULT_BRANCH`:
 
 | Ruleset | rules | `bypass_actors` | Effect |
 |---|---|---|---|
-| `baseline-history-protect` | `[deletion, non_fast_forward]` | `[]` | force-push and branch-deletion blocked for EVERYONE incl. admin. A normal fast-forward push is NOT a force-push, so it is not blocked. Merge commits are ALLOWED — `required_linear_history` was removed from the baseline by USER ruling 2026-08-08. |
+| `baseline-history-protect` | `[deletion, non_fast_forward]` | `[{actor_id:5, actor_type:"RepositoryRole", bypass_mode:"always"}]` | force-push and branch-deletion blocked for every NON-ADMIN actor (CI, agents, outside contributors); the owner (Admin role) bypasses — USER Tier-3 ruling 2026-08-13: the baseline protects against accident, never against the owner's deliberate act. A normal fast-forward push is NOT a force-push, so it is not blocked. Merge commits are ALLOWED — `required_linear_history` was removed by USER ruling 2026-08-08. |
 | `baseline-pr-and-checks` | `[pull_request, required_status_checks]` (strict, the CI job ids) | `[{actor_id:5, actor_type:"RepositoryRole", bypass_mode:"always"}]` | admin (publish.py) direct-push bypasses BOTH the PR requirement and the checks; outside-contributor PRs are still gated by review + checks. |
 
 Result: publish.py's normal push succeeds (admin bypasses checks; a
@@ -46,14 +46,13 @@ bypassed ruleset — verified live 2026-05-29 on
 `Emasoft/ai-maestro-maintainer-agent` (the v1.3.1 publish that surfaced
 this).
 
-> **Emergency history scrub.** Because `baseline-history-protect` is
-> `bypass_actors: []` on `non_fast_forward`, NOBODY — admin included —
-> can force-push to rewrite the default branch. Scrubbing a leaked
-> secret out of history is therefore reachable ONLY out-of-band by the
-> repo owner: Settings → Rules → disable the ruleset, `git push
-> --force-with-lease` the scrubbed history, then re-enable. Never via a
-> push while the ruleset is active — the protection that blocks an
-> attacker's force-push blocks yours too. This is by design.
+> **Emergency history scrub.** Since the USER Tier-3 ruling 2026-08-13,
+> `baseline-history-protect` carries an Admin bypass, so the repo OWNER
+> can `git push --force-with-lease` a scrubbed history directly (the
+> push log shows `remote: Bypassed rule violations`). Every non-admin
+> actor — CI, agents, outside contributors — remains blocked, so an
+> attacker's force-push is still stopped. No Settings → Rules toggle
+> dance is needed any more.
 
 ## The third ruleset: tag protection (`baseline-tag-protect`)
 
@@ -255,7 +254,7 @@ ALSO declares a job that genuinely should not gate merges, filter
 Write each to its own tmpfile — never inline with `${{ }}`
 interpolation in the shell.
 
-**Body A — history-protect, NO bypass:**
+**Body A — history-protect, admin bypass (USER Tier-3 ruling 2026-08-13):**
 
 ```bash
 TMP_HIST="$(mktemp -t ruleset-hist.XXXXXX.json)"
@@ -271,7 +270,9 @@ cat > "$TMP_HIST" <<JSON
     { "type": "deletion" },
     { "type": "non_fast_forward" }
   ],
-  "bypass_actors": []
+  "bypass_actors": [
+    { "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always" }
+  ]
 }
 JSON
 ```
@@ -292,7 +293,7 @@ cat > "$TMP_CHECKS" <<JSON
     {
       "type": "pull_request",
       "parameters": {
-        "required_approving_review_count": 1,
+        "required_approving_review_count": 0,
         "dismiss_stale_reviews_on_push": true,
         "require_code_owner_review": false,
         "require_last_push_approval": false,
@@ -352,9 +353,14 @@ because `bypass_actors` exempts the admin RepositoryRole from this
 entire (PR-and-checks) ruleset — that is exactly what lets `publish.py`
 push straight to the default branch.
 
-The admin bypass lives ONLY on Body B. Body A's `bypass_actors` is
-`[]` so force-push and deletion stay blocked for everyone, including
-admin. Merge commits are allowed: `required_linear_history` was removed
+Both branch rulesets carry the Admin bypass (USER Tier-3 ruling
+2026-08-13); only the tag ruleset is bypass-less. Force-push and
+deletion stay blocked for every non-admin actor — the owner's
+deliberate act is exempt, accident and attacker are not. Approvals are
+0: GitHub never lets an author approve their own PR, so on a solo-owner
+repo a count of 1 is a deadlock, not a bar (same class as
+`required_linear_history`, janitor#14). Merge commits are allowed:
+`required_linear_history` was removed
 from the baseline by USER ruling 2026-08-08 ("an unrealistic requirement
 nobody was ever able to follow"), so a merge-commit push is no longer
 refused here. See [Why two rulesets](#why-two-rulesets-not-one).
@@ -452,8 +458,8 @@ for want in baseline-history-protect baseline-pr-and-checks baseline-tag-protect
   }
 done
 
-# Defence-in-depth: confirm the checks ruleset kept its admin bypass and
-# the history ruleset stayed bypass-less — a wrong shape silently reopens
+# Defence-in-depth: confirm BOTH branch rulesets kept their admin bypass
+# (USER Tier-3 ruling 2026-08-13) — a wrong shape silently reopens
 # the GH013 block (or the force-push hole).
 CHECKS_BYPASS="$(gh api "repos/$REPO/rulesets/$CHECKS_NEW_ID" \
   --jq '[.bypass_actors[].actor_type] | join(",")')"
@@ -461,6 +467,8 @@ CHECKS_BYPASS_ID="$(gh api "repos/$REPO/rulesets/$CHECKS_NEW_ID" \
   --jq '[.bypass_actors[].actor_id] | join(",")')"
 HIST_BYPASS="$(gh api "repos/$REPO/rulesets/$HIST_NEW_ID" \
   --jq '(.bypass_actors // []) | length')"
+HIST_BYPASS_ID="$(gh api "repos/$REPO/rulesets/$HIST_NEW_ID" \
+  --jq '[.bypass_actors[].actor_id] | join(",")')"
 [ "$CHECKS_BYPASS" = "RepositoryRole" ] || {
   echo "VERIFY FAIL: checks ruleset lost its admin bypass ($CHECKS_BYPASS)" >&2
   exit 66
@@ -475,8 +483,15 @@ HIST_BYPASS="$(gh api "repos/$REPO/rulesets/$HIST_NEW_ID" \
   echo "VERIFY FAIL: checks bypass actor_id = [$CHECKS_BYPASS_ID], want 5 (Admin)" >&2
   exit 66
 }
-[ "$HIST_BYPASS" = "0" ] || {
-  echo "VERIFY FAIL: history ruleset has $HIST_BYPASS bypass actor(s), want 0" >&2
+# Ratified shape (USER Tier-3 2026-08-13): history-protect carries the
+# Admin bypass. A bypass-less history ruleset is the ABOLISHED owner
+# lockout — it must redden here, not pass.
+[ "$HIST_BYPASS" = "1" ] || {
+  echo "VERIFY FAIL: history ruleset has $HIST_BYPASS bypass actor(s), want 1 (Admin)" >&2
+  exit 66
+}
+[ "$HIST_BYPASS_ID" = "5" ] || {
+  echo "VERIFY FAIL: history bypass actor_id = [$HIST_BYPASS_ID], want 5 (Admin)" >&2
   exit 66
 }
 
@@ -623,7 +638,7 @@ schema change. The three relevant entries look like:
     "enforcement": "active",
     "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
     "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}],
-    "bypass_actors": []
+    "bypass_actors": [{"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"}]
   },
   {
     "id": 17025842,

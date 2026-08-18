@@ -1,9 +1,9 @@
 ---
 trdd-id: 1LTGEA2H
 title: Remove the abolished owner lockout from workflow-protect-branch and bootstrap templates (audit C2b-1 C2b-2)
-column: todo
+column: completed
 created: 2026-08-18T19:55:21+0200
-updated: 2026-08-18T19:55:21+0200
+updated: 2026-08-18T20:16:00+0200
 current-owner: maintainer-agent-session
 task-type: bugfix
 approval-tier: 0
@@ -43,14 +43,23 @@ admin bypass on history-protect at :226-232, approvals 0 at :303).
 
 ## Acceptance
 
-- [ ] instructions.md :274 region ships admin-bypass history-protect payload
-- [ ] instructions.md :295 region ships approvals 0
-- [ ] instructions.md :478-479 verification asserts the RATIFIED shape (admin
-      bypass present, approvals 0) and reddens on the abolished one
-- [ ] :523 tag assertion untouched
-- [ ] both bootstrap template JSONs carry the ratified pair
-- [ ] repo-wide grep finds no remaining `"bypass_actors": []` on a
-      default-branch history-protect surface and no `review_count: 1` baseline
-      claim (docs deliberately historical excepted)
+- [x] instructions.md Body A ships admin-bypass history-protect payload
+      (actor_id 5, RepositoryRole, always)
+- [x] instructions.md Body B ships `required_approving_review_count: 0`
+- [x] verification asserts the RATIFIED shape: `HIST_BYPASS = 1` +
+      `HIST_BYPASS_ID = 5` — the abolished bypass-less shape now REDDENS
+- [x] tag assertion (`TAG_BYPASS = 0`, now at :538) untouched
+- [x] both bootstrap template JSONs carry the ratified pair; both parse as JSON
+- [x] repo-wide sweep: the only remaining `"bypass_actors": []` are the two
+      TAG-ruleset contexts (:334 Body C, appendix), which are correct; no
+      `review_count: 1` remains on any shipped surface. Prose also updated:
+      the split table row, the emergency-history-scrub callout (owner now
+      force-pushes via bypass, no Settings toggle), and the Body-A/Body-B
+      rationale paragraph.
 
 ## Approval log
+
+- 2026-08-18T20:16:00+0200 — COMPLETED by maintainer-agent-session under the
+  hub's Phase-2 GO (Tier-0: applying the ratified baseline as-is to this
+  plugin's own shipped surfaces; SSOT = branch_protection_lib.baseline_ruleset_payloads).
+  Not blocked by the CPV wrong-shape PUT — that is another project's card.
