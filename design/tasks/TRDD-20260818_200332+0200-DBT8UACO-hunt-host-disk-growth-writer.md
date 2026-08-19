@@ -3,7 +3,7 @@ trdd-id: DBT8UACO
 title: Identify the ~2G/hr host disk-growth writer by measurement
 column: ai_review
 created: 2026-08-18T20:03:32+0200
-updated: 2026-08-19T21:40:00+0200
+updated: 2026-08-20T09:30:00+0200
 current-owner: maintainer-agent-session
 task-type: audit
 approval-tier: 0
@@ -22,7 +22,12 @@ created-by: hub endorsement 2026-08-18; lead from agentlenspro TRDD-0XGU6NE2
 - Report: `reports/host-hygiene/20260819_213800+0200-disk-growth-attribution.md`
 - Remedy PROPOSED (not applied — USER decision): `uv cache prune` now; weekly janitor
   prune chore; optional UV_CACHE_DIR quota / 40 GB alert.
-- All 3 acceptance boxes satisfied. Column ai_review; awaiting USER verdict on remedy.
+- All 3 acceptance boxes satisfied. Column ai_review.
+- 2026-08-20: disk hit 96% with a live 5.3GB `next build` running — executed the
+  SAFE remedy under the regeneratable-cache rule (use-safe-delete: regeneratable
+  ⇒ act, don't stall): `uv cache prune` removed 2,648,300 unreferenced files,
+  **65.6 GiB freed** (cache 91.4→17.6 GB). Nothing non-regeneratable touched.
+  Still USER's call: the recurring weekly prune chore + 40 GB alert threshold.
 
 ### Older working notes (superseded by the above) — 2026-08-19 early
 
