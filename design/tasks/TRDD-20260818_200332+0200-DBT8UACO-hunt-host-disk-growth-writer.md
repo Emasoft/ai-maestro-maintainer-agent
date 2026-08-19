@@ -1,9 +1,9 @@
 ---
 trdd-id: DBT8UACO
 title: Identify the ~2G/hr host disk-growth writer by measurement
-column: dev
+column: ai_review
 created: 2026-08-18T20:03:32+0200
-updated: 2026-08-19T03:35:00+0200
+updated: 2026-08-19T21:40:00+0200
 current-owner: maintainer-agent-session
 task-type: audit
 approval-tier: 0
@@ -12,7 +12,19 @@ created-by: hub endorsement 2026-08-18; lead from agentlenspro TRDD-0XGU6NE2
 
 # Identify the ~2G/hr host disk-growth writer by measurement
 
-## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-08-19
+## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-08-19 21:40
+
+- **ATTRIBUTION DONE.** Writer = `uv` filling `~/.cache/uv` (91 GB; +2.6 GB/hr while
+  measured; 1,979 files touched in 3 h). Net disk growth +25.9 GB over 14.5 h
+  (1.79 GB/hr) matches the symptom; bursty (spikes to 16 GB/hr, reclaim valleys).
+  All prior suspects exonerated by interval measurement (projects, plugins, Caches,
+  Photos, OrbStack, snapshots, swap).
+- Report: `reports/host-hygiene/20260819_213800+0200-disk-growth-attribution.md`
+- Remedy PROPOSED (not applied — USER decision): `uv cache prune` now; weekly janitor
+  prune chore; optional UV_CACHE_DIR quota / 40 GB alert.
+- All 3 acceptance boxes satisfied. Column ai_review; awaiting USER verdict on remedy.
+
+### Older working notes (superseded by the above) — 2026-08-19 early
 
 - Snapshots: /tmp/du-snap-1.txt (epoch 1787088712), du-snap-2.txt (1787090489),
   du-snap-3.txt (1787107952). Snap2→snap3 (4.85 hr): disk +3377 MB (~0.70 GB/hr)
@@ -54,8 +66,8 @@ lead, measured by that session: `~/.claude/projects` (session transcripts,
 
 ## Acceptance
 
-- [ ] growth attributed to specific path(s) with two-timestamp evidence
-- [ ] writer process identified
-- [ ] remedy PROPOSED (not applied) in a report under `reports/host-hygiene/`
+- [x] growth attributed to specific path(s) with two-timestamp evidence — `~/.cache/uv`, 90957→91106 MB @1787141665→1787141871, plus the 7-point df series (net 1.79 GB/hr over 14.5 h)
+- [x] writer process identified — `uv` (fleet-wide `uv run --script` from hooks/heartbeats/plugin scripts)
+- [x] remedy PROPOSED (not applied) in a report under `reports/host-hygiene/` — 20260819_213800+0200-disk-growth-attribution.md
 
 ## Approval log
