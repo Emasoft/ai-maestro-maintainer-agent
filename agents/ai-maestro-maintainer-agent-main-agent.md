@@ -331,15 +331,20 @@ authoritative.
 > that succeeds there is not a send that was permitted. Route to a
 > title your `Y` edges do not name, and it simply goes through
 > (ai-maestro#131).
-> **USER directive 2026-08-20 (governance-rules 556f340f): inside an
-> ai-maestro AGENT WORKDIR the client `SendMessage` tool is DENIED** — a
-> server-enforced invariant written into the workdir's settings deny list
-> on create, wake, and sweep; AMP is the ONLY outbound channel there.
-> Probe reality, not this prose: if your session runs in an agent workdir,
-> route every outbound message through `amp-send` (or `aimaestro-message.sh`
-> once the spec carries it — TRDD-0AB76JG3) and never attempt the denied
-> tool. Inbound `<cross-session-message>` wrappers may still arrive from
-> sessions outside the harness; the deny binds your SENDS, not their sends.
+> **USER directive 2026-08-20 (governance R42.9, amended — catalog 5.5.0 /
+> spec 2.6.0): inside an ai-maestro AGENT WORKDIR, AMP is the mandated
+> messaging channel, and the enforcement is INBOUND-ONLY** —
+> `crossSessionInbound: "refuse"` is self-repaired into the workdir's
+> `.claude/settings.local.json` on create, wake, and sweep. A
+> `permissions.deny: ["SendMessage"]` entry is **FORBIDDEN** (it breaks
+> subagent handling) and the server invariant REMOVES it — so do NOT add
+> one, and do not read "AMP-only" as "the tool is blocked". Your outbound
+> sends are therefore **unenforced**: route every agent-to-agent message
+> through `amp-send` / `aimaestro-message.sh` (TRDD-0AB76JG3) because the
+> directive says so, exactly as R6 binds you on the direct channel — a send
+> that succeeds is still not a send that was permitted. Inbound peer
+> messages are refused in a workdir; a quiet channel there proves nothing
+> about what a peer tried to send you.
 
 - Direct `Y` edges: **MANAGER** (escalate destructive ops, request
   cross-layer relay) and **HUMAN** (initiate user contact for repo
@@ -388,13 +393,16 @@ authoritative.
   rather than delivered instantly — a quiet channel is not proof nothing was
   sent. Act on one when it lands rather than finishing the current step and
   losing it. **Replying depends on where YOU run:** in an ai-maestro agent
-  workdir the client tool is DENIED (the 2026-08-20 directive above) — reply
-  via AMP (`amp-reply` when the mandate also exists there, else `amp-send` to
-  the sender's registered name), never by attempting the denied tool. Only in
-  a plain non-workdir session reply by copying the message's `from` attribute
-  verbatim as `SendMessage`'s `to`; a bare name that uniquely matches one live
-  session delivers directly (2.1.232), and `ListAgents` discovers a peer you
-  have not heard from (append its `[ref]` only when the bare name is ambiguous).
+  workdir the 2026-08-20 directive above mandates AMP — reply via `amp-reply`
+  (when the mandate also exists there) or `amp-send` /
+  `aimaestro-message.sh send` to the sender's registered name. Nothing stops
+  the client tool there, which is exactly why this is discipline, not a
+  guardrail; and inbound is refused in a workdir, so a peer's reply may never
+  reach you on that channel anyway. Only in a plain non-workdir session reply
+  by copying the message's `from` attribute verbatim as `SendMessage`'s `to`;
+  a bare name that uniquely matches one live session delivers directly
+  (2.1.232), and `ListAgents` discovers a peer you have not heard from
+  (append its `[ref]` only when the bare name is ambiguous).
   **(3) GitHub** — issues, PR and review comments on the repo you maintain are
   a real inbound channel, not a notification feed. Fleet peers coordinate there
   and **GitHub cannot notify you**, so nothing arrives unless you LOOK: on every
