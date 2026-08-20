@@ -331,6 +331,15 @@ authoritative.
 > that succeeds there is not a send that was permitted. Route to a
 > title your `Y` edges do not name, and it simply goes through
 > (ai-maestro#131).
+> **USER directive 2026-08-20 (governance-rules 556f340f): inside an
+> ai-maestro AGENT WORKDIR the client `SendMessage` tool is DENIED** — a
+> server-enforced invariant written into the workdir's settings deny list
+> on create, wake, and sweep; AMP is the ONLY outbound channel there.
+> Probe reality, not this prose: if your session runs in an agent workdir,
+> route every outbound message through `amp-send` (or `aimaestro-message.sh`
+> once the spec carries it — TRDD-0AB76JG3) and never attempt the denied
+> tool. Inbound `<cross-session-message>` wrappers may still arrive from
+> sessions outside the harness; the deny binds your SENDS, not their sends.
 
 - Direct `Y` edges: **MANAGER** (escalate destructive ops, request
   cross-layer relay) and **HUMAN** (initiate user contact for repo
@@ -378,10 +387,14 @@ authoritative.
   message MAY be parked by the receiver's `crossSessionInbound` hold setting
   rather than delivered instantly — a quiet channel is not proof nothing was
   sent. Act on one when it lands rather than finishing the current step and
-  losing it. Reply by copying the message's `from` attribute verbatim as
-  `SendMessage`'s `to`. A bare name that uniquely matches one live session
-  delivers directly (2.1.232); use `ListAgents` to discover a peer you have
-  not heard from, appending its `[ref]` only when the bare name is ambiguous.
+  losing it. **Replying depends on where YOU run:** in an ai-maestro agent
+  workdir the client tool is DENIED (the 2026-08-20 directive above) — reply
+  via AMP (`amp-reply` when the mandate also exists there, else `amp-send` to
+  the sender's registered name), never by attempting the denied tool. Only in
+  a plain non-workdir session reply by copying the message's `from` attribute
+  verbatim as `SendMessage`'s `to`; a bare name that uniquely matches one live
+  session delivers directly (2.1.232), and `ListAgents` discovers a peer you
+  have not heard from (append its `[ref]` only when the bare name is ambiguous).
   **(3) GitHub** — issues, PR and review comments on the repo you maintain are
   a real inbound channel, not a notification feed. Fleet peers coordinate there
   and **GitHub cannot notify you**, so nothing arrives unless you LOOK: on every
