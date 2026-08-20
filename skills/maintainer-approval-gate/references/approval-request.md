@@ -28,16 +28,36 @@ approval request for exempt work trains the reader to skim the ones that matter.
 
 ## Resolve the recipient BEFORE composing
 
-`amp-send` resolves a recipient by **registered name** through
-`~/.agent-messaging/agents/.index.json`. `manager-<host>` is a placeholder, not
-a name — sending to it fails at the moment you most need it to work.
+**Primary path — `aimaestro-message.sh` (spec'd CLI, TRDD-0AB76JG3, v1.0.0+):**
+a thin transport over the same AMP pipeline (R6 gate, AID, log all apply), with
+DISTINGUISHABLE failures. `manager-<host>` is a placeholder, not a name —
+sending to it fails at the moment you most need it to work.
 
 ```bash
-command -v amp-send >/dev/null 2>&1 || exit 0   # not a fleet session; degrade
+if command -v aimaestro-message.sh >/dev/null 2>&1; then
+  MANAGER=$(aimaestro-message.sh resolve manager | cut -f1)
+  case $? in
+    0) : ;;            # exactly one match — proceed
+    4|5) : ;;          # ZERO or AMBIGUOUS → ask the authorized user which
+                       # MANAGER to address. Never guess a recipient for a
+                       # destructive-op approval.
+    3) : ;;            # transport/registry unavailable → not a fleet session;
+                       # degrade with ONE loud warning, continue patrol
+    7) : ;;            # AID_AUTH missing/invalid → real fleet misconfig; warn
+                       # ONCE loudly (a mandate may rot behind it), continue
+  esac
+fi
+```
+
+**Fallback — `amp-send` (same pipeline), only when the CLI is absent** on a
+host whose deploy predates it:
+
+```bash
+command -v amp-send >/dev/null 2>&1 || exit 0   # neither CLI: not a fleet session
 MANAGER=$(jq -r 'keys[] | select(test("manager"))' \
   ~/.agent-messaging/agents/.index.json 2>/dev/null | head -1)
-# No match, or more than one plausible match → ask the authorized user which
-# MANAGER to address. Never guess a recipient for a destructive-op approval.
+# jq fallback cannot distinguish "no registry" from "no match" — treat any
+# empty result as ask-the-user, never as "nobody to notify".
 ```
 
 Fall back to `--id <uuid>` when the name is ambiguous.
@@ -49,7 +69,9 @@ human-owner identity, so the recipient cannot otherwise tell which Claude wrote
 this (PRRD G1.1, and R22 for the GitHub equivalent).
 
 ```bash
-amp-send "$MANAGER" "APPROVAL REQUEST — TRDD-<id8> <one-line summary>" "$(cat <<'EOF'
+aimaestro-message.sh send "$MANAGER" \
+  --subject "APPROVAL REQUEST — TRDD-<id8> <one-line summary>" \
+  --body - --priority normal <<'EOF'
 This is the Claude responsible for the ai-maestro-maintainer-agent project.
 
 TRDD: design/tasks/TRDD-<...>.md
@@ -60,8 +82,16 @@ Impact: <what changes the moment it is approved>
 Reversible: <yes | no | compensable-by: ...>
 Blocked-on-this: <what is stalled until you answer, if anything>
 EOF
-)" --priority normal
 ```
+
+On exit 0 the CLI prints the **message-id** — record it in the TRDD's
+`## Approval log`. Non-zero always carries a stderr reason: 3 transport, 4
+recipient not found, **6 = R6 REFUSED with the server's routing hint verbatim
+on stderr — follow the hint**, 7 auth. Never pass `--from` from an agent (the
+server overrides the sender with the AID-verified identity; the flag is the
+human-owner path only); `--type` defaults to `notification` and is fine as-is.
+With the legacy `amp-send` fallback the invocation is
+`amp-send "$MANAGER" "<subject>" "<body>" --priority normal`.
 
 Use `--priority high` only when something is genuinely blocked on the answer.
 
