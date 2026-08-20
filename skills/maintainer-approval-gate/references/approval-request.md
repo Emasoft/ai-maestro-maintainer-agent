@@ -103,6 +103,15 @@ once, in
 [trdd-template.md](../../maintainer-trdd-adr/references/trdd-template.md) —
 this template does not restate them.
 
+## Checking for the answer
+
+Poll `aimaestro-message.sh replies <message-id> [--limit N]` with the id the
+send printed — TSV rows of inbox messages replying to it. Exit 0 = rows (read
+them), 4 = none yet (keep working, re-check on a later wake — never spin-wait),
+3 = transport unavailable, 7 = auth. This replaces scanning the whole
+`amp-inbox` for the MANAGER's reply; the inbox drain on wake still happens
+regardless (a MANAGER may answer with a fresh message instead of a reply).
+
 ## Recording the answer
 
 The decision goes in the TRDD's `## Approval log`, in this exact line shape:
