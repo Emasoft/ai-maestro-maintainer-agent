@@ -44,11 +44,17 @@ tree runs directly. The manifest is a **contract, not a presence guarantee**, an
 host's `~/.local/bin` is deployment residue (the installer copies and never prunes),
 never a source of truth.
 
-**Probe the VERB, not just the script.** `command -v` alone is not enough — and this
-is not hypothetical: as of 2026-07-16 the copy deployed to `~/.local/bin` is **330
-lines and dispatches 7 verbs**, while `governance-rules` is **387 lines and dispatches
-8**. The missing one is `verify`. So `command -v` succeeds, the agent calls `verify`
-in good faith, and it fails. Ask the script itself what it can do:
+**Probe the VERB, not just the script.** `command -v` alone is not enough, and the
+reason is a MOVING TARGET — which is the whole point. Measured 2026-07-16: the copy at
+`~/.local/bin` was **330 lines dispatching 7 verbs**, missing `verify`, so `command -v`
+succeeded and the verb still failed. Re-measured **2026-08-21: the same path is 627
+lines and DOES dispatch `verify`** (`cmd_verify`, dispatch line 618; its `--help` lists
+it). The gap closed with no announcement and no version bump.
+
+Neither number is the answer — **the host is**. A skill that hardcodes either
+measurement is wrong half the time, in both directions: the 2026-07-16 number, left
+standing, would have told an agent to skip a verb that now works. Ask the script itself
+what it can do, every time:
 
 ```bash
 # Ask THIS host's script what it actually implements. Its own --help is the only
@@ -73,9 +79,36 @@ fi
 
 Never gate on a version string, and never infer a verb from
 `docs/SCRIPT-MANIFEST.md` — the manifest is generated from `scripts/` on the
-`governance-rules` tree and documents `verify`, which the deployed script does not
-have. **A skill teaching a verb the shipped CLI lacks is exactly as broken as a
-manifest promising one `main` does not ship.**
+`governance-rules` tree and has documented verbs the deployed script did not dispatch.
+**A skill teaching a verb the shipped CLI lacks is exactly as broken as a manifest
+promising one `main` does not ship** — and a skill still denying a verb the CLI has
+since gained is the same defect wearing the other face.
+
+**The CLI name carries a `.sh` and always will.** All 16 `aimaestro-*` scripts are
+addressed by their full `aimaestro-<name>.sh` name; **no bare-name alias exists or is
+coming** (ai-maestro#148, ruled 2026-08-21 — a *partial* alias set would be worse than
+none, because `aimaestro-agent` is already an unrelated Python shim and a bare name
+there would silently run a different program). Typing `aimaestro-trdd` gets
+`command not found`; that is the convention, not a broken install.
+
+**AUTH — every mutating verb is a strict route.** `edit`, `approve`, `refuse`,
+`promote`, `archive` reach strict server routes and 401/403 without credentials; the
+read-only verbs (`search`, `read`, `verify`) need none. The deployed script's own
+`--help` states it: `AID_AUTH` is the **Bearer token for agent callers (REQUIRED — no
+localhost exemption)**, and a USER caller supplies `AIMAESTRO_SUDO_TOKEN` instead. This
+plugin is an AGENT caller, so the agent path applies — `AID_AUTH` plus a governance
+title sufficient for the card (the R32 dual path):
+
+```bash
+# AGENT caller (this plugin). Mint before any mutating verb; read-only verbs skip this.
+export AID_AUTH="$(aid-auth.sh)"
+```
+
+Do NOT hand a 401/403 back as "the CLI is broken" and do NOT retry it — an authority
+refusal is a terminal answer (see *Done when*). **Header caveat:** the deployed copy's
+comment block still opens "the local owner needs none" two lines above the strict-route
+rule that contradicts it (ai-maestro#149, corrected upstream, not yet redeployed here).
+Believe `--help` and the exit code, not the header.
 
 ## Instructions
 
@@ -92,21 +125,28 @@ Full recipes: [Full step-by-step instructions](references/instructions.md):
 
 ### The verbs
 
-| Subcommand | Deployed? | Flags |
-|---|---|---|
-| `search` | ✅ | `--column C` `--id I` `--keyword K` `--zone proposals\|tasks\|archived\|refused` |
-| `read <id>` | ✅ | — |
-| `verify <id>` | ⚠️ **NOT on the deployed script — probe first** | exit `0` verified · **`2` NOT verified** · `1` error. **Flags UNSETTLED** — see below |
-| `edit <id>` | ✅ | `--set k=v` (repeatable) — frontmatter in place, no folder move |
-| `approve <id>` | ✅ | `--approver W` `--tier N` `--rationale R` — proposal → planned, `git mv` |
-| `refuse <id>` | ✅ | `--approver W` `--tier N` `--reason R` — → `refused/` |
-| `promote <id> --column C` | ✅ | `--note N` `--approver W` — advance in place |
-| `archive <id> --state S` | ✅ | `--reason R` `--superseded-by ID` `--approver W` |
+Auth column: **RO** = read-only, no credentials · **STRICT** = `AID_AUTH` required
+(agent caller), 401/403 without it.
 
-**The `verify` row is the reason this skill probes per-verb.** It is implemented on
-`governance-rules` (`cmd_verify`, dispatched) and documented in the manifest, but the
-copy deployed to `~/.local/bin` does not dispatch it (verified 2026-07-16; tracked in
-ai-maestro#69). Treat it as *available only where the probe says so*. **`--tier` is a
+| Subcommand | Deployed? | Auth | Flags |
+|---|---|---|---|
+| `create` | ✅ | STRICT | *Out of scope here* — authoring is `maintainer-trdd-adr`. Listed so its presence is not mistaken for a gap. |
+| `search` | ✅ | RO | `--column C` `--id I` `--keyword K` `--zone proposals\|tasks\|archived\|refused` |
+| `read <id>` | ✅ | RO | — |
+| `verify <id>` | ✅ *(2026-08-21; ABSENT on 2026-07-16 — probe anyway)* | RO | exit `0` verified · **`2` NOT verified** · `1` error. **Flags UNSETTLED** — see below |
+| `edit <id>` | ✅ | STRICT | `--set k=v` (repeatable) — frontmatter in place, no folder move |
+| `approve <id>` | ✅ | STRICT | `--approver W` `--tier N` `--rationale R` — proposal → planned, `git mv` |
+| `refuse <id>` | ✅ | STRICT | `--approver W` `--tier N` `--reason R` — → `refused/` |
+| `promote <id> --column C` | ✅ | STRICT | `--note N` `--approver W` — advance in place |
+| `archive <id> --state S` | ✅ | STRICT | `--reason R` `--superseded-by ID` `--approver W` |
+
+**The `verify` row is still the reason this skill probes per-verb — for the opposite
+reason it used to be.** It was implemented on `governance-rules` and documented in the
+manifest while the copy at `~/.local/bin` did not dispatch it (measured 2026-07-16;
+ai-maestro#69). That gap has since closed on this host (measured 2026-08-21: dispatched,
+and listed by the script's own `--help`). Both facts are kept because the pair is the
+lesson: **a deployed CLI drifts in BOTH directions and announces neither.** Treat the
+verb as *available only where the probe says so*, on the day you ask. **`--tier` is a
 CLAIM the server must validate against the caller's real title — never a grant**
 (ai-maestro#69 §2).
 
