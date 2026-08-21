@@ -3,7 +3,7 @@ trdd-id: PY5QXSBU
 title: Migrate the 5 remaining amp-send call sites to the aimaestro-message CLI
 column: ai_review
 created: 2026-08-20T08:32:04+0200
-updated: 2026-08-21T16:41:00+0200
+updated: 2026-08-21T22:26:38+0200
 current-owner: maintainer-agent-session
 task-type: docs
 min-approval-requirement: none
@@ -54,3 +54,34 @@ Final state: 17/17 `amp-send` occurrences are fallback-labelled.
 The exit-code contract is stated ONCE per file and otherwise linked to
 `approval-request.md`, which owns it — 8 verbatim copies of a 5-line table is 8
 things to drift.
+
+## AI review — 2026-08-21
+
+**VERDICT: PASS.** Both work boxes verified independently; the release box is
+genuinely outstanding, not a hidden completion.
+
+| Box | Evidence checked | Result |
+|---|---|---|
+| every site names the CLI as primary, `amp-send` as explicit degrade | re-grepped the whole tree, not the 3 files the card originally listed | ok |
+| `grep -rn 'amp-send' skills/ agents/` shows only fallback-labelled uses | **17 hits, 17 labelled, 0 bare** — matches the card's claim exactly | ok |
+| rides a release (publish.py) | untickable here — NON-EXEMPT, needs the USER | correctly left unticked |
+
+**A false positive worth recording, because it is this card's own subject matter.**
+A first pass filtering hits by "does the line contain fallback/legacy/degrade" flagged
+**7 of 17 as unlabelled**. All 7 were wrong: the label sits on the *preceding* line,
+because the sentence wraps —
+
+```
+   (fallback where the CLI is absent:
+   `amp-send "$MANAGER" ... --type alert`).
+```
+
+A line-scoped filter cannot see a line-wrapped label, so it reports the documentation
+*about* the fallback as an unlabelled use of it. Same class as the detector-validity
+lesson: a keyword needle cannot tell USE from MENTION, and reading the context — not
+tightening the pattern — is what resolved it. Recorded here so the next reviewer of
+this card does not re-derive the same 7 ghosts.
+
+**Scope correction upheld.** Patching only the 3 originally-listed files would have
+left 4 sibling callers wrong while box 2's whole-tree grep passed by accident. The
+widened fix is the correct one.

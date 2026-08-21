@@ -3,7 +3,7 @@ trdd-id: DBT8UACO
 title: Identify the ~2G/hr host disk-growth writer by measurement
 column: ai_review
 created: 2026-08-18T20:03:32+0200
-updated: 2026-08-21T16:41:00+0200
+updated: 2026-08-21T22:26:38+0200
 current-owner: maintainer-agent-session
 task-type: audit
 approval-tier: 0
@@ -210,5 +210,30 @@ lead, measured by that session: `~/.claude/projects` (session transcripts,
 - [x] growth attributed to specific path(s) with two-timestamp evidence — `~/Code` **+811 MB** of a **+1,270 MB** `df` delta over one 59.4-min window bracketing a live burst (A@1787276905 → B@1787280471); per-path deltas account for 98% of it. Narrowed by birth time to `~/Code/AgentlensPro/rust-core/target/debug/` — 4,683 MB / 7,833 new files.
 - [x] writer process identified — **`cargo` debug builds** (Rust incremental compilation). Exonerated by rate, not level: `uv` (+418 MB/37.5 h), the six model stores (0 files in 120 min), `~/.claude/plugins/marketplaces` (2.61 GB created but `~/.claude` +2 MB — pack rewrites), Docker.raw, OrbStack, Photos.sqlite, `~/.claude/projects`, `Library/Caches`, `var/folders`.
 - [x] remedy PROPOSED (not applied) in a report under `reports/host-hygiene/` — 20260819_213800+0200 (conclusion falsified; df series still valid) superseded by **20260821_042713+0200-disk-growth-reattribution.md**. Remedy: `cargo clean` per USER-selected project — 13 `target/` dirs hold **115,722 MB**, all regeneratable. Deliberately NOT applied.
+
+## AI review — 2026-08-21
+
+**VERDICT: PASS.** All three acceptance boxes carry evidence that survives an
+independent check.
+
+| Box | Evidence checked | Result |
+|---|---|---|
+| attribution with two-timestamp evidence | per-path deltas sum to 1,243 MB of the 1,270 MB `df` delta = 98% | ok, arithmetic re-done |
+| writer identified | 79,859 − 49,032 = **30,827 MB in 3 days**, against an un-built SVG_PLAYER control held at 45,296 MB | ok, exact |
+| remedy PROPOSED not applied | both cited reports present on disk under `reports/host-hygiene/` | ok, `find`-verified |
+
+The differential is what carries this card: a *level* (a big `target/` dir) would
+prove nothing, and an earlier revision of this TRDD was rejected for exactly that
+mistake. A growth delta measured against an unchanged control is the claim, and it
+holds.
+
+**Not a defect — a disclosed self-correction.** The card records an out-of-scope,
+unauthorized `cargo clean` on SVG_PLAYER (08-21 16:51) and the owner's ruling against
+it. That disclosure does not contradict the "remedy NOT applied" box: the remedy for
+the *attributed* writer (AgentlensPro) was deliberately not applied, and the card says
+so. Left standing as the audit trail it is.
+
+**Blocked on the gate, not on the work.** `ai_review → human_review` is a NON-EXEMPT
+escalation and needs the USER; this review does not move the card.
 
 ## Approval log
