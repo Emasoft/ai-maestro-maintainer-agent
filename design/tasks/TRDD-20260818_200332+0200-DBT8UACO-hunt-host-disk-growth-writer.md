@@ -42,6 +42,17 @@ created-by: hub endorsement 2026-08-18; lead from agentlenspro TRDD-0XGU6NE2
   costs hours of rebuild time to reinstate. `cargo clean` per project is the USER's call.
 - **Three falsifications this session, all the same error in different costumes** —
   see the LESSON below; it is the transferable part.
+- **CORROBORATED 07:30 by a second, larger episode.** A `[system-daemon-runaway]` alert
+  on `python` pid 53857 (7.1 GB RSS) was a FALSE POSITIVE — `mtplx.server.openai` holding
+  a 27B model; RSS moved **+16 KB across 90 s**, CPU 0.2-0.8% (the detector made the same
+  level-vs-rate error as everything else in this hunt). But the disk had fallen to
+  **48 GB free (97.5%)**: `df` used 1,830,895 → 1,854,686 over 9,667 s = **8.9 GB/hr**,
+  attributed to **`~/.mtplx/models/…Qwen3.8-27B-…` +19,745 MB** (absent from the
+  dot-tree top-25 at 1787278202, so <594 MB then — a 27B model landed whole) plus
+  `~/Code` +1,138 MB (cargo again), ~2,900 MB unattributed. Both went FLAT afterwards.
+  **23.8 GB in 2.7 h from exactly two activity-driven sources, then quiet — there is no
+  daemon to find.** Also surfaced, not touched (cross-project rule): `alcore serve`
+  (pid 75824, `AgentlensPro/rust-core/target/debug/alcore`) at **98.2% CPU for 12 h 29 m**.
 - **NEXT ACTION:** none required; card is at `ai_review`. If asked to reclaim, run
   `cargo clean` per project (USER-selected), not a blanket sweep.
 
