@@ -1,9 +1,9 @@
 ---
 trdd-id: PY5QXSBU
 title: Migrate the 5 remaining amp-send call sites to the aimaestro-message CLI
-column: todo
+column: ai_review
 created: 2026-08-20T08:32:04+0200
-updated: 2026-08-20T08:32:04+0200
+updated: 2026-08-21T16:41:00+0200
 current-owner: maintainer-agent-session
 task-type: docs
 min-approval-requirement: none
@@ -26,10 +26,31 @@ server's CLI layer necessarily lands).
 
 ## Acceptance
 
-- [ ] every site names `aimaestro-message.sh send` as primary (exit codes: 3
+- [x] every site names `aimaestro-message.sh send` as primary (exit codes: 3
       transport / 4 not-found / 5 ambiguous / 6 R6-refused-follow-hint / 7 auth;
       never `--from` as an agent) with `amp-send` as the explicit degrade path
-- [ ] `grep -rn 'amp-send' skills/ agents/` shows only fallback-labelled uses
-- [ ] rides a release (publish.py)
+- [x] `grep -rn 'amp-send' skills/ agents/` shows only fallback-labelled uses
+- [ ] rides a release (publish.py) — **DEFERRED, not forgotten.** Two reasons,
+      both external to this card: (a) publish is NON-EXEMPT and needs the USER,
+      and the peer hub explicitly has no governance title over this repo to grant
+      it; (b) the host is at **99% disk / 25 GB free** (measured 2026-08-21
+      16:41) and a build+test+publish there risks a corrupt release and a
+      half-written index. Land the release on the next cycle, after the disk is
+      reclaimed.
 
 Pattern to copy: `skills/maintainer-approval-gate/references/approval-request.md`.
+
+## Scope correction (2026-08-21)
+
+The card listed 3 files / 8 sites, but **acceptance box 2 is a whole-tree grep**,
+and 4 more files named `amp-send` as the sole, unlabelled transport. Patching only
+the listed 3 would have left every sibling caller wrong while the grep still
+passed by accident. Also migrated: `skills/maintainer-patrol/SKILL.md`,
+`skills/maintainer-patrol/references/handoff.md`,
+`skills/maintainer-approval-gate/SKILL.md`,
+`agents/ai-maestro-maintainer-agent-main-agent.md` (2 sites, ordering only).
+Final state: 17/17 `amp-send` occurrences are fallback-labelled.
+
+The exit-code contract is stated ONCE per file and otherwise linked to
+`approval-request.md`, which owns it — 8 verbatim copies of a 5-line table is 8
+things to drift.

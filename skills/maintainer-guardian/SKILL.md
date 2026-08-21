@@ -28,10 +28,16 @@ maintainer no longer waits for someone to file an issue saying
 - `uvx` on PATH (for the chained `workflow-scan` zizmor run).
 - The maintained repo is checked out (working tree may be dirty).
 - **Frozen CLI only (IRON RULE).** Every ai-maestro interaction goes through the
-  frozen scripts — here, `amp-send` for the T5 escalation. NEVER call the
+  frozen scripts — here, `aimaestro-message.sh send` for the T5 escalation, with
+  `amp-send` as the explicit degrade path on a host whose deploy predates the
+  CLI. Exit codes (3 transport / 4 not-found / 5 ambiguous / 6 R6-refused —
+  follow the hint on stderr verbatim / 7 auth), the recipient-resolve recipe, and
+  the never-pass-`--from`-as-an-agent rule live in
+  [approval-request.md](../maintainer-approval-gate/references/approval-request.md)
+  — that file owns the contract; do not restate it here. NEVER call the
   ai-maestro server `/api/*` directly, not even to raise an urgent alert when
-  `amp-send` is absent: alert the authorized user instead (threat-classes T5 →
-  Route). (`gh` APIs are NOT covered — keep them.)
+  neither transport is present: alert the authorized user instead
+  (threat-classes T5 → Route). (`gh` APIs are NOT covered — keep them.)
 
 ## Instructions
 
@@ -100,7 +106,7 @@ Full per-class commands + routing tables:
 | `workflow-scan` chain fails | Skip T1/T2, continue T3/T4/T5 |
 | `workflow-protect-branch` SHOW fails | Mark T3 status `unknown`, continue |
 | Baseline file missing during SCAN | Re-run BASELINE first, retry |
-| T5 hit (suspected secret leak) | Stop; escalate URGENT to MANAGER via `amp-send` (self-id line in body) AND alert the authorized user; do NOT scan further (see threat-classes T5 → Route) |
+| T5 hit (suspected secret leak) | Stop; escalate URGENT to MANAGER via `aimaestro-message.sh send` (fallback `amp-send`; self-id line opens the body) AND alert the authorized user; do NOT scan further (see threat-classes T5 → Route) |
 
 ## Examples
 

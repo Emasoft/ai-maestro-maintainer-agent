@@ -29,9 +29,15 @@ scripts; this wrapper never calls those scripts directly.
 - A PRRD plus a populated `design/tasks/` TRDD set in each audited project.
 - Read access to the projects under audit (the audit is read-only).
 - **Frozen CLI only (IRON RULE).** Every ai-maestro interaction goes through the
-  frozen scripts and the `ama-*` skills — here, `amp-send` and
-  `aimaestro-trdd.sh`. NEVER call the ai-maestro server `/api/*` directly, not
-  even as a fallback when a script is missing: degrade explicitly instead.
+  frozen scripts and the `ama-*` skills — here, `aimaestro-message.sh send`
+  (with `amp-send` as the explicit degrade path where the CLI is absent) and
+  `aimaestro-trdd.sh`. Exit codes (3 transport / 4 not-found / 5 ambiguous /
+  6 R6-refused — follow the hint on stderr verbatim / 7 auth), the
+  recipient-resolve recipe, and the never-pass-`--from`-as-an-agent rule are
+  owned by
+  [approval-request.md](../maintainer-approval-gate/references/approval-request.md).
+  NEVER call the ai-maestro server `/api/*` directly, not even as a fallback
+  when a script is missing: degrade explicitly instead.
   (`gh` APIs are NOT covered — keep them.)
 
 ## Instructions
@@ -56,9 +62,12 @@ scripts; this wrapper never calls those scripts directly.
    to MANAGER, no COS hop). A proposal is non-binding and never mutates the
    PRRD directly.
 7. If findings are serious, notify MANAGER over AMP:
-   `amp-send "$MANAGER" "Audit findings need attention" "See <path> for details" --type alert`
-   (resolve `$MANAGER` from the agents index — see `approval-request.md` in the
-   `maintainer-approval-gate` skill's references).
+   `aimaestro-message.sh send "$MANAGER" --subject "Audit findings need attention" --body "See <path> for details" --type alert`
+   (fallback where the CLI is absent:
+   `amp-send "$MANAGER" "Audit findings need attention" "See <path> for details" --type alert`).
+   Resolve `$MANAGER` with the recipe in `approval-request.md` in the
+   `maintainer-approval-gate` skill's references — never send to the
+   `manager-<host>` placeholder.
 
 ## Output
 
@@ -92,10 +101,10 @@ classify and report:
 - Classify the three outputs, then write
   `$MAIN_ROOT/reports/maintainer-audit/<TS>-<project>.md`.
 - Notify MANAGER over AMP:
-  `amp-send "$MANAGER" "Audit findings need attention" "See <report-path> for details" --type alert`
-  (`manager-host` is not a resolvable name — resolve `$MANAGER` from the agents
-  index per `approval-request.md` in the `maintainer-approval-gate` skill's
-  references).
+  `aimaestro-message.sh send "$MANAGER" --subject "Audit findings need attention" --body "See <report-path> for details" --type alert`
+  (fallback where the CLI is absent: `amp-send "$MANAGER" "Audit findings need attention" "See <report-path> for details" --type alert`;
+  `manager-host` is not a resolvable name — resolve `$MANAGER` per
+  `approval-request.md` in the `maintainer-approval-gate` skill's references).
 
 A recurring drift signal seen across several projects becomes a proposal —
 invoke `ama-prrd-propose`:

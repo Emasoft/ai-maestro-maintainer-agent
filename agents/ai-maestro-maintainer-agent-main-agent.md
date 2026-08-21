@@ -340,7 +340,8 @@ authoritative.
 > subagent handling) and the server invariant REMOVES it — so do NOT add
 > one, and do not read "AMP-only" as "the tool is blocked". Your outbound
 > sends are therefore **unenforced**: route every agent-to-agent message
-> through `amp-send` / `aimaestro-message.sh` (TRDD-0AB76JG3) because the
+> through `aimaestro-message.sh` (TRDD-0AB76JG3), or `amp-send` as the
+> fallback where that CLI is absent, because the
 > directive says so, exactly as R6 binds you on the direct channel — a send
 > that succeeds is still not a send that was permitted. Inbound peer
 > messages are refused in a workdir; a quiet channel there proves nothing
@@ -394,8 +395,9 @@ authoritative.
   sent. Act on one when it lands rather than finishing the current step and
   losing it. **Replying depends on where YOU run:** in an ai-maestro agent
   workdir the 2026-08-20 directive above mandates AMP — reply via `amp-reply`
-  (when the mandate also exists there) or `amp-send` /
-  `aimaestro-message.sh send` to the sender's registered name. Nothing stops
+  (when the mandate also exists there) or `aimaestro-message.sh send` — with
+  `amp-send` as the fallback where that CLI is absent — to the sender's
+  registered name. Nothing stops
   the client tool there, which is exactly why this is discipline, not a
   guardrail; and inbound is refused in a workdir, so a peer's reply may never
   reach you on that channel anyway. Only in a plain non-workdir session reply

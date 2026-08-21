@@ -297,7 +297,11 @@ history are CRITICAL by definition; baseline is always 0.
 
 1. **AMP → MANAGER** (governance escalation, not GitHub-only): send an
    URGENT message to the host MANAGER —
-   `amp-send "$MANAGER" "T5 secret-leak on <repo>" "<body — begins with the self-id line>" --type alert --priority urgent`.
+   `aimaestro-message.sh send "$MANAGER" --subject "T5 secret-leak on <repo>"
+   --body - --type alert --priority urgent` with the body on stdin, beginning
+   with the self-id line. Where the CLI is absent, the degrade path is the
+   legacy `amp-send "$MANAGER" "T5 secret-leak on <repo>" "<body — begins with
+   the self-id line>" --type alert --priority urgent`.
    `$MANAGER` is a **registered agent name**, resolved from the agents index —
    `manager-<host>` is a placeholder and fails to resolve at the exact moment
    this escalation matters. Resolve it (or fall back to `--id <uuid>`) with the
@@ -312,9 +316,10 @@ history are CRITICAL by definition; baseline is always 0.
    commit SHA + the suspected secret kind.
 
 Do NOT echo the secret value back in either message. Do NOT proceed with any
-other patrol task until the user (or MANAGER) acknowledges. If `amp-send` is
-unavailable (AMP server offline), fall back to the GitHub alert alone and note
-the AMP-unreachable condition in it.
+other patrol task until the user (or MANAGER) acknowledges. If NEITHER
+`aimaestro-message.sh` (exit 3 = transport unavailable) nor the legacy
+`amp-send` can deliver, fall back to the GitHub alert alone and note the
+AMP-unreachable condition in it.
 
 ---
 
