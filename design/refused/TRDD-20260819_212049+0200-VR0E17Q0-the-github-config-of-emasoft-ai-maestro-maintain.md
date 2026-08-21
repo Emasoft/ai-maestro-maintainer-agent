@@ -1,11 +1,11 @@
 ---
 trdd-id: VR0E17Q0
 title: the GitHub config of Emasoft/ai-maestro-maintainer-agent is off-baseline — NO_PR_REVIEW
-column: proposal
+column: refused
 created: 2026-08-19T21:20:49+0200
-updated: 2026-08-20T10:40:00+0200
-current-owner: janitor
-blocked-by: [janitor#283]
+updated: 2026-08-21T16:41:00+0200
+current-owner: maintainer-agent-session
+blocked-by: []
 task-type: bugfix
 severity: medium
 ticket-kind: github-config
@@ -17,7 +17,40 @@ ticket-origin: fleet-github-config
 
 # the GitHub config of Emasoft/ai-maestro-maintainer-agent is off-baseline — NO_PR_REVIEW
 
-## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-08-20
+## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-08-21 16:41
+
+**REFUSED — FALSE POSITIVE. Terminal. Do not re-propose without new evidence.**
+janitor#283 is CLOSED (verified first-hand 2026-08-21: `closedAt
+2026-08-20T06:56:51Z`), and its title IS the ruling: *"github-config detector flags
+NO_PR_REVIEW unconditionally while the payload builder emits pull_request
+conditionally — a correctly-baselined solo repo is permanently 'off-baseline'."*
+The defect is in the DETECTOR, never in this repo.
+
+**Verified against the API, not against prose** (2026-08-21, `gh api
+repos/Emasoft/ai-maestro-maintainer-agent/rulesets`): three rulesets, all `active` —
+`baseline-history-protect` (`deletion`, `non_fast_forward`),
+`baseline-pr-and-checks` (`required_status_checks` **only — no `pull_request` rule,
+which is exactly correct**), `baseline-tag-protect` (`deletion`, `update`). That is
+what `require_pull_request_for(slug)` emits for a solo-owner repo under the USER's
+2026-08-13 approvals-0 ruling. Approving this would have dispatched a fixer
+(`github_config_fix.py:65` lists NO_PR_REVIEW as fixable) that RE-IMPOSES the rule
+that ruling deliberately removed.
+
+**Bar for any future re-proposal:** the live API must disagree with the CODE SSOT
+`branch_protection_lib.baseline_ruleset_payloads` — never with a prose restatement of
+it (`~/.claude/rules/manager-approval-defaults.md` was itself stale on this exact
+point until 2026-08-20). The plugin repo holds an identical proposal on the same
+phantom, TRDD-RFATWDM5.
+
+## Approval log
+
+- 2026-08-21T16:41:00+0200 — REFUSED by maintainer-agent-session. False positive from
+  the stale `github_config_audit.py:195-197` detector; janitor#283 CLOSED. Live
+  rulesets verified against the API and found correct for a solo-owner repo.
+
+---
+
+**Superseded context below — kept as the audit record of what was proposed.**
 
 **BLOCKED — DO NOT APPROVE, DO NOT AUTO-FIX (hub-verified 2026-08-20, janitor#283).**
 The finding is a FALSE POSITIVE from a stale detector: `lib/github_config_audit.py:195-197`
