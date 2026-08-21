@@ -1,9 +1,9 @@
 ---
 trdd-id: DBT8UACO
 title: Identify the ~2G/hr host disk-growth writer by measurement
-column: dev
+column: ai_review
 created: 2026-08-18T20:03:32+0200
-updated: 2026-08-21T10:55:00+0200
+updated: 2026-08-21T05:10:00+0200
 current-owner: maintainer-agent-session
 task-type: audit
 approval-tier: 0
@@ -12,9 +12,68 @@ created-by: hub endorsement 2026-08-18; lead from agentlenspro TRDD-0XGU6NE2
 
 # Identify the ~2G/hr host disk-growth writer by measurement
 
-## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-08-21 10:55
+## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-08-21 05:10
 
-- **ai_review REJECTED the uv attribution — reopened to `dev`.** The prune was the
+- **ATTRIBUTED, with a bracketed measurement. The writer is `cargo` debug builds under
+  `~/Code`** — principally `~/Code/AgentlensPro/rust-core/target` (49,032 MB, of which
+  `debug/` is 47,363 MB). Not uv, not the model stores, not the plugin marketplaces.
+- **The evidence (one 59.4-min window that BRACKETS a captured burst):**
+  `du` depth-1 over `$HOME/*` + `$HOME/.[!.]*` + `/Applications /Library /opt /usr/local
+  /private/var`, A@1787276905 → B@1787280471. `df /` +1,270 MB; the per-path deltas
+  account for +1,243 MB of it (98%):
+  `~/Code +811` · `~/Downloads +380` · `~/Library +30` · `/private/var +19` ·
+  `~/Pictures +6` · `/Library −3` MB.
+  Birth-time scoped to that window (`find -newerBt A ! -newerBt B`) names the files:
+  **4,683 MB across 7,833 NEW files, all `AgentlensPro/rust-core/target/debug/`** —
+  `deps/*` 127-168 MB apiece, `libagentlens_core.rlib` 85 MB, `incremental/*/dep-graph.bin`
+  54 MB, `query-cache.bin` 38 MB.
+- **Why net (+811 MB) ≪ created (4,683 MB): a rebuild REPLACES most artifacts.** That is
+  also why the growth is bursty with reclaim valleys, and why the long-run average
+  (0.71 GB/hr net) is far below the in-burst rate (2.4-3.1 GB/hr measured live).
+- **The burst, captured end to end** (first time): +857 MB over 1,167 s at ~2.5 GB/hr,
+  then decay 0.86 → 0.19 → −0.17 GB/hr. Duration ~20 min, not hours. No `cargo`/`rustc`
+  alive afterwards (ps snapshotted to a file first — never `pgrep -f`).
+- **Accumulation, the real reason the disk is at 97%:** 13 `target/` dirs under `~/Code`
+  total **115,722 MB (113 GB)**, all regeneratable. Top: AgentlensPro 49,032 ·
+  SVG_PLAYER 45,296 · ANIME2SVG/vectorizer 10,257 · gpui-video-player 4,529 ·
+  perfect-skill-suggester 3,919 MB.
+- **NOT deleting them.** Regeneratable, so RULE 0 permits it — but the card's scope is
+  *identify the writer*, and 113 GB of warm build caches across 13 of the USER's projects
+  costs hours of rebuild time to reinstate. `cargo clean` per project is the USER's call.
+- **Three falsifications this session, all the same error in different costumes** —
+  see the LESSON below; it is the transferable part.
+- **NEXT ACTION:** none required; card is at `ai_review`. If asked to reclaim, run
+  `cargo clean` per project (USER-selected), not a blanket sweep.
+
+### LESSON — a LEVEL is not a RATE, and WRITE ACTIVITY is not GROWTH
+
+Three candidates were named and falsified today; each was measured with the wrong
+instrument, and the right instrument was always a two-timestamp delta on the same path.
+
+1. **`uv` (level mistaken for rate).** 91 GB of cache + `+149 MB` over a **3.4-minute**
+   window spanning an active `uv run` = "+2.6 GB/hr". The prune falsified it: 65.6 GiB
+   freed, rate unchanged, `~/.cache/uv` then +418 MB in 37.5 h.
+2. **The six model stores (level, no rate at all).** 255,984 MB across `.mlxstudio`,
+   `.hfd`, `.magnitude`, `.ollama`, `.lmstudio`, `.transformerlab` — and **zero files
+   modified in 120 min**. Pure accumulation.
+3. **`~/.claude/plugins/marketplaces` (write activity mistaken for growth).** A
+   birth-time scan showed **2.61 GB across 35,805 files created** in the burst window,
+   including a single 850 MB git pack — yet `~/.claude` grew **+2 MB**. A `git fetch`
+   rewrites packs: every byte gets a fresh mtime and birth time, net size barely moves.
+
+`find -mmin`/`-newerBt` measures what was WRITTEN; only a delta measures what was KEPT.
+Use birth-time to NAME files inside a window you have already bracketed with a delta —
+never as the attribution itself.
+
+Two traps that cost real time here: **`$HOME/*` does not glob dotfiles** (~395 GB
+invisible; use `$HOME/.[!.]*` too), and **`find -size +200M` cannot see a many-small-files
+writer** (7,833 files did this).
+
+### Superseded — do NOT carry forward
+
+- The uv attribution, and the reopening note that said the writer was still unidentified.
+
+- (SUPERSEDED 2026-08-21 05:10) ai_review REJECTED the uv attribution — reopened to `dev`. The prune was the
   experiment that falsified it. Measured 2026-08-21 (df `/`, MB used):
   `1,801,976 @1787140831 → 1,829,347 @1787275916` = **+27,371 MB net over 37.5 h
   (0.71 GB/hr)** — and that is *after* the 65.6 GiB prune landed inside the window, so
@@ -105,11 +164,8 @@ lead, measured by that session: `~/.claude/projects` (session transcripts,
 
 ## Acceptance
 
-- [ ] growth attributed to specific path(s) with two-timestamp evidence — REOPENED. The
-  `uv` attribution (90957→91106 MB over 3.4 min) was a burst extrapolated to a rate;
-  pruning uv to 18 GB left the 2.46 GB/hr gross growth unchanged. Needs a delta over
-  ≥45 min per path, and a sweep outside `$HOME` if every `$HOME` path is flat.
-- [ ] writer process identified — REOPENED. `uv` exonerated (+418 MB in 37.5 h).
-- [x] remedy PROPOSED (not applied) in a report under `reports/host-hygiene/` — 20260819_213800+0200-disk-growth-attribution.md (its *conclusion* is now falsified; the df series and method in it remain valid evidence)
+- [x] growth attributed to specific path(s) with two-timestamp evidence — `~/Code` **+811 MB** of a **+1,270 MB** `df` delta over one 59.4-min window bracketing a live burst (A@1787276905 → B@1787280471); per-path deltas account for 98% of it. Narrowed by birth time to `~/Code/AgentlensPro/rust-core/target/debug/` — 4,683 MB / 7,833 new files.
+- [x] writer process identified — **`cargo` debug builds** (Rust incremental compilation). Exonerated by rate, not level: `uv` (+418 MB/37.5 h), the six model stores (0 files in 120 min), `~/.claude/plugins/marketplaces` (2.61 GB created but `~/.claude` +2 MB — pack rewrites), Docker.raw, OrbStack, Photos.sqlite, `~/.claude/projects`, `Library/Caches`, `var/folders`.
+- [x] remedy PROPOSED (not applied) in a report under `reports/host-hygiene/` — 20260819_213800+0200 (conclusion falsified; df series still valid) superseded by **20260821_042713+0200-disk-growth-reattribution.md**. Remedy: `cargo clean` per USER-selected project — 13 `target/` dirs hold **115,722 MB**, all regeneratable. Deliberately NOT applied.
 
 ## Approval log
