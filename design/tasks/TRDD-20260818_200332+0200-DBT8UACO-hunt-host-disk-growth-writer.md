@@ -3,7 +3,7 @@ trdd-id: DBT8UACO
 title: Identify the ~2G/hr host disk-growth writer by measurement
 column: ai_review
 created: 2026-08-18T20:03:32+0200
-updated: 2026-08-21T05:10:00+0200
+updated: 2026-08-21T16:41:00+0200
 current-owner: maintainer-agent-session
 task-type: audit
 approval-tier: 0
@@ -12,7 +12,7 @@ created-by: hub endorsement 2026-08-18; lead from agentlenspro TRDD-0XGU6NE2
 
 # Identify the ~2G/hr host disk-growth writer by measurement
 
-## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-08-21 05:10
+## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-08-21 16:41
 
 - **ATTRIBUTED, with a bracketed measurement. The writer is `cargo` debug builds under
   `~/Code`** — principally `~/Code/AgentlensPro/rust-core/target` (49,032 MB, of which
@@ -37,9 +37,19 @@ created-by: hub endorsement 2026-08-18; lead from agentlenspro TRDD-0XGU6NE2
   total **115,722 MB (113 GB)**, all regeneratable. Top: AgentlensPro 49,032 ·
   SVG_PLAYER 45,296 · ANIME2SVG/vectorizer 10,257 · gpui-video-player 4,529 ·
   perfect-skill-suggester 3,919 MB.
+- **RE-MEASURED 2026-08-21 16:41 — the attribution now has a third, independent
+  corroboration, and it is a GROWTH one.** `du -sm`: AgentlensPro/rust-core/target
+  **79,859 MB** (was 49,032 on 08-18 → **+30,827 MB in 3 days**), SVG_PLAYER/target
+  45,296 MB (unchanged). `df /`: 25 GB free, **99%**. The one tree named as the writer
+  is the one tree that grew; the tree that is not being built did not move. Quote
+  78 GB / 45 GB, not the stale 49 GB.
 - **NOT deleting them.** Regeneratable, so RULE 0 permits it — but the card's scope is
   *identify the writer*, and 113 GB of warm build caches across 13 of the USER's projects
   costs hours of rebuild time to reinstate. `cargo clean` per project is the USER's call.
+- **`cargo clean` RECLAIMS, it does not FIX.** These trees rebuild; a clean at 99% buys
+  days, not a solution. The durable fix (a CARGO_TARGET_DIR budget, a scheduled prune, or
+  `--profile dev` artifact limits on the two hot repos) belongs to a NEW card — it is not
+  this one's scope, and closing this one must not read as closing that.
 - **Three falsifications this session, all the same error in different costumes** —
   see the LESSON below; it is the transferable part.
 - **CORROBORATED 07:30 by a second, larger episode.** A `[system-daemon-runaway]` alert
