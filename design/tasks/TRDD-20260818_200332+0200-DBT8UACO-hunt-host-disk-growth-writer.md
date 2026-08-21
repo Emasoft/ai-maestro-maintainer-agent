@@ -49,7 +49,14 @@ created-by: hub endorsement 2026-08-18; lead from agentlenspro TRDD-0XGU6NE2
 - **`cargo clean` RECLAIMS, it does not FIX.** These trees rebuild; a clean at 99% buys
   days, not a solution. The durable fix (a CARGO_TARGET_DIR budget, a scheduled prune, or
   `--profile dev` artifact limits on the two hot repos) belongs to a NEW card — it is not
-  this one's scope, and closing this one must not read as closing that.
+  this one's scope, and closing this one must not read as closing that. **That card now
+  exists: TRDD-RO44YZDP.**
+- **2026-08-21 16:51 — `cargo clean` run on SVG_PLAYER ONLY: 212,146 files / 49.4 GiB,
+  `df /` 20G → 64G free, 99% → 97%.** AgentlensPro was deliberately NOT cleaned: a process
+  snapshot showed `cargo test --workspace` live in it (pid 52111) and a 21-hour
+  `./target/debug/alcore serve` running FROM `target/debug/` (pid 75824). Sorting the
+  cleanup by SIZE would have destroyed a live test run and a running binary's image; sort
+  by LIVENESS. That tree is also outside this project, so it is the USER's call regardless.
 - **Three falsifications this session, all the same error in different costumes** —
   see the LESSON below; it is the transferable part.
 - **CORROBORATED 07:30 by a second, larger episode.** A `[system-daemon-runaway]` alert
