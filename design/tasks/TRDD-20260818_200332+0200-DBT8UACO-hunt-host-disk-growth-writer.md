@@ -14,9 +14,15 @@ created-by: hub endorsement 2026-08-18; lead from agentlenspro TRDD-0XGU6NE2
 
 ## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-08-21 16:41
 
-- **ATTRIBUTED, with a bracketed measurement. The writer is `cargo` debug builds under
-  `~/Code`** — principally `~/Code/AgentlensPro/rust-core/target` (49,032 MB, of which
-  `debug/` is 47,363 MB). Not uv, not the model stores, not the plugin marketplaces.
+- **ATTRIBUTED. The writer is `cargo` debug builds under `~/Code`** — principally
+  `~/Code/AgentlensPro/rust-core/target`. Not uv, not the model stores, not the plugin
+  marketplaces.
+- **THE STRONGEST EVIDENCE IS THE DIFFERENTIAL, not either burst — lead with it.**
+  `AgentlensPro/rust-core/target` went **49,032 MB (08-18) → 79,859 MB (08-21)**, +30,827
+  MB in three days, while the comparable but un-built `SVG_PLAYER/target` sat **unchanged
+  at 45,296 MB** across the same window. A named writer that grew beside a control that
+  did not is an experiment; two CPU bursts are two samples. (On 08-18 the AgentlensPro
+  tree was 49,032 MB, of which `debug/` was 47,363 MB.)
 - **The evidence (one 59.4-min window that BRACKETS a captured burst):**
   `du` depth-1 over `$HOME/*` + `$HOME/.[!.]*` + `/Applications /Library /opt /usr/local
   /private/var`, A@1787276905 → B@1787280471. `df /` +1,270 MB; the per-path deltas
