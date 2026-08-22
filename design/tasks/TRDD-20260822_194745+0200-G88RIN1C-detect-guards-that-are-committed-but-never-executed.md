@@ -80,7 +80,14 @@ have printed it regardless.
 
 **46 of 48 repos execute a pre-push**, not the 6 the first table implied — anyone
 reading "6 LIVE / 48" as coverage got the inverse of reality. The substantive point
-survives all of it: for 39 of them the executed file is the LFS shim that gates nothing.
+survives all of it: for 39 of them the executed file is the stock LFS shim.
+
+**Precise about what that shim does, because "gates nothing" was too strong.**
+`git lfs pre-push` receives the ref range on stdin and **uploads associated LFS
+objects** — it is not a no-op and can exit non-zero on a transfer or config failure. The
+accurate claim is that it **enforces no POLICY about what is pushed**: no branch rule, no
+publish gate, no secret scan. The conclusion is unchanged; the sentence was not. Read the
+wrappee, not just the wrapper.
 
 **DECORATIVE rose to 5 only under PATH-AGNOSTIC discovery** (`git ls-files | grep -E
 '(^|/)pre-push$'` instead of three assumed directory names). One repo ships at
@@ -106,13 +113,26 @@ Measured here 2026-08-22:
 lost by overriding        -> post-checkout, post-commit, post-merge
 ```
 
-**Benign in this repo** — it tracks zero LFS patterns and zero LFS objects, so the three
-lost hooks were Git LFS hooks with nothing to do. **Not benign in general**, and that is
-exactly why it belongs in a downstream check: an entrusted repo that DOES use LFS and
-sets a local `hooksPath` loses LFS checkout/commit/merge behaviour with no error, no
-warning, and a `core.hooksPath` value that reads as correctly configured. Fleet-wide, 7
-of 9 repos with a local hooksPath provide only `pre-push`; one points at a directory
-containing nothing and therefore runs no hooks at all while appearing configured.
+**Benign in this repo, and that is MEASURED, not assumed** — zero `filter=lfs` patterns
+in `.gitattributes` and zero `git lfs ls-files`, so the three lost hooks had nothing to
+do. **Not benign in general**: an entrusted repo that DOES use LFS and sets a local
+`hooksPath` loses checkout/commit/merge behaviour with no error and a `core.hooksPath`
+that reads as correctly configured.
+
+**A MISSING HOOK IS A LOSS ONLY WHERE THE HOOK HAD WORK.** This is the qualifier that
+makes the state reportable rather than alarmist, and the hub's first DEPRIVED table
+lacked it: it said 7 of 9 local-hooksPath repos "thereby REMOVED three unrelated hooks",
+which imputes a regression nobody measured. What is actually established is only that
+those repos **do not provide** the three non-push hooks the global dir provides — whether
+any ever had or wanted them is unmeasured, and a repo that never touched LFS is missing
+nothing. **The check must report the matrix AND the usage signal together**, or it files
+a benign absence as breakage in every repo that never used the feature.
+
+Two rows of that table were also wrong, from testing a hardcoded four-name list instead
+of enumerating the directory: one repo reported as running "nothing" in fact runs a real
+`pre-commit` (it has only `pre-push.sample`, which git never executes — "no push gate"
+is the true finding, not "empty shell"), and another reported with two hooks actually
+runs five.
 
 This makes the model a **per-hook-type matrix**, not a per-repo state: for each hook
 type, what does git resolve, and does a file exist there?
@@ -177,6 +197,16 @@ a PR, never a direct edit.
       NEVER string-concatenates it with the repo root (`core.hooksPath` is frequently
       absolute; concatenating yields a path that cannot exist, and every branch then
       reports "not live" for any input — the exact bug that produced the retracted table)
+- [ ] the resolved hooks dir is ENUMERATED, never probed for a list of expected names:
+      `find "$h" -maxdepth 1 -type f -perm -u+x ! -name '*.sample'`. Both filters are
+      load-bearing and fail in OPPOSITE directions — a name list misses every hook
+      outside it (two rows of the retracted table), while an unfiltered executable count
+      over-reports by 14 on any repo using its default `.git/hooks`, which ships 14
+      executable `.sample` files
+- [ ] a missing hook is reported as a LOSS only alongside a usage signal that the hook
+      had work (e.g. LFS hooks against `filter=lfs` patterns and `git lfs ls-files`) —
+      otherwise it is a benign absence, and reporting it as breakage trains the reader
+      to ignore the check
 - [ ] reported per ARTIFACT and per HOOK TYPE, never as one state per repo
 - [ ] the states above are distinguished by MEASUREMENT, never by the presence of a file
       and never by its SIZE
