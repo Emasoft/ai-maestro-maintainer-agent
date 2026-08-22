@@ -24,8 +24,9 @@ created-by: hub endorsement 2026-08-18; lead from agentlenspro TRDD-0XGU6NE2
   did not is an experiment; two CPU bursts are two samples. (On 08-18 the AgentlensPro
   tree was 49,032 MB, of which `debug/` was 47,363 MB.)
 - **The evidence (one 59.4-min window that BRACKETS a captured burst):**
-  `du` depth-1 over `$HOME/*` + `$HOME/.[!.]*` + `/Applications /Library /opt /usr/local
-  /private/var`, A@1787276905 → B@1787280471. `df /` +1,270 MB; the per-path deltas
+  `du` depth-1 over `$HOME/*` + `$HOME/.[!.]*` + the five system roots (Applications,
+  Library, opt, usr/local, private/var), A@1787276905 → B@1787280471. `df /` +1,270 MB;
+  the per-path deltas
   account for +1,243 MB of it (98%):
   `~/Code +811` · `~/Downloads +380` · `~/Library +30` · `/private/var +19` ·
   `~/Pictures +6` · `/Library −3` MB.

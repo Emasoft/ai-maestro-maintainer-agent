@@ -159,6 +159,15 @@ Idempotent — re-running BASELINE replaces the snapshot atomically.
   - T6 — Package-manager safety-config drift
   - Routing table
   - Atomic write pattern
+- [AMP approval-request template](../maintainer-approval-gate/references/approval-request.md)
+  — owns the T5 escalation's exit codes, the recipient-resolve recipe, and the
+  never-pass-`--from`-as-an-agent rule:
+  - When you send this
+  - Resolve the recipient BEFORE composing
+  - The message
+  - Recording the answer
+  - When the answer is "no"
+  - The protected-edit variant (human, not AMP)
 - Companions: `workflow-scan`, `workflow-fix-safe`,
   `workflow-protect-branch`, `maintainer-approval-gate`.
 - Inspiration: Atai Barkai, "Supply chain attacks are at an

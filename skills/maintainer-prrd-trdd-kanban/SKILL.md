@@ -113,6 +113,16 @@ invoke `ama-prrd-propose`:
 
 ## Resources
 
+- [AMP approval-request template](../maintainer-approval-gate/references/approval-request.md)
+  — owns the exit codes, the recipient-resolve recipe, and the
+  never-pass-`--from`-as-an-agent rule this skill defers to:
+  - When you send this
+  - Resolve the recipient BEFORE composing
+  - The message
+  - Recording the answer
+  - When the answer is "no"
+  - The protected-edit variant (human, not AMP)
+
 See the granular `ama-*` skills in `ai-maestro-plugin` for the shared
 mechanics — each ships its own reference docs, and `ama-trdd-transition`'s
 `exempt-operations.md` reference defines why audits, status reports, and

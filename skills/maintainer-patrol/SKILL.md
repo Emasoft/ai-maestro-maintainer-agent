@@ -151,6 +151,14 @@ boundaries and only NEW issues are re-triaged on resume.
   - What the successor actually needs
   - The message
   - Degrade
+- [AMP approval-request template](../maintainer-approval-gate/references/approval-request.md)
+  — owns the exit codes and the recipient-resolve recipe this skill defers to:
+  - When you send this
+  - Resolve the recipient BEFORE composing
+  - The message
+  - Recording the answer
+  - When the answer is "no"
+  - The protected-edit variant (human, not AMP)
 
   The R15.7 message shape for passing patrol state to a successor session
   (hibernation, host migration), including the three things a successor
