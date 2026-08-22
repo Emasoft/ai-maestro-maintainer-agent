@@ -13,27 +13,29 @@ created-by: fleet census by the ai-maestro hub session, relayed 2026-08-22
 
 # Detect guards that are committed but never executed on entrusted repos
 
-## The finding this comes from
+## The finding this comes from (IN-SCOPE statement — see the SCOPE section below)
 
-A hub census of **15 repos shipping `.githooks/pre-push`** measured that **3 of them
-never execute it**:
+**`ai-maestro-plugins` — the marketplace every agent in the ecosystem installs from —
+ships no push-policy gate.** It dispatches the global Git LFS shim, which gates only LFS
+object upload: no branch rule, no publish gate, no secret scan. `AgentlensPro` is in the
+same state. That is the highest-value target here, and it spent an afternoon buried under
+dozens of rows about repos that were none of our business.
 
-- 2 (`defuddle-skill`, `maestro-orchestrate`) have `core.hooksPath` pointing at a
-  directory **outside the repo** (`~/.config/git/hooks`).
-- 1 (`AI-MAESTRO-WEBDESIGN-AGENT`) ships `.githooks` (dot) while `core.hooksPath` names
-  `git-hooks` (hyphen).
+**`AI-MAESTRO-WEBDESIGN-AGENT` is the in-scope DECORATIVE case:** it ships
+`.githooks/pre-push` while `core.hooksPath` names `git-hooks` — one character apart, two
+directories, **the reviewed file is not the executed file**, and nothing reports it. The
+guard is present, reviewed, committed, and inert.
 
-**One character is enough, and nothing reports it.** The push protection is present,
-reviewed, committed — and decorative. This repo was measured CLEAN
-(`core.hooksPath=.githooks`, `.git/hooks/pre-push` absent, so git executes the tracked
-file directly), which is exactly why the gap is invisible from here: a healthy host
-looks identical to a broken one until you ask what git actually resolves.
+**A second state, SHADOWED:** a repo with `core.hooksPath` set AND a leftover
+`.git/hooks/pre-push`. Git runs the former and ignores the latter — harmless to
+execution, **actively misleading to inspection**, because anyone opening
+`.git/hooks/pre-push` to learn "what runs" reads the wrong file. Four sessions made
+exactly that mistake in one day, on this very subject.
 
-A second, subtler state from the same census: **4 repos** have `core.hooksPath=.githooks`
-AND a leftover `.git/hooks/pre-push`. Git runs the former and ignores the latter —
-harmless to execution, **actively misleading to inspection**, because anyone opening
-`.git/hooks/pre-push` to learn "what runs" reads the wrong file. That is the exact
-mistake four sessions made in one day on this very subject.
+**This repo was measured LIVE and clean** (`core.hooksPath=.githooks`,
+`.git/hooks/pre-push` absent, so git executes the tracked file), which is precisely why
+the gap is invisible from inside it: **a healthy repo looks identical to a broken one
+until you ask what git actually resolves.**
 
 ## Why this is the MAINTAINER's job
 
@@ -51,7 +53,54 @@ The class generalizes past hooks. A gate can be enabled and check nothing:
 **Each fails silently in the same direction: nothing is red, because nothing ran.**
 Those are the findings that matter most precisely because nothing is failing on them.
 
-## Census — RETRACTED TWICE, and the retractions are the useful part
+## ⛔ SCOPE — owner directive 2026-08-22, and it invalidated every census below
+
+> **"stop messing with projects that are not ai-maestro plugins or dependency plugins
+> (cpv, pss, llm-externalizer, etc.) or dependency tools (agentlenspro)"** — USER,
+> relayed by the hub session.
+>
+> Every census recorded further down swept **~152 git repos under `~/Code`**, the owner's
+> unrelated private projects included. Reads only, nothing modified — but the wrong
+> population, widened four times in an hour, each widening chasing a measurement error
+> and none of them pausing to ask whether the wider set was ours to audit.
+> **Correcting an instrument is not a licence to enlarge its scope.**
+>
+> **WITHDRAWN — do not encode, do not cite:** the three "genuinely unprotected" repos,
+> the 39/48 and 46/48 ratios, the 9-repo hook-type matrix, and the "five sixths of this
+> machine" framing. The alarming half of that finding was about the owner's private work.
+
+### What survives, re-scoped to the ecosystem
+
+| state | count |
+|---|---|
+| own pre-push guard | 16 (ai-maestro, ai-maestro-plugin, the janitor, the 8 role-plugins, assistant-role, web-scenario-tester, WEBDESIGN, perfect-skill-suggester) |
+| **inherits the LFS shim — NO push-policy gate** | **2** — **`ai-maestro-plugins` (the MARKETPLACE)** and `AgentlensPro` |
+| not resolvable at a depth-3 path | 4 |
+
+**THE FINDING WORTH THE WHOLE THREAD: `ai-maestro-plugins` — the marketplace every agent
+installs from — has no push-policy gate.** It dispatches the global LFS shim. Highest-
+value target in the ecosystem, and 46 irrelevant rows had buried it.
+
+`AI-MAESTRO-WEBDESIGN-AGENT` remains the in-scope DECORATIVE case: ships
+`.githooks/pre-push` while `hooksPath=git-hooks` — the reviewed file is not the executed
+one.
+
+### Scope rule for the implementation
+
+Membership comes from the **SSOT** (`lib/ecosystem-constants.ts` + the CLAUDE.md repo
+table + the named dependency tools), never from a directory glob. A guardian that walks
+`~/Code/*` audits the owner's private work — that is the defect this directive names.
+
+And `~/Code/*/` is **depth 1** while in-scope repos nest deeper (e.g.
+`~/Code/EMASOFT-ASSISTANT-MANAGER/ai-maestro-assistant-manager-agent`), so the same
+sweeps were **too wide and too narrow at once**. Resolve entrusted repos BY NAME from the
+SSOT and `find` them at depth.
+
+## Census — RETRACTED TWICE, kept only as a worked example of checks that measure nothing
+
+**Every count in this section is out of scope per the directive above and must not be
+cited.** It is retained solely for the classifier post-mortem, which is this card's
+subject matter.
 
 **Do not cite any count here as settled.** Two successive hub censuses were withdrawn,
 the second because its classifier was broken in a way that made it right for the wrong
@@ -221,6 +270,10 @@ a PR, never a direct edit.
 
 ## Acceptance
 
+- [ ] the repo set comes from the ECOSYSTEM SSOT, resolved BY NAME and found at depth —
+      never `~/Code/*` or any directory glob. A glob is both too wide (it audits the
+      owner's private projects, which the 2026-08-22 directive forbids) and too narrow
+      (in-scope repos nest below depth 1)
 - [ ] hook files are DISCOVERED (`git ls-files | grep -E '(^|/)pre-push$'`), never
       assumed to live in a known directory — assuming the dir is what undercounted
       DECORATIVE by two
