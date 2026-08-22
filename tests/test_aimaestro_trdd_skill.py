@@ -101,18 +101,30 @@ def test_probe_is_verb_granular_not_just_script_granular(doc: Path) -> None:
 
 
 @pytest.mark.parametrize("doc", DOCS, ids=lambda p: p.name)
-def test_verify_is_marked_absent_on_the_deployed_script(doc: Path) -> None:
-    """Every doc flags that `verify` is NOT on the deployed CLI and must be probed.
+def test_verify_is_probe_gated_not_asserted_either_way(doc: Path) -> None:
+    """Every doc gates `verify` on the PROBE rather than asserting its availability.
 
-    Teaching `verify` as unconditionally available is a false capability claim: it
-    exists on governance-rules and in the manifest, but not on the deployed copy.
-    An agent that believes it can check authenticity, and cannot, is worse off than
-    one that knows it cannot — it may fall back to trusting the card's prose, which
-    is precisely what the token design exists to stop.
+    Teaching `verify` as unconditionally available is a false capability claim, and an
+    agent that believes it can check authenticity but cannot may fall back to trusting
+    the card's prose — precisely what the token design exists to stop.
+
+    THIS TEST USED TO ASSERT THE OPPOSITE FACT, AND THE FACT EXPIRED. It required each
+    doc to state `verify` is "not on the deployed script", measured 2026-07-16 (330
+    lines / 7 verbs, ai-maestro#69). Re-measured 2026-08-21 the same path is 627 lines
+    / 9 verbs and DOES dispatch `verify`. So the docs were corrected, and this test —
+    written to prevent a false capability claim — became the thing enforcing one, in
+    the opposite direction: it would have failed the release until the docs re-asserted
+    something untrue.
+
+    The lesson, and why the assertion now reads this way: PIN THE METHOD, NEVER THE
+    MEASUREMENT. The deployed CLI drifts in BOTH directions and announces neither, so
+    any test that hardcodes a verb's presence or absence has a shelf life. The probe is
+    what stays correct on every host on every day, and it is the only thing worth
+    asserting. A dated number belongs in prose as history, never in an assertion.
     """
     text = _flat(doc)
-    assert re.search(r"not\s+(on\s+the\s+deployed|implemented\s+on\s+this\s+host)", text, re.I), f"{doc.name}: does not state that `verify` is absent from the deployed script"
-    assert "69" in text, f"{doc.name}: does not cite ai-maestro#69 for the verify gap"
+    assert re.search(r"verify.{0,400}?probe|probe.{0,400}?verify", text, re.I | re.S), f"{doc.name}: `verify` is not tied to the capability probe — it must be presented as available only where the probe says so, never asserted present or absent"
+    assert "69" in text, f"{doc.name}: does not cite ai-maestro#69 for the verify capability history"
 
 
 def test_docs_forbid_substituting_prose_when_verify_is_unavailable() -> None:
