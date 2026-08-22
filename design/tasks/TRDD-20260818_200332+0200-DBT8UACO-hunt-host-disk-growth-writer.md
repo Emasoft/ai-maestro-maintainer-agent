@@ -1,9 +1,9 @@
 ---
 trdd-id: DBT8UACO
 title: Identify the ~2G/hr host disk-growth writer by measurement
-column: ai_review
+column: human_review
 created: 2026-08-18T20:03:32+0200
-updated: 2026-08-21T22:26:38+0200
+updated: 2026-08-22T19:27:53+0200
 current-owner: maintainer-agent-session
 task-type: audit
 approval-tier: 0
@@ -237,3 +237,7 @@ so. Left standing as the audit trail it is.
 escalation and needs the USER; this review does not move the card.
 
 ## Approval log
+
+- 2026-08-22T19:27:53+0200 — `ai_review → human_review` APPROVED by USER (non-exempt
+  escalation gate). Requested after the AI review returned PASS with all three acceptance
+  boxes independently verified. Awaiting the USER's final call on the card itself.

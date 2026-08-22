@@ -1,9 +1,9 @@
 ---
 trdd-id: PY5QXSBU
 title: Migrate the 5 remaining amp-send call sites to the aimaestro-message CLI
-column: ai_review
+column: human_review
 created: 2026-08-20T08:32:04+0200
-updated: 2026-08-21T22:26:38+0200
+updated: 2026-08-22T19:27:53+0200
 current-owner: maintainer-agent-session
 task-type: docs
 min-approval-requirement: none
@@ -85,3 +85,11 @@ this card does not re-derive the same 7 ghosts.
 **Scope correction upheld.** Patching only the 3 originally-listed files would have
 left 4 sibling callers wrong while box 2's whole-tree grep passed by accident. The
 widened fix is the correct one.
+
+## Approval log
+
+- 2026-08-22T19:27:53+0200 — `ai_review → human_review` APPROVED by USER (non-exempt
+  escalation gate). Requested after the AI review returned PASS: 17/17 `amp-send`
+  occurrences fallback-labelled, re-grepped across the whole tree. The release box is
+  still open and ticks when this rides `publish.py` (also authorized by the USER in the
+  same exchange).
