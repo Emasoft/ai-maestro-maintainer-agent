@@ -100,13 +100,39 @@ def test_probe_is_verb_granular_not_just_script_granular(doc: Path) -> None:
     assert re.search(r"--help.{0,80}grep", text), f"{doc.name}: no per-VERB probe (script's own --help) — `command -v` alone is not enough; it passes on a host whose CLI lacks the verb"
 
 
-# THE DRIFT RECORD — the two dated measurements of the same deployed path. A doc that
-# carries BOTH has recorded that the verb table MOVES; it cannot coherently also assert a
-# standing presence or absence, because it is showing the reader two opposite states of
-# one file. Dates are literals nobody rewords while "improving" prose, which is exactly
-# why this is the half worth asserting. See the docstring for what was tried before.
+# THE DRIFT RECORD — the two dated measurements of the same deployed path, required to
+# sit NEAR a mention of `verify` (see `_verify_drift_record`). A doc carrying both has
+# recorded that the verb table MOVES. It does NOT follow that such a doc cannot also
+# assert a standing state — an earlier version of this comment claimed exactly that, and
+# it is false: a history section plus a contradicting body sentence satisfies it, which
+# is measured and is why the literal tripwire below was restored. Dates are chosen
+# because they are literals nobody rewords while "improving" prose.
 VERIFY_MEASURED_ABSENT = "2026-07-16"  # deployed: 330 lines / 7 verbs, no `verify`
 VERIFY_MEASURED_PRESENT = "2026-08-21"  # deployed: 627 lines / 9 verbs, `verify` dispatched
+
+# The literal phrasing of the expired claim. NOT a guard against the claim-CLASS — it is
+# defeated by one word ("not PRESENT on the deployed", "ABSENT FROM the deployed"), which
+# is measured and stated in the docstring. It is kept as a cheap TRIPWIRE for the exact
+# historical sentence, because the realistic way this falsehood returns is someone
+# copying the old text back, not inventing a new synonym for it.
+VERIFY_OLD_LITERAL_CLAIM = re.compile(r"not\s+on\s+the\s+deployed", re.I)
+
+DRIFT_WINDOW = 400
+
+
+def _verify_drift_record(text: str) -> bool:
+    """True when some mention of `verify` carries BOTH dates within DRIFT_WINDOW chars.
+
+    Binding the dates to the SUBJECT is the whole point. Asserting the two dates appear
+    anywhere in the file is satisfied by a frontmatter date, an unrelated citation, or a
+    stray literal left behind after the drift paragraph is deleted — none of which say
+    anything about `verify`.
+    """
+    for m in re.finditer(r"verify", text, re.I):
+        window = text[max(0, m.start() - DRIFT_WINDOW) : m.end() + DRIFT_WINDOW]
+        if VERIFY_MEASURED_ABSENT in window and VERIFY_MEASURED_PRESENT in window:
+            return True
+    return False
 
 
 @pytest.mark.parametrize("doc", DOCS, ids=lambda p: p.name)
@@ -168,12 +194,31 @@ def test_verify_is_probe_gated_not_asserted_either_way(doc: Path) -> None:
     cannot coherently also assert a standing presence or absence. It encodes the lesson
     itself — record the drift, never a state.
 
-    PROVEN BY MUTATION ON A REAL FILE, both directions (2026-08-22): collapsing the two
-    dates to either one alone in `commands/maintainer-aimaestro-trdd.md` fails this test;
-    restoring returns 28 passed with an empty `git diff`. No synthetic control accompanies
-    it because a literal-substring assert against a non-empty constant cannot go vacuous
-    the way a regex can — the two failure modes that killed attempts one and two (matches
-    everything / matches only its own wording) do not exist for `in`.
+    ATTEMPT 3 WAS ALSO DEFEATED, AND THE ROOT WAS THE SAME ONE A THIRD TIME. It asserted
+    the two dates appeared ANYWHERE in the file, unbound to the subject. Measured: a doc
+    reading "Capability history: absent 2026-07-16, dispatched 2026-08-21 (ai-maestro#69).
+    verify is not on the deployed script" PASSED it — while the regex deleted in attempt 2
+    had CAUGHT that exact string. So on the property this test claims to protect, attempt
+    3 was strictly WEAKER than what it replaced. A literal is immune to matching
+    everything; it is wide open to matching something IRRELEVANT — a frontmatter date, an
+    unrelated citation, or a date left behind after the drift paragraph is deleted. Note
+    attempt 1 at least required proximity between `verify` and `probe`; attempt 3 dropped
+    the binding entirely, which is why it regressed.
+
+    SO THE RECORD IS NOW BOUND TO ITS SUBJECT: `_verify_drift_record` requires some
+    mention of `verify` to carry BOTH dates within a window. Delete the record and it
+    fails; a stray date elsewhere cannot rescue it.
+
+    The literal tripwire is restored alongside it, honestly scoped: it catches the exact
+    historical sentence and NOT the class, because the realistic re-entry path is someone
+    pasting the old text back rather than inventing a synonym. 1-of-6 coverage stated as
+    1-of-6 is a tripwire; 1-of-6 presented as a guard is the false assurance that made
+    deleting it correct in the first place.
+
+    PROVEN BY MUTATION ON A REAL FILE (2026-08-22): collapsing the two dates to either one
+    alone in `commands/maintainer-aimaestro-trdd.md` fails, and each collapse fails a
+    DIFFERENT half — A leaves 4x07-16/0x08-21, B leaves 0x07-16/4x08-21. Restoring returns
+    an empty `git diff`.
 
     WHAT IS DELIBERATELY NOT ASSERTED, and must not be "fixed" by adding a regex: that
     the prose never re-asserts absence in some new wording. That property is real and
@@ -182,9 +227,37 @@ def test_verify_is_probe_gated_not_asserted_either_way(doc: Path) -> None:
     the runnable `--help | grep` recipe rather than prose about it.
     """
     text = _flat(doc)
-    assert VERIFY_MEASURED_ABSENT in text, f"{doc.name}: missing the {VERIFY_MEASURED_ABSENT} measurement (deployed lacked `verify`) — without BOTH dates the doc reads as a single state rather than a drift record"
-    assert VERIFY_MEASURED_PRESENT in text, f"{doc.name}: missing the {VERIFY_MEASURED_PRESENT} re-measurement (deployed dispatches `verify`) — a doc carrying only the older date re-asserts the EXPIRED claim by omission"
+    assert _verify_drift_record(text), (
+        f"{doc.name}: no drift record BOUND to `verify` — some mention of the verb must carry both {VERIFY_MEASURED_ABSENT} (absent) and {VERIFY_MEASURED_PRESENT} (dispatched) within {DRIFT_WINDOW} chars, so that deleting the record fails and a stray date elsewhere in the file cannot satisfy it"
+    )
+    assert not VERIFY_OLD_LITERAL_CLAIM.search(text), f"{doc.name}: contains the literal expired claim 'not on the deployed' (measured present {VERIFY_MEASURED_PRESENT}: 627 lines, 9 verbs). Tripwire only — see the docstring: rewordings of this claim are NOT caught and never will be"
     assert "69" in text, f"{doc.name}: does not cite ai-maestro#69 for the verify capability history"
+
+
+def test_the_drift_record_binding_bites() -> None:
+    """Control for BOTH halves — the control attempt 3 shipped without.
+
+    Every fixture here is a real defeat of a real previous attempt, kept so a future
+    author can see what each half is for rather than inferring it from the regex.
+    """
+    # The counter-example that defeated attempt 3: both dates + #69 + the falsehood.
+    # It satisfies the binding (the dates ARE near `verify`), so the TRIPWIRE must reject.
+    hostile = "Capability history: absent 2026-07-16, dispatched 2026-08-21 (ai-maestro#69). verify is not on the deployed script - do not call it."
+    assert _verify_drift_record(hostile), "fixture drifted: it should satisfy the binding half"
+    assert VERIFY_OLD_LITERAL_CLAIM.search(hostile), "the tripwire no longer catches the literal historical sentence"
+
+    # Dates present but bound to nothing — a changelog line, or a leftover after the
+    # drift paragraph was deleted. Attempt 3 accepted this; the binding must reject it.
+    stray = f"{VERIFY_MEASURED_ABSENT} and {VERIFY_MEASURED_PRESENT} in a changelog. " + ("x" * 900) + " verify the token."
+    assert not _verify_drift_record(stray), "unbound dates satisfy the guard — the binding is decorative, which is exactly how attempt 3 regressed"
+
+    # One date only is not a drift record: it reads as a single state.
+    assert not _verify_drift_record(f"verify was absent {VERIFY_MEASURED_ABSENT}.")
+
+    # And correct writing must pass, or the guard gets deleted.
+    good = f"`verify` was ABSENT {VERIFY_MEASURED_ABSENT} and is dispatched as of {VERIFY_MEASURED_PRESENT} — probe anyway."
+    assert _verify_drift_record(good)
+    assert not VERIFY_OLD_LITERAL_CLAIM.search(good)
 
 
 def test_docs_forbid_substituting_prose_when_verify_is_unavailable() -> None:
