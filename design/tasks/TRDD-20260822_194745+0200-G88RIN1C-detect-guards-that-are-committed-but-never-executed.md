@@ -76,18 +76,28 @@ have printed it regardless.
 | execute a pre-push resolved to the **global LFS shim** | 39 |
 | execute a pre-push resolved **repo-locally** | 7 |
 | execute **nothing** at the resolved path | 2 |
-| DECORATIVE (ships a guard git never resolves) | **5**, was reported 3 |
+| ships a guard git never resolves — see the SPLIT below, do not cite as one number | 5 |
+
+**DECORATIVE=5 IS A LOSSY HEADLINE; ENCODE THE SPLIT.** Counts get encoded, tables get
+read, and folding these together files a protected repo beside unprotected ones:
+
+| sub-state | count | meaning |
+|---|---|---|
+| genuinely unprotected | **3** | ships a guard, runs nothing that gates pushing |
+| protected-but-unreviewable | **1** | runs a real 3285 B guard that is UNTRACKED — no PR can review it |
+| reviewed-file-is-not-the-executed-file | **1** | ships `.githooks/pre-push`, `hooksPath=git-hooks` — two dirs, one reviewed, the other executed |
 
 **46 of 48 repos execute a pre-push**, not the 6 the first table implied — anyone
 reading "6 LIVE / 48" as coverage got the inverse of reality. The substantive point
 survives all of it: for 39 of them the executed file is the stock LFS shim.
 
-**Precise about what that shim does, because "gates nothing" was too strong.**
-`git lfs pre-push` receives the ref range on stdin and **uploads associated LFS
-objects** — it is not a no-op and can exit non-zero on a transfer or config failure. The
-accurate claim is that it **enforces no POLICY about what is pushed**: no branch rule, no
-publish gate, no secret scan. The conclusion is unchanged; the sentence was not. Read the
-wrappee, not just the wrapper.
+**Precise about what that shim does, because "gates nothing" was twice too strong.**
+`git lfs pre-push` receives the ref range on stdin, uploads associated LFS objects, and
+**ABORTS THE PUSH if that upload fails** — so it does gate pushing, on exactly one
+condition. Correct form: **gates only LFS object upload; nothing about branch, ancestry,
+or publish policy.** With nothing on this machine tracking LFS that condition cannot
+arise, so the conclusion stands and only the absolute phrasing was wrong. Two rounds of
+over-claiming here, both from reading the wrapper and not the wrappee.
 
 **DECORATIVE rose to 5 only under PATH-AGNOSTIC discovery** (`git ls-files | grep -E
 '(^|/)pre-push$'` instead of three assumed directory names). One repo ships at
@@ -99,7 +109,28 @@ first count missed two.
 **The states are NOT a partition.** A repo can be LIVE *and* SHADOWED at once, so report
 per ARTIFACT and never classify a repo into one bucket.
 
-## Fifth state — DEPRIVED, and THIS REPO IS IN IT
+## Fifth state — DEPRIVED. **SEVERITY WITHDRAWN. Do NOT ship this as breakage.**
+
+> The hub withdrew the severity it attached to this state, and the settling measurement
+> agrees: **all 9 repos with a local `core.hooksPath` track zero LFS content, and ZERO
+> repos on this machine have a `filter=lfs` pattern at all.** The three "lost" hooks
+> (`post-checkout`, `post-commit`, `post-merge`) are installed by `git lfs install` — they
+> are plumbing that ships beside the `pre-push` shim, not anyone's policy. **No repo here
+> lost anything.**
+>
+> The original claim measured *a file is not there now* and reported *"thereby REMOVED
+> three hooks"* + *"silent breakage"* — causal claims about a transition nobody observed,
+> carrying a harm nobody established. Shipped as a check, it would have flagged seven
+> healthy repos forever, which is how a guardian gets muted.
+>
+> Also set aside on the way: `.git/lfs` EXISTS and even holds files in most repos —
+> `cache`/`tmp` residue from `git lfs install`, not tracked content. **Directory existence
+> is not usage**, the same proxy trap one more time.
+>
+> The state may stay in the model as an OBSERVATION. Its acceptance criterion is the
+> matrix **AND** the usage signal, together, always.
+
+
 
 `core.hooksPath` **replaces the entire hooks directory**; there is no per-hook fallback
 to the global one. So a repo that sets it to ADD a push gate silently REMOVES every
