@@ -51,6 +51,47 @@ The class generalizes past hooks. A gate can be enabled and check nothing:
 **Each fails silently in the same direction: nothing is red, because nothing ran.**
 Those are the findings that matter most precisely because nothing is failing on them.
 
+## Census corrected 2026-08-22 — 48 repos, and a fourth state
+
+The hub re-ran over the whole machine (48 repos, not the ~15 fleet repos). Two
+structural corrections and one new state:
+
+| state | count |
+|---|---|
+| LIVE (own tracked hook executes) | 6 |
+| DECORATIVE (ships a hook git never resolves) | **3** — the only figure stable across both populations |
+| SHADOWED (stale ignored `.git/hooks/pre-push`) | 9 (was 4) |
+| INHERITED (no local `core.hooksPath`; takes the machine default) | **39** |
+
+**The states are NOT a partition.** Two repos are LIVE *and* SHADOWED at once, so the
+check must report each state per ARTIFACT and never classify a repo into one bucket.
+
+**INHERITED is not "protected by an external file" — measured, it is protected by
+nothing.** `~/.config/git/hooks/pre-push` on this machine is 388 bytes of **stock Git
+LFS**: it checks `git-lfs` is on PATH (its only exit path) and calls `git lfs pre-push`.
+No publish gate, no ancestry walk, no branch guard. For contrast this repo's
+`.githooks/pre-push` is 3165 bytes of process-ancestry enforcement — the size gap is
+what prompted reading the file rather than accepting the config value.
+
+Consequence, and the reason this state matters most: **`core.hooksPath` REPLACES, it
+does not fall back.** Any INHERITED repo that also ships its own `.githooks/pre-push`
+has that guard shadowed by an LFS shim which gates nothing — so it is DECORATIVE, and
+the DECORATIVE=3 figure is a FLOOR, not a total. Such a repo reads as correctly
+configured to anyone who checks `core.hooksPath` and stops there: the
+healthy-looks-identical-to-broken trap, now wearing a plausible config value.
+
+Open census question this raises, worth answering before implementing: **of the 39
+INHERITED repos, how many ship a push guard of their own?** Each one is a gate both
+present and inert.
+
+Remediation note: the fix is per-repo LOCAL `core.hooksPath`, never editing the global
+file — that file is shared by all 48 and changing it would alter LFS behaviour
+machine-wide. (Its `.bak-20260413_202201` siblings are backups of an LFS shim, not of a
+security control.)
+
+THIS REPO remains unaffected and LIVE: local `core.hooksPath=.githooks` overrides the
+global, `.git/hooks/pre-push` absent, tracked 3165-byte guard executes.
+
 ## Proposed capability (NOT yet implemented — this card is intake only)
 
 A `maintainer-guardian` threat class (or a sibling check) that, per entrusted repo,

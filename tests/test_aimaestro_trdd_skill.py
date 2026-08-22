@@ -100,16 +100,13 @@ def test_probe_is_verb_granular_not_just_script_granular(doc: Path) -> None:
     assert re.search(r"--help.{0,80}grep", text), f"{doc.name}: no per-VERB probe (script's own --help) — `command -v` alone is not enough; it passes on a host whose CLI lacks the verb"
 
 
-# A CONDITIONAL gate phrase — each makes availability contingent on the probe rather
-# than naming a state. Enumerated from what the three docs actually say, not invented.
-VERIFY_PROBE_GATE = re.compile(
-    r"only where the probe says so|probe (?:the verb )?at call time|probe before calling|probe anyway",
-    re.I,
-)
-
-# The EXPIRED standing claim. Deliberately narrow: `not implemented on this host` is the
-# runtime degrade message and must stay legal (see the docstring below).
-VERIFY_STANDING_ABSENCE = re.compile(r"not\s+on\s+the\s+deployed", re.I)
+# THE DRIFT RECORD — the two dated measurements of the same deployed path. A doc that
+# carries BOTH has recorded that the verb table MOVES; it cannot coherently also assert a
+# standing presence or absence, because it is showing the reader two opposite states of
+# one file. Dates are literals nobody rewords while "improving" prose, which is exactly
+# why this is the half worth asserting. See the docstring for what was tried before.
+VERIFY_MEASURED_ABSENT = "2026-07-16"  # deployed: 330 lines / 7 verbs, no `verify`
+VERIFY_MEASURED_PRESENT = "2026-08-21"  # deployed: 627 lines / 9 verbs, `verify` dispatched
 
 
 @pytest.mark.parametrize("doc", DOCS, ids=lambda p: p.name)
@@ -143,33 +140,51 @@ def test_verify_is_probe_gated_not_asserted_either_way(doc: Path) -> None:
     admitted it verbatim. Proximity is not entailment; a needle nobody has shown can MISS
     is not a guard.
 
-    So the invariant is pinned in TWO directions, because either alone is defeated:
-      * POSITIVE — an explicit CONDITIONAL gating phrase must be present. Each phrase
-        asserts availability is contingent on the probe, never a state.
-      * NEGATIVE — the standing claim "not on the deployed" must be ABSENT. The gate
-        phrase alone is insufficient: the hostile sentence above carries one.
-    `NOT implemented on this host` is deliberately NOT forbidden — it is the runtime
-    DEGRADE message inside `if ! aimaestro_trdd_has verify`, i.e. what the agent PRINTS
-    when the probe says no. Banning it would redden correct writing (use vs mention),
-    which is how a repo loses a detector it still needs.
+    THE SECOND ATTEMPT FAILED THE SAME WAY, IN BOTH HALVES. It paired a fitted phrase
+    allowlist ("only where the probe says so|probe before calling|...") with a negative
+    regex `not\\s+on\\s+the\\s+deployed`. Measured against rewordings:
+      * NEGATIVE caught 1 of 6. "not PRESENT on the deployed", "ABSENT FROM the deployed",
+        "the deployed copy LACKS verify", "does not DISPATCH verify" — every one is the
+        expired falsehood, stated plainly, sailing past. One intervening word defeats it.
+      * POSITIVE rejected 3 of 3 correct-but-unlisted gatings ("available only where the
+        host --help lists it", "gate verify on the capability probe"). It was enumerated
+        FROM these three docs, so it described today's text rather than constraining
+        tomorrow's — and it would have reddened on correct writing, which is how a repo
+        loses a guard it still needs.
+
+    THE CATEGORY ERROR, stated plainly so nobody repeats it a fourth time: **absence of a
+    CLAIM-CLASS is not checkable by a regex over prose.** "The doc must not assert the
+    verb is missing" has unbounded phrasings; each round of tightening buys one more
+    wording and leaves the next one free. Refining that regex again is whack-a-mole that
+    yields false assurance — the worst outcome, because a guard believed to cover
+    something stops anyone from checking it by hand.
+
+    SO THE ASSERTION PINS THE ONE THING A LITERAL MATCH CAN HOLD: the DRIFT RECORD. Each
+    doc must carry BOTH dated measurements of the same deployed path — absent
+    2026-07-16, dispatched 2026-08-21. That is positive (regexes are reliable at finding
+    committed literals, unreliable at proving a claim absent), it is not fitted to any
+    phrasing (dates do not get reworded during a prose cleanup), and it is semantically
+    load-bearing: a doc showing the reader two OPPOSITE measured states of one file
+    cannot coherently also assert a standing presence or absence. It encodes the lesson
+    itself — record the drift, never a state.
+
+    PROVEN BY MUTATION ON A REAL FILE, both directions (2026-08-22): collapsing the two
+    dates to either one alone in `commands/maintainer-aimaestro-trdd.md` fails this test;
+    restoring returns 28 passed with an empty `git diff`. No synthetic control accompanies
+    it because a literal-substring assert against a non-empty constant cannot go vacuous
+    the way a regex can — the two failure modes that killed attempts one and two (matches
+    everything / matches only its own wording) do not exist for `in`.
+
+    WHAT IS DELIBERATELY NOT ASSERTED, and must not be "fixed" by adding a regex: that
+    the prose never re-asserts absence in some new wording. That property is real and
+    unpinnable here; it belongs to review, not to this file. The per-verb probe MECHANISM
+    is separately covered by `test_the_docs_teach_a_per_verb_probe` above, which matches
+    the runnable `--help | grep` recipe rather than prose about it.
     """
     text = _flat(doc)
-    assert VERIFY_PROBE_GATE.search(text), f"{doc.name}: no CONDITIONAL probe-gate phrase for `verify` — it must be presented as available only where the probe says so, never asserted present or absent"
-    assert not VERIFY_STANDING_ABSENCE.search(text), f"{doc.name}: re-asserts the EXPIRED standing claim that `verify` is not on the deployed script (measured present 2026-08-21: 627 lines, 9 verbs)"
+    assert VERIFY_MEASURED_ABSENT in text, f"{doc.name}: missing the {VERIFY_MEASURED_ABSENT} measurement (deployed lacked `verify`) — without BOTH dates the doc reads as a single state rather than a drift record"
+    assert VERIFY_MEASURED_PRESENT in text, f"{doc.name}: missing the {VERIFY_MEASURED_PRESENT} re-measurement (deployed dispatches `verify`) — a doc carrying only the older date re-asserts the EXPIRED claim by omission"
     assert "69" in text, f"{doc.name}: does not cite ai-maestro#69 for the verify capability history"
-
-
-def test_the_verify_probe_gate_detector_bites() -> None:
-    """Positive control in BOTH directions — the control the first replacement lacked."""
-    # The hostile case: carries a real gate phrase AND the expired standing claim.
-    # It passed the previous regex. It must fail now, on the NEGATIVE half.
-    hostile = "verify is NOT on the deployed script - probe before calling (ai-maestro#69)"
-    assert VERIFY_PROBE_GATE.search(hostile), "fixture is wrong: it should carry a gate phrase"
-    assert VERIFY_STANDING_ABSENCE.search(hostile), "the standing-claim detector does not bite — the guard is decorative again"
-    # Mere co-occurrence of the two words must NOT satisfy the gate (the old failure).
-    assert not VERIFY_PROBE_GATE.search("Step 3: verify an approval. Probe the script first.")
-    # The runtime degrade message must NOT read as the standing claim (use vs mention).
-    assert not VERIFY_STANDING_ABSENCE.search('echo "verify is NOT implemented on this host"')
 
 
 def test_docs_forbid_substituting_prose_when_verify_is_unavailable() -> None:
