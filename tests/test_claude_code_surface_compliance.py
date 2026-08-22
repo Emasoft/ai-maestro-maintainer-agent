@@ -11,11 +11,21 @@ a changelog.
 The 2026-08-22 pass added ONE detector (the Todo/Task tool family, removed on
 modern models in 2.1.233) and confirmed the rest of that changelog needed no
 edit here: the persona's session-channel bullet already carried 2.1.232's
-bare-name `SendMessage` delivery, and this tree names no model id, no
+bare-name `SendMessage` delivery, and a whole-tree grep found no model id, no
 `extraKnownMarketplaces`/`strictKnownMarketplaces` setting, and no
 `allowed-tools` frontmatter for the renamed/aliased surfaces to invalidate. That
 "nothing to change" is recorded deliberately — an audit that finds nothing looks
 identical to an audit nobody ran.
+
+MIND THE GAP BETWEEN THAT SWEEP AND THESE GUARDS. The 2026-08-22 sweep was
+whole-tree; `_shipped_files()` below is NOT. It covers `.md`/`.json` under
+agents/skills/commands/hooks plus README — so `scripts/` (144 files) and every
+`.sh`/`.py`/`.yaml` anywhere are OUTSIDE these detectors. "This tree is clean
+today" is a stronger statement than "a future violation will be caught here",
+and only the first was measured tree-wide. The narrower guard is deliberate —
+these check what an agent LOADS AS INSTRUCTIONS, and a Python script naming a
+tool identifier is a different concern with a different owner — but do not read
+a green suite as tree-wide coverage. It is not.
 
 WHY A TEST RATHER THAN A NOTE. A fact verified in ANOTHER repo keeps living
 there: the check's scope stops at this tree while the surface keeps changing

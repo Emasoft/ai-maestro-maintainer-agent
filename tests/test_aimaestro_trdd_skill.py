@@ -100,6 +100,18 @@ def test_probe_is_verb_granular_not_just_script_granular(doc: Path) -> None:
     assert re.search(r"--help.{0,80}grep", text), f"{doc.name}: no per-VERB probe (script's own --help) — `command -v` alone is not enough; it passes on a host whose CLI lacks the verb"
 
 
+# A CONDITIONAL gate phrase — each makes availability contingent on the probe rather
+# than naming a state. Enumerated from what the three docs actually say, not invented.
+VERIFY_PROBE_GATE = re.compile(
+    r"only where the probe says so|probe (?:the verb )?at call time|probe before calling|probe anyway",
+    re.I,
+)
+
+# The EXPIRED standing claim. Deliberately narrow: `not implemented on this host` is the
+# runtime degrade message and must stay legal (see the docstring below).
+VERIFY_STANDING_ABSENCE = re.compile(r"not\s+on\s+the\s+deployed", re.I)
+
+
 @pytest.mark.parametrize("doc", DOCS, ids=lambda p: p.name)
 def test_verify_is_probe_gated_not_asserted_either_way(doc: Path) -> None:
     """Every doc gates `verify` on the PROBE rather than asserting its availability.
@@ -121,10 +133,43 @@ def test_verify_is_probe_gated_not_asserted_either_way(doc: Path) -> None:
     any test that hardcodes a verb's presence or absence has a shelf life. The probe is
     what stays correct on every host on every day, and it is the only thing worth
     asserting. A dated number belongs in prose as history, never in an assertion.
+
+    THE FIRST REPLACEMENT WAS A RUBBER STAMP, AND IT PERMITTED THE FALSEHOOD. It
+    asserted `verify.{0,400}?probe|probe.{0,400}?verify` — token CO-OCCURRENCE read as a
+    semantic tie. Measured: 10 / 5 / 3 matches across the three docs, because both words
+    appear 8-24 times each; the assert could not fail whatever the prose said. Worse, the
+    exact sentence the OLD test demanded — "verify is NOT on the deployed script — probe
+    before calling" — MATCHES it. A guard written to stop a falsehood being re-asserted
+    admitted it verbatim. Proximity is not entailment; a needle nobody has shown can MISS
+    is not a guard.
+
+    So the invariant is pinned in TWO directions, because either alone is defeated:
+      * POSITIVE — an explicit CONDITIONAL gating phrase must be present. Each phrase
+        asserts availability is contingent on the probe, never a state.
+      * NEGATIVE — the standing claim "not on the deployed" must be ABSENT. The gate
+        phrase alone is insufficient: the hostile sentence above carries one.
+    `NOT implemented on this host` is deliberately NOT forbidden — it is the runtime
+    DEGRADE message inside `if ! aimaestro_trdd_has verify`, i.e. what the agent PRINTS
+    when the probe says no. Banning it would redden correct writing (use vs mention),
+    which is how a repo loses a detector it still needs.
     """
     text = _flat(doc)
-    assert re.search(r"verify.{0,400}?probe|probe.{0,400}?verify", text, re.I | re.S), f"{doc.name}: `verify` is not tied to the capability probe — it must be presented as available only where the probe says so, never asserted present or absent"
+    assert VERIFY_PROBE_GATE.search(text), f"{doc.name}: no CONDITIONAL probe-gate phrase for `verify` — it must be presented as available only where the probe says so, never asserted present or absent"
+    assert not VERIFY_STANDING_ABSENCE.search(text), f"{doc.name}: re-asserts the EXPIRED standing claim that `verify` is not on the deployed script (measured present 2026-08-21: 627 lines, 9 verbs)"
     assert "69" in text, f"{doc.name}: does not cite ai-maestro#69 for the verify capability history"
+
+
+def test_the_verify_probe_gate_detector_bites() -> None:
+    """Positive control in BOTH directions — the control the first replacement lacked."""
+    # The hostile case: carries a real gate phrase AND the expired standing claim.
+    # It passed the previous regex. It must fail now, on the NEGATIVE half.
+    hostile = "verify is NOT on the deployed script - probe before calling (ai-maestro#69)"
+    assert VERIFY_PROBE_GATE.search(hostile), "fixture is wrong: it should carry a gate phrase"
+    assert VERIFY_STANDING_ABSENCE.search(hostile), "the standing-claim detector does not bite — the guard is decorative again"
+    # Mere co-occurrence of the two words must NOT satisfy the gate (the old failure).
+    assert not VERIFY_PROBE_GATE.search("Step 3: verify an approval. Probe the script first.")
+    # The runtime degrade message must NOT read as the standing claim (use vs mention).
+    assert not VERIFY_STANDING_ABSENCE.search('echo "verify is NOT implemented on this host"')
 
 
 def test_docs_forbid_substituting_prose_when_verify_is_unavailable() -> None:
