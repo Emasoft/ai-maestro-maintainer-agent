@@ -51,20 +51,79 @@ The class generalizes past hooks. A gate can be enabled and check nothing:
 **Each fails silently in the same direction: nothing is red, because nothing ran.**
 Those are the findings that matter most precisely because nothing is failing on them.
 
-## Census corrected 2026-08-22 — 48 repos, and a fourth state
+## Census — RETRACTED TWICE, and the retractions are the useful part
 
-The hub re-ran over the whole machine (48 repos, not the ~15 fleet repos). Two
-structural corrections and one new state:
+**Do not cite any count here as settled.** Two successive hub censuses were withdrawn,
+the second because its classifier was broken in a way that made it right for the wrong
+reason. That history is kept because this card's whole subject is checks that pass
+without measuring anything — a census that did exactly that is the best worked example
+available.
 
-| state | count |
+**The classifier bug (hub's own post-mortem).** The loop tested
+`[ -x "$d/$hp/pre-push" ]`, but `$hp` is ABSOLUTE for most repos, so the concatenation
+produced `/Users/…/Code/foo//Users/…/.config/git/hooks` — a path that cannot exist.
+Every branch failed and those rows printed `live=no` **by construction, for any input**.
+The `DECORATIVE` branch additionally required `-z "$hp"` while `core.hooksPath` is set
+everywhere, so **it fired zero times**. And the loop computed `git rev-parse --git-path
+hooks` — the correct instrument — into a variable it never used. It survived review
+because `live=no` was a TRUE sentence about those repos, reached by a route that would
+have printed it regardless.
+
+**Corrected numbers (ask git what it resolves, then ask the filesystem):**
+
+| | count |
 |---|---|
-| LIVE (own tracked hook executes) | 6 |
-| DECORATIVE (ships a hook git never resolves) | **3** — the only figure stable across both populations |
-| SHADOWED (stale ignored `.git/hooks/pre-push`) | 9 (was 4) |
-| INHERITED (no local `core.hooksPath`; takes the machine default) | **39** |
+| execute a pre-push resolved to the **global LFS shim** | 39 |
+| execute a pre-push resolved **repo-locally** | 7 |
+| execute **nothing** at the resolved path | 2 |
+| DECORATIVE (ships a guard git never resolves) | **5**, was reported 3 |
 
-**The states are NOT a partition.** Two repos are LIVE *and* SHADOWED at once, so the
-check must report each state per ARTIFACT and never classify a repo into one bucket.
+**46 of 48 repos execute a pre-push**, not the 6 the first table implied — anyone
+reading "6 LIVE / 48" as coverage got the inverse of reality. The substantive point
+survives all of it: for 39 of them the executed file is the LFS shim that gates nothing.
+
+**DECORATIVE rose to 5 only under PATH-AGNOSTIC discovery** (`git ls-files | grep -E
+'(^|/)pre-push$'` instead of three assumed directory names). One repo ships at
+`scripts/hooks/pre-push`; another ships `.githooks/pre-push` while `hooksPath=git-hooks`
+— two directories, one reviewed, the other executed. **Any implementation here must
+discover hook files, never assume where they live** — assuming the directory is how the
+first count missed two.
+
+**The states are NOT a partition.** A repo can be LIVE *and* SHADOWED at once, so report
+per ARTIFACT and never classify a repo into one bucket.
+
+## Fifth state — DEPRIVED, and THIS REPO IS IN IT
+
+`core.hooksPath` **replaces the entire hooks directory**; there is no per-hook fallback
+to the global one. So a repo that sets it to ADD a push gate silently REMOVES every
+other hook type the global dir was providing.
+
+Measured here 2026-08-22:
+
+```
+.githooks/                -> pre-push                                    (1 file)
+~/.config/git/hooks/      -> pre-push post-checkout post-commit post-merge
+lost by overriding        -> post-checkout, post-commit, post-merge
+```
+
+**Benign in this repo** — it tracks zero LFS patterns and zero LFS objects, so the three
+lost hooks were Git LFS hooks with nothing to do. **Not benign in general**, and that is
+exactly why it belongs in a downstream check: an entrusted repo that DOES use LFS and
+sets a local `hooksPath` loses LFS checkout/commit/merge behaviour with no error, no
+warning, and a `core.hooksPath` value that reads as correctly configured. Fleet-wide, 7
+of 9 repos with a local hooksPath provide only `pre-push`; one points at a directory
+containing nothing and therefore runs no hooks at all while appearing configured.
+
+This makes the model a **per-hook-type matrix**, not a per-repo state: for each hook
+type, what does git resolve, and does a file exist there?
+
+## Caution carried from the hub's near-miss
+
+They formed "384/388 bytes is LFS-shim-sized, classify on size" and were about to use
+it. Reading refuted it: one 384 B hook delegates to `publish.py --gate`, one 388 B hook
+runs ruff + mypy under `set -euo pipefail`. Both real guards, merely short. **Size is a
+reason to OPEN a file, never a reason to classify it.** The read is what proved the LFS
+finding; the size only prompted it.
 
 **INHERITED is not "protected by an external file" — measured, it is protected by
 nothing.** `~/.config/git/hooks/pre-push` on this machine is 388 bytes of **stock Git
@@ -111,8 +170,16 @@ a PR, never a direct edit.
 
 ## Acceptance
 
-- [ ] the three states above are distinguished by MEASUREMENT (both commands), never by
-      the presence of a file
+- [ ] hook files are DISCOVERED (`git ls-files | grep -E '(^|/)pre-push$'`), never
+      assumed to live in a known directory — assuming the dir is what undercounted
+      DECORATIVE by two
+- [ ] the resolved path comes from `git rev-parse --git-path hooks`, and the classifier
+      NEVER string-concatenates it with the repo root (`core.hooksPath` is frequently
+      absolute; concatenating yields a path that cannot exist, and every branch then
+      reports "not live" for any input — the exact bug that produced the retracted table)
+- [ ] reported per ARTIFACT and per HOOK TYPE, never as one state per repo
+- [ ] the states above are distinguished by MEASUREMENT, never by the presence of a file
+      and never by its SIZE
 - [ ] a positive control proves the detector bites: a fixture whose `core.hooksPath`
       points somewhere else must be reported DECORATIVE, and a correctly-wired one must
       NOT be — a guard that reddens on correct configuration gets deleted
