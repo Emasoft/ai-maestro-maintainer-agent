@@ -3,10 +3,10 @@ trdd-id: HDO00XSF
 title: This repo ships the 17-column kanban vocabulary that 3-pillars 3.0.0 replaced with 22
 column: backburner
 created: 2026-08-23T16:29:29+0200
-updated: 2026-08-23T16:31:58+0200
+updated: 2026-08-23T16:36:03+0200
 current-owner: ai-maestro-maintainer-agent
 task-type: docs
-approval-tier: 2
+min-approval-requirement: manager
 scope: project
 ---
 
@@ -27,10 +27,33 @@ the spec lands here or the USER says so.
 
 ## What was measured (this repo, 2026-08-23)
 
-**Six live files.** Measured exhaustively over every tracked file
-(`git ls-files | xargs grep`), matching the NUMBER (`17-column`, `exactly 17`), the
-terminal column (`live_auditing`), and the ORDER (`backburner … todo`) — because a
-file can be stale on the order alone: 3.0.0 moves `design` to *before* `todo`.
+**Six live files that DEFINE the vocabulary.** Confirmed by the UNION of two
+independent searches — and the word "exhaustive" is not claimed for either one alone,
+because neither is a superset of the other:
+
+- **Mesh A** (shape-dependent): the NUMBER (`17-column`, `exactly 17`), the terminal
+  column (`live_auditing`), the ORDER (`backburner … todo` on one line). A file can be
+  stale on the order alone — 3.0.0 moves `design` to *before* `todo`.
+- **Mesh B** (shape-independent, tracked + untracked via
+  `git ls-files --cached --others --exclude-standard`): the bare tokens
+  `backburner|live_auditing|human_review`, no number, arrow, adjacency or line shape.
+
+**Each mesh caught a file the other missed**, which is the whole reason both are
+recorded here:
+
+- Mesh A alone missed nothing new, but only after a fifth pattern was hand-added on a
+  hunch when `seed-readmes.md` failed to appear.
+- **Mesh B missed `skills/the-skills-menu/SKILL.md`** — its text is "17-column kanban",
+  which contains none of the three bare tokens.
+- **Mesh A missed `.cspell-project-words.txt`** — a spellcheck dictionary carrying
+  `backburner` as a word (line 46). Not a governance definition, but a genuine
+  DEPENDENT site: new snake_case columns may need entries there or the spell gate
+  reddens.
+
+Mesh B also returned 8 files that merely USE a column value in their own `column:`
+field (5 live cards, 2 archived cards, `CHANGELOG.md`). Verified none of them define
+the vocabulary. High recall, low precision — the delta had to be classified by hand,
+not counted.
 
 | file | what it is |
 |---|---|
@@ -39,7 +62,8 @@ file can be stale on the order alone: 3.0.0 moves `design` to *before* `todo`.
 | `skills/maintainer-trdd-adr/references/trdd-template.md` | lifecycle order handed to every authored TRDD |
 | `skills/maintainer-trdd-adr/references/seed-readmes.md` | lifecycle order seeded into new repos' `design/` READMEs — **matches on ORDER only**, carries neither the number nor `live_auditing` |
 | `design/tasks/README.md` | this repo's own board legend |
-| `skills/the-skills-menu/SKILL.md` | menu row 17 names "17-column kanban" |
+| `skills/the-skills-menu/SKILL.md` | menu row 17 names "17-column kanban" — **invisible to Mesh B** |
+| `.cspell-project-words.txt` | dependent site, not a definition — carries `backburner` as a dictionary word |
 
 `design/archived/…-VLIP8CHM-…` also says 17 and is correctly excluded — a terminal
 card is frozen historical record, not a site.
@@ -100,20 +124,62 @@ it, and this repo's own memory carries the note for exactly this trap
 and paid for itself by surfacing the negative gate, which no amount of grepping
 would have revealed.
 
+## This card was itself written from a stale global rule — measured, not theorised
+
+Its frontmatter originally read `approval-tier: 2`. That field is **RETIRED**
+(USER ruling 2026-07-10); the live field is `min-approval-requirement:` on the ladder
+`none < orchestrator < chief-of-staff < manager < user`. It has been corrected to
+`min-approval-requirement: manager`.
+
+✓ VERIFIED first-hand in this repo, not taken from the peer:
+`skills/maintainer-aimaestro-trdd/references/instructions.md:186` — *"Approval authority
+is read from the card's own `min-approval-requirement:`"* — and the persona suite that
+was run for this card already proves it, with
+`test_persona_carries_the_full_approval_floor_enum[none|orchestrator|chief-of-staff|manager|user]`
+(5 IDs, passing) plus `test_persona_treats_the_numeric_tier_field_as_decode_only`.
+
+The wrong field was written by following `~/.claude/rules/trdd-approval-tiers.md`, a
+janitor-shipped GLOBAL rule that still teaches the retired numeric tier. That is the
+exact hazard this card is about, reproduced inside the card that reports it: a stale
+global rule reads as current to every session on the machine, and this repo's own
+shipped persona already contradicts it — a contradiction no test can see, because the
+test guards the persona, not the rules file.
+
 ## Do NOT
 
-- Edit `~/.claude/rules/universal-kanban.md`. It is janitor-shipped, still says 17,
-  and the peer flagged it as stale-not-authoritative. It is not this repo's to fix.
+- Edit `~/.claude/rules/universal-kanban.md` (still says 17) or
+  `~/.claude/rules/trdd-approval-tiers.md` (still teaches `approval-tier:`). Both are
+  janitor-shipped global rules asserting superseded governance, both are the USER's
+  own files, and neither is this repo's to fix. The peer is raising both to the USER.
+  Do not "restore the ratified baseline" from either text.
 - Touch the ratified GitHub branch-ruleset baseline. The peer confirmed 3.0.0 does
   not change `baseline-history-protect` / `baseline-pr-and-checks` /
   `baseline-tag-protect`, and this repo's memory already records that slice as done.
 - Re-evaluate non-archived cards. The USER's mandate to do that was issued about
   ai-maestro's corpus and does not cross the repo boundary.
 
-## Next action when authorized
+## BLOCKER — the 3.0.0 artifact is UNPUBLISHED
+
+The same peer corrected itself on 2026-08-23: `governance-rules` is **282 commits
+ahead of its remote**, published state is **2026-08-21**. It cited the branch as
+fetchable; it is not. So step 1 below is **not runnable today** — there is nothing to
+read, and the vocabulary in this card remains hearsay with no path to verification
+from this repo.
+
+Three spec repairs the peer reported after the first message (commit `928c96b3`),
+all found by peers, none by any test:
+
+- **3P-KAN-20** — the legal `column:` set is **27**, not 22; the 5 bracket values sit
+  outside the board. (This card already said 27/22/5 — consistent, no change.)
+- **3P-KAN-10** — `human_review` is now a **RESTING** column. If that lands here it
+  matters to this board directly: two cards (`TRDD-DBT8UACO`, `TRDD-PY5QXSBU`) sit at
+  `human_review` and would be correctly *parked* rather than stalled.
+- **3P-KAN-21** — cards that entered `todo` on or before 2026-08-23 are grandfathered.
+
+## Next action when authorized AND the artifact is published
 
 1. Read the real 3.0.0 artifact from `Emasoft/ai-maestro@governance-rules` — do not
-   trust the list above.
+   trust the list above. **Blocked until it is pushed** (see above).
 2. Update the 6 live files in one batch, persona first.
 3. Update `tests/test_persona_governance.py` in the SAME change — not optional
    tidiness: the negative gate (test 3 above) turns the suite red the instant the
