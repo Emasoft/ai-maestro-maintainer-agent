@@ -3,7 +3,7 @@ trdd-id: HDO00XSF
 title: This repo ships the 17-column kanban vocabulary that 3-pillars 3.0.0 replaced with 22
 column: backburner
 created: 2026-08-23T16:29:29+0200
-updated: 2026-08-23T16:36:03+0200
+updated: 2026-08-23T16:39:37+0200
 current-owner: ai-maestro-maintainer-agent
 task-type: docs
 min-approval-requirement: manager
@@ -43,12 +43,18 @@ recorded here:
 
 - Mesh A alone missed nothing new, but only after a fifth pattern was hand-added on a
   hunch when `seed-readmes.md` failed to appear.
-- **Mesh B missed `skills/the-skills-menu/SKILL.md`** — its text is "17-column kanban",
-  which contains none of the three bare tokens.
+- **Mesh B missed `skills/the-skills-menu/SKILL.md`** — ✓ VERIFIED by grepping that
+  file directly for all three bare tokens: no match. Its text is "17-column kanban".
 - **Mesh A missed `.cspell-project-words.txt`** — a spellcheck dictionary carrying
-  `backburner` as a word (line 46). Not a governance definition, but a genuine
-  DEPENDENT site: new snake_case columns may need entries there or the spell gate
-  reddens.
+  `backburner` as a word (line 46). Not a governance definition. **POSSIBLE**
+  dependent site, deliberately not stated as more: `.cspell.json`, `.mega-linter.yml`
+  and `.github/workflows/ci.yml` all exist, so a gate plausibly exists — but nothing
+  here verifies that cspell runs on the files carrying columns, how it splits
+  `snake_case`, or whether an unknown word fails or merely warns. This repo's memory
+  already records cspell running **dictionary-less for months** behind
+  `VALIDATE_ALL_CODEBASE: false`, so "a green gate may be pointed at nothing" cuts
+  both ways: an unverified gate may also fire on nothing. Check it when the edit is
+  authorized; do not plan around it before.
 
 Mesh B also returned 8 files that merely USE a column value in their own `column:`
 field (5 live cards, 2 archived cards, `CHANGELOG.md`). Verified none of them define
@@ -145,6 +151,39 @@ global rule reads as current to every session on the machine, and this repo's ow
 shipped persona already contradicts it — a contradiction no test can see, because the
 test guards the persona, not the rules file.
 
+### …and the FIRST correction repeated the same mistake one level down
+
+The replacement value `manager` was originally derived from the Tier-2 → MANAGER row
+of that same stale global rule. Rejecting a source's *schema* while trusting its
+*semantics* three lines later is not a correction, it is the same error wearing a new
+value — and it fails **silently**, because nothing tests a card's floor: `verify`
+checks the issuer's title *against* whatever the card claims, so a floor that is too
+low does not error, it **approves**.
+
+Re-derived from first-party text instead
+(`skills/maintainer-trdd-adr/references/trdd-template.md:43-98`, which
+`maintainer-approval-gate` names as the single place field semantics are defined):
+
+- `min-approval-requirement:` floor is `none | orchestrator | chief-of-staff | manager
+  | user`; **`user` is the TOP rung**; `maestro` is a read-alias, never written.
+- `approval-tier:` is deprecated, **decode-only**, migrating on next touch —
+  `0 → none`, `1 → chief-of-staff`, `2 → manager`, `3 → user`.
+- **An absent or unknown value resolves to `manager`, never `none`.**
+- `:96` — "The MAINTAINER is a governance-layer peer and files **manager-floor
+  proposals** (`min-approval-requirement: manager`) DIRECTLY to MANAGER (no
+  CHIEF-OF-STAFF hop)."
+
+So `manager` survives on first-party grounds: it is both the documented MAINTAINER
+default and the resolve-to value. The tier map agreed — but that agreement is now a
+coincidence that was *checked*, not a premise that was *inherited*.
+
+**⚠ UNRESOLVED, and it belongs to the approver, not to this card.** No text in this
+repo states whether rewriting the SHIPPED PERSONA's governance vocabulary — the text
+every entrusted downstream repo inherits — clears at `manager` or needs `user`. The
+floor recorded here is the MAINTAINER's documented default, not a finding that this
+particular work is manager-tier. This card is intake and requests nothing; the
+migration will, and whoever approves it should settle manager-vs-user first.
+
 ## Do NOT
 
 - Edit `~/.claude/rules/universal-kanban.md` (still says 17) or
@@ -160,21 +199,29 @@ test guards the persona, not the rules file.
 
 ## BLOCKER — the 3.0.0 artifact is UNPUBLISHED
 
-The same peer corrected itself on 2026-08-23: `governance-rules` is **282 commits
-ahead of its remote**, published state is **2026-08-21**. It cited the branch as
-fetchable; it is not. So step 1 below is **not runnable today** — there is nothing to
-read, and the vocabulary in this card remains hearsay with no path to verification
-from this repo.
+The same peer corrected itself on 2026-08-23: `governance-rules` is **unpushed**
+(it reported 282 commits ahead, then 284 — the number moves as it works), published
+state is **2026-08-21**. It cited the branch as fetchable; it is not. So step 1 below
+is **not runnable today** — there is nothing to read, and the vocabulary in this card
+remains hearsay with no path to verification from this repo. Everything in this
+section is the peer's assertion recorded AS the peer's assertion; none of it is
+measured here.
 
-Three spec repairs the peer reported after the first message (commit `928c96b3`),
-all found by peers, none by any test:
+Five spec repairs the peer reported after the first message (from commit `928c96b3`
+onward), all found by peers, none by any test:
 
 - **3P-KAN-20** — the legal `column:` set is **27**, not 22; the 5 bracket values sit
   outside the board. (This card already said 27/22/5 — consistent, no change.)
 - **3P-KAN-10** — `human_review` is now a **RESTING** column. If that lands here it
   matters to this board directly: two cards (`TRDD-DBT8UACO`, `TRDD-PY5QXSBU`) sit at
   `human_review` and would be correctly *parked* rather than stalled.
-- **3P-KAN-21** — cards that entered `todo` on or before 2026-08-23 are grandfathered.
+- **3P-KAN-21** (later WIDENED) — grandfathering is not just `todo`: **three** columns
+  changed meaning, and `design` and `backburner` drift in **opposite directions**.
+  That reaches this board directly — four live cards sit at `backburner`, including
+  this one. Read the widened text before re-columning anything.
+- **3P-KAN-22** — the approver is DERIVED from the column or from
+  `min-approval-requirement:`; no new field is minted. Consistent with this repo,
+  where `min-approval-requirement:` is already the only floor field.
 
 ## Next action when authorized AND the artifact is published
 
