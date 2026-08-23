@@ -3,7 +3,8 @@ trdd-id: HDO00XSF
 title: This repo ships the 17-column kanban vocabulary that 3-pillars 3.0.0 replaced with 22
 column: backburner
 created: 2026-08-23T16:29:29+0200
-updated: 2026-08-23T16:42:52+0200
+updated: 2026-08-23T16:45:26+0200
+relevant-rules: [1.2, 8.1]
 current-owner: ai-maestro-maintainer-agent
 task-type: docs
 min-approval-requirement: manager
@@ -178,18 +179,46 @@ anywhere in the repo. So `trdd-template.md` is the **best available local source
 not the canonical one, and this card says so rather than promoting a waypoint to a
 terminus.
 
-**RESOLVED, and it confirms `manager`.** The shipped persona states the `user` trigger
-outright (`agents/ai-maestro-maintainer-agent-main-agent.md:449-454`):
+**RESOLVED as `manager`** — on the PRRD, which is the thing the trigger points AT.
+
+The persona states a `user` trigger (`agents/ai-maestro-maintainer-agent-main-agent.md:449-454`):
 
 > "any proposal you cannot self-authorize (Tier 2 — `min-approval-requirement:
 > manager`) goes straight to MANAGER, and MANAGER forwards the **highest-stakes
 > (golden / owner-identity)** ones (Tier 3 — `min-approval-requirement: user`) to
 > USER."
 
-The `user` floor is triggered by **golden PRRD rules** or **owner-identity**. Adopting
-a USER-ratified spec's vocabulary into this repo's own docs is neither: it touches no
-golden PRRD rule and nothing in the shared GitHub identity. `manager` is correct — and
-correct for a stated reason, not by inheritance or by fallback.
+That sentence alone does **not** settle it, and the earlier version of this card
+pretended otherwise: "(golden / owner-identity)" reads as much like a gloss on
+"highest-stakes" as like a closed enum, and the reading chosen was the one that
+confirmed the value already written. So the antecedent was checked instead —
+`design/requirements/PRRD.md`, **read whole** (42 lines), not through a window:
+
+- **Exactly ONE golden rule exists: `G1.2`** — GitHub authorship self-identification.
+  It says nothing about the kanban vocabulary, the column enum, the persona, or any
+  shipped governance surface. The negative half of the argument is now GROUNDED rather
+  than assumed from a general model of what a PRRD contains.
+- **The rule that DOES govern this work is `S8.1`** — *"TRDDs use the v2 `column:`
+  kanban schema (no v1 `status:` field) and the 4-zone design folders…"* — and it is
+  **SILVER**. Silver is MANAGER-mutable by the PRRD's own definition (`§I`).
+
+So `manager` no longer rests on the ambiguous parenthetical at all: the rule governing
+the kanban schema is silver, and silver means manager. The persona sentence is now
+corroboration, not load-bearing. Recorded in `relevant-rules:`.
+
+### Found while checking: the shipped persona VIOLATES PRRD S8.1
+
+S8.1 forbids the v1 `status:` field. The persona's folder table
+(`agents/…-main-agent.md:456-465`) is headed `` | Folder | `status:` | Meaning | ``
+and its prose instructs **"the approver sets `status: planned`"** — teaching the
+retired field, in shipped governance text, to every reader of the persona.
+
+✓ VERIFIED nothing guards it: `grep -n "status:" tests/test_persona_governance.py`
+returns nothing. The suite that proves the persona names all 17 columns and carries
+the full 5-value approval floor has **no assertion about the v1 field S8.1 bans**.
+This is the same class as the whole card — a governance defect in prose that no test
+can see — but unlike the 17→22 drift it is live *today* and does not wait on 3.0.0.
+It is out of scope here; it deserves its own card.
 
 Two supports used in the previous pass have been **dropped as unsound**, not merely
 softened: "absent/unknown resolves to `manager`" is a fallback for cards whose author
@@ -203,13 +232,15 @@ persona quote above does, on its own.
 `agents/…-main-agent.md:445` closes the approval section with
 **"Reference: `~/.claude/rules/trdd-approval-tiers.md`"** — the same janitor-shipped
 global rule that still teaches the retired `approval-tier:`. The persona's own text is
-correct; its *pointer* sends the reader to superseded governance, and that pointer
-ships to every entrusted downstream repo. That raises the stale-rule issue from "a
-session might read it" to "this project's shipped persona cites it". Worth attaching
-to whatever goes to the USER about those two global files.
+correct; its *pointer* sends the reader to superseded governance. That raises the
+stale-rule issue from "a session might read it" to "this project's persona cites it".
+Worth attaching to whatever goes to the USER about those two global files.
 
-Noted in passing for the migration pass, out of scope here: the folder table at
-`:456` labels its column `status:`, a v1 field name — `column:` is the state machine.
+⚠ Not claimed: how far that pointer travels. "Ships to every entrusted downstream
+repo" was asserted repeatedly earlier in this thread **without ever verifying the
+distribution mechanism** — whether downstream repos receive this persona file, or
+merely have the plugin installed, is a different claim and an unchecked one. Check it
+before repeating it.
 
 ## Do NOT
 
