@@ -3,7 +3,7 @@ trdd-id: HDO00XSF
 title: This repo ships the 17-column kanban vocabulary that 3-pillars 3.0.0 replaced with 22
 column: backburner
 created: 2026-08-23T16:29:29+0200
-updated: 2026-08-23T16:45:26+0200
+updated: 2026-08-23T16:49:47+0200
 relevant-rules: [1.2, 8.1]
 current-owner: ai-maestro-maintainer-agent
 task-type: docs
@@ -198,13 +198,52 @@ confirmed the value already written. So the antecedent was checked instead —
   It says nothing about the kanban vocabulary, the column enum, the persona, or any
   shipped governance surface. The negative half of the argument is now GROUNDED rather
   than assumed from a general model of what a PRRD contains.
-- **The rule that DOES govern this work is `S8.1`** — *"TRDDs use the v2 `column:`
-  kanban schema (no v1 `status:` field) and the 4-zone design folders…"* — and it is
-  **SILVER**. Silver is MANAGER-mutable by the PRRD's own definition (`§I`).
+- No overlay can change that: `.claude/rules/` does not exist here (established
+  above), so no seeded `aimaestro-prrd-governance.md` authority matrix is in play, and
+  the PRRD's own frontmatter carries `mirrors: []`.
 
-So `manager` no longer rests on the ambiguous parenthetical at all: the rule governing
-the kanban schema is silver, and silver means manager. The persona sentence is now
-corroboration, not load-bearing. Recorded in `relevant-rules:`.
+**A previous version of this card argued from `S8.1` being SILVER. That was a
+non-sequitur and is withdrawn.** "Silver" says who may edit *the rule*; it says nothing
+about the floor for *work touching the rule's subject*. Rule-mutability and
+work-authorization are different axes. Worse, S8.1's scope is *"TRDDs use the v2
+`column:` schema…"*, and four of the six files here are not TRDDs and are not about
+what TRDDs use (the persona, `seed-readmes.md`, the skills menu, the test). Reaching
+for the nearest rule containing the word `column:` was topical adjacency dressed as
+governance.
+
+**The floor comes from the floor-assignment table, read whole**
+(`skills/maintainer-approval-gate/references/approval-request.md:19-24`):
+
+| Trigger | Floor |
+|---|---|
+| Destructive git — force-push, history rewrite, tag/branch deletion (R19.7) | `manager` |
+| Deviating from the ratified baseline rulesets | `manager` |
+| **Entering the release pipeline on a TRDD you own** | **`manager`** |
+| Anything golden / owner-identity — MANAGER forwards it to USER | `user` |
+
+The migration must ship via `publish.py` (S2.1 — no other push path exists), so it
+matches the third row **by name**. `manager`. Not by inheritance, not by fallback, not
+by analogy.
+
+### The falsification search — the shape never run until now
+
+Four derivations of the same value, and every search behind them was
+**confirmation-shaped**: *where is the floor defined*, *what does the trigger say*,
+*what does the PRRD contain*. None asked what would make it `user`. That was run:
+
+```
+git ls-files -z | xargs -0 grep -nEi 'tier.?3|highest-stakes|owner-identity|owner-facing|breaking.*public|governance-layer|shipped surface'
+```
+
+30 hits, **clean**. Four independent enumerations of the Tier-3 set — persona `:453`,
+persona `:530-531` ("GOLDEN PRRD changes, rule promote/demote, and irreversible /
+owner-identity / shared-credential actions"), approval-gate `:24`, `README.md:146` —
+and they agree. **None names personas, shipped artifacts, docs, or governance text.**
+`skills/maintainer-prrd-trdd-kanban/SKILL.md`, whose whole subject is this
+intersection, returned no escalation trigger at all.
+
+**`manager` is SETTLED. Stop re-deriving it.** Further confirmation-shaped search has
+negative value; the unfinished work on this card is the unfetchable 3.0.0 artifact.
 
 ### Found while checking: the shipped persona VIOLATES PRRD S8.1
 
@@ -218,7 +257,12 @@ returns nothing. The suite that proves the persona names all 17 columns and carr
 the full 5-value approval floor has **no assertion about the v1 field S8.1 bans**.
 This is the same class as the whole card — a governance defect in prose that no test
 can see — but unlike the 17→22 drift it is live *today* and does not wait on 3.0.0.
-It is out of scope here; it deserves its own card.
+Out of scope here: **filed separately as `TRDD-3EI7X5DT`.**
+
+(The "no test guards it" grep was one literal string and is weak on its own. The
+stronger argument does not depend on it: the suite is 36/36 GREEN while a real
+violation is present — any test that effectively guarded the banned field would be
+RED. That holds whatever string was grepped.)
 
 Two supports used in the previous pass have been **dropped as unsound**, not merely
 softened: "absent/unknown resolves to `manager`" is a fallback for cards whose author
