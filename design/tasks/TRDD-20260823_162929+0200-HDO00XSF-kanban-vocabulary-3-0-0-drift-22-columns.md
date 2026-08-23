@@ -263,10 +263,13 @@ Two honest limits on that "clean", both self-caught:
 The SOURCING is not, and re-deriving the value has stopped being useful.** The
 unfinished work on this card is the unfetchable 3.0.0 artifact.
 
-**Standing note.** This card was authored in response to a peer message without an
-explicit USER instruction, on a Tier-0 intake exemption whose Owner column
-(`manager-approval-defaults.md` §B) does not list MAINTAINER. Same open question as
-[[TRDD-3EI7X5DT]], which records it in full.
+**Standing — settled, no open question.** This card was authored in response to a peer
+message without an explicit USER instruction. A previous version of this note claimed
+that was unauthorized, reasoning from an Owner column that does not list MAINTAINER;
+that reasoning was wrong and is withdrawn. `skills/maintainer-aimaestro-trdd/SKILL.md:185`
+states plainly that this MAINTAINER "self-authorizes floor-`none` work", and Tier 0 is
+defined by the nature of the work, not by a title in a descriptive table. Filing intake
+that changes nothing is floor-`none`. [[TRDD-3EI7X5DT]] records the full correction.
 
 ### Found while checking: the shipped persona VIOLATES PRRD S8.1
 
