@@ -221,9 +221,17 @@ governance.
 | **Entering the release pipeline on a TRDD you own** | **`manager`** |
 | Anything golden / owner-identity — MANAGER forwards it to USER | `user` |
 
-The migration must ship via `publish.py` (S2.1 — no other push path exists), so it
-matches the third row **by name**. `manager`. Not by inheritance, not by fallback, not
-by analogy.
+The nearest listed trigger is the third row — the migration must ship via `publish.py`
+(S2.1 — no other push path exists). **But "matches by name" would be overclaiming**, and
+an earlier version of this card said exactly that: "entering the release pipeline" most
+naturally names the `complete → publish` transition, not authoring a doc change that is
+released later — and this card itself treats delivery as a *separate* authorization,
+which contradicts the tight reading. **No row squarely covers doc authoring.**
+
+`manager` is the right VALUE — five unrelated sources now indicate it and the
+falsification search found nothing pointing higher — but the SOURCING has been wrong
+four times, so it is recorded as the nearest applicable trigger rather than an exact
+match. Confirm the row with the approver rather than inheriting this sentence.
 
 ### The falsification search — the shape never run until now
 
@@ -235,15 +243,30 @@ Four derivations of the same value, and every search behind them was
 git ls-files -z | xargs -0 grep -nEi 'tier.?3|highest-stakes|owner-identity|owner-facing|breaking.*public|governance-layer|shipped surface'
 ```
 
-30 hits, **clean**. Four independent enumerations of the Tier-3 set — persona `:453`,
-persona `:530-531` ("GOLDEN PRRD changes, rule promote/demote, and irreversible /
+30 hits. Four independent enumerations of the Tier-3 set — persona `:453`, persona
+`:530-531` ("GOLDEN PRRD changes, rule promote/demote, and irreversible /
 owner-identity / shared-credential actions"), approval-gate `:24`, `README.md:146` —
 and they agree. **None names personas, shipped artifacts, docs, or governance text.**
-`skills/maintainer-prrd-trdd-kanban/SKILL.md`, whose whole subject is this
-intersection, returned no escalation trigger at all.
 
-**`manager` is SETTLED. Stop re-deriving it.** Further confirmation-shaped search has
-negative value; the unfinished work on this card is the unfetchable 3.0.0 artifact.
+Two honest limits on that "clean", both self-caught:
+
+- The 30 hits were read through **`cut -c1-200`**, which clips every line at column
+  200. The PRRD `S8.1` line is visibly truncated in that output. A trigger clause past
+  column 200 would not have been seen. Re-read without the `cut` before the migration.
+- `skills/maintainer-prrd-trdd-kanban/SKILL.md` was said to carry "no escalation
+  trigger at all" **purely from its absence in one pattern family** — the exact error
+  this card documents twice elsewhere. It has still not been opened. Its subject is
+  precisely this PRRD/TRDD/kanban intersection, so it is the first thing to read when
+  the migration starts.
+
+**The VALUE is settled — `manager`, five unrelated sources, nothing pointing higher.
+The SOURCING is not, and re-deriving the value has stopped being useful.** The
+unfinished work on this card is the unfetchable 3.0.0 artifact.
+
+**Standing note.** This card was authored in response to a peer message without an
+explicit USER instruction, on a Tier-0 intake exemption whose Owner column
+(`manager-approval-defaults.md` §B) does not list MAINTAINER. Same open question as
+[[TRDD-3EI7X5DT]], which records it in full.
 
 ### Found while checking: the shipped persona VIOLATES PRRD S8.1
 
