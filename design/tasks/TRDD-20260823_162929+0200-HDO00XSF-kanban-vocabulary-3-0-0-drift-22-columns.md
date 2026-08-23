@@ -3,7 +3,7 @@ trdd-id: HDO00XSF
 title: This repo ships the 17-column kanban vocabulary that 3-pillars 3.0.0 replaced with 22
 column: backburner
 created: 2026-08-23T16:29:29+0200
-updated: 2026-08-23T16:39:37+0200
+updated: 2026-08-23T16:42:52+0200
 current-owner: ai-maestro-maintainer-agent
 task-type: docs
 min-approval-requirement: manager
@@ -160,29 +160,56 @@ value — and it fails **silently**, because nothing tests a card's floor: `veri
 checks the issuer's title *against* whatever the card claims, so a floor that is too
 low does not error, it **approves**.
 
-Re-derived from first-party text instead
-(`skills/maintainer-trdd-adr/references/trdd-template.md:43-98`, which
-`maintainer-approval-gate` names as the single place field semantics are defined):
+### Re-derived — and the chain was walked to its end this time
+
+`maintainer-approval-gate` defers to
+`skills/maintainer-trdd-adr/references/trdd-template.md:43-98`, which states:
 
 - `min-approval-requirement:` floor is `none | orchestrator | chief-of-staff | manager
   | user`; **`user` is the TOP rung**; `maestro` is a read-alias, never written.
 - `approval-tier:` is deprecated, **decode-only**, migrating on next touch —
   `0 → none`, `1 → chief-of-staff`, `2 → manager`, `3 → user`.
-- **An absent or unknown value resolves to `manager`, never `none`.**
-- `:96` — "The MAINTAINER is a governance-layer peer and files **manager-floor
-  proposals** (`min-approval-requirement: manager`) DIRECTLY to MANAGER (no
-  CHIEF-OF-STAFF hop)."
 
-So `manager` survives on first-party grounds: it is both the documented MAINTAINER
-default and the resolve-to value. The tier map agreed — but that agreement is now a
-coincidence that was *checked*, not a premise that was *inherited*.
+But `trdd-template.md:70` **disclaims being the authority** and names its own upstream:
+`rules/aimaestro/aimaestro-trdd-approval.md`, "seeded into agent workdirs as
+`.claude/rules/aimaestro-trdd-approval.md`". ✓ CHECKED: that file does **not** exist
+here — `.claude/rules/` does not exist at all, and no `rules/aimaestro/` directory is
+anywhere in the repo. So `trdd-template.md` is the **best available local source**,
+not the canonical one, and this card says so rather than promoting a waypoint to a
+terminus.
 
-**⚠ UNRESOLVED, and it belongs to the approver, not to this card.** No text in this
-repo states whether rewriting the SHIPPED PERSONA's governance vocabulary — the text
-every entrusted downstream repo inherits — clears at `manager` or needs `user`. The
-floor recorded here is the MAINTAINER's documented default, not a finding that this
-particular work is manager-tier. This card is intake and requests nothing; the
-migration will, and whoever approves it should settle manager-vs-user first.
+**RESOLVED, and it confirms `manager`.** The shipped persona states the `user` trigger
+outright (`agents/ai-maestro-maintainer-agent-main-agent.md:449-454`):
+
+> "any proposal you cannot self-authorize (Tier 2 — `min-approval-requirement:
+> manager`) goes straight to MANAGER, and MANAGER forwards the **highest-stakes
+> (golden / owner-identity)** ones (Tier 3 — `min-approval-requirement: user`) to
+> USER."
+
+The `user` floor is triggered by **golden PRRD rules** or **owner-identity**. Adopting
+a USER-ratified spec's vocabulary into this repo's own docs is neither: it touches no
+golden PRRD rule and nothing in the shared GitHub identity. `manager` is correct — and
+correct for a stated reason, not by inheritance or by fallback.
+
+Two supports used in the previous pass have been **dropped as unsound**, not merely
+softened: "absent/unknown resolves to `manager`" is a fallback for cards whose author
+did not decide and says nothing about a case that was decided; and `:96` ("the
+MAINTAINER files manager-floor proposals directly to MANAGER") is a **routing** rule
+that presupposes the floor rather than assigning it. Neither supports the value; the
+persona quote above does, on its own.
+
+### A further finding: the shipped persona POINTS AT the stale rule
+
+`agents/…-main-agent.md:445` closes the approval section with
+**"Reference: `~/.claude/rules/trdd-approval-tiers.md`"** — the same janitor-shipped
+global rule that still teaches the retired `approval-tier:`. The persona's own text is
+correct; its *pointer* sends the reader to superseded governance, and that pointer
+ships to every entrusted downstream repo. That raises the stale-rule issue from "a
+session might read it" to "this project's shipped persona cites it". Worth attaching
+to whatever goes to the USER about those two global files.
+
+Noted in passing for the migration pass, out of scope here: the folder table at
+`:456` labels its column `status:`, a v1 field name — `column:` is the state machine.
 
 ## Do NOT
 
