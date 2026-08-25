@@ -1,6 +1,6 @@
 [project]
 name = "ai-maestro-maintainer-agent"
-version = "1.13.10"
+version = "1.14.0"
 description = "Autonomous MAINTAINER agent for Claude Code that polls a GitHub repository, triages issues, enforces the canonical approval-gate, and guards against supply-chain drift via a six-class Guardian (zizmor / actionlint / Sentinel-port / SHA-pin freshness / branch-rule drift / secret-leak / package-manager safety-knob drift)."
 readme = "README.md"
 requires-python = ">=3.10"
