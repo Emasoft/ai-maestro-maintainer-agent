@@ -115,6 +115,27 @@ def test_persona_does_not_invent_columns_outside_the_ratified_set(persona: str) 
     assert used <= known, f"persona uses non-vocabulary column(s): {sorted(used - known)}"
 
 
+def test_persona_does_not_instruct_writing_the_v1_status_field(persona: str) -> None:
+    """PRRD S8.1: TRDDs use the v2 `column:` schema — no v1 `status:` field.
+
+    The violation this pins (TRDD-3EI7X5DT): the two-folder table was headed
+    `| Folder | `status:` |` and its prose read "the approver sets
+    `status: planned`" — an imperative instruction to write the banned field, in
+    the persona every session loads, while this whole suite stayed 36/36 green.
+    A strong gate only guards what it was pointed at; this points one at S8.1.
+
+    `gh auth status` and `required_status_checks` are unrelated and must stay
+    legal, so the assertions target the FIELD-NAME shapes (backticked
+    `status:...` and a line-anchored frontmatter field), never the bare word.
+    """
+    hits = re.findall(r"`status:[^`]*`", persona)
+    assert not hits, f"the persona writes the v1 `status:` field S8.1 bans: {hits}"
+    assert not re.search(r"(?m)^status:\s*\S", persona), "a bare `status:` frontmatter-style line appears in the persona"
+    # Two-way: the corrected teaching must be present, not merely the old one absent.
+    assert re.search(r"\|\s*Folder\s*\|\s*`column:`", persona), "the two-folder table no longer teaches the v2 `column:` field"
+    assert "`column: planned`" in persona, "the approval instruction must set `column: planned` (v2), not the banned v1 field"
+
+
 # ─────────────────── seeded read-only overlays (#29 Q4, bullet 3) ───────────────────
 
 

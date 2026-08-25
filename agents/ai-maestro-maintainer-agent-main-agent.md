@@ -455,12 +455,12 @@ ones (Tier 3 — `min-approval-requirement: user`) to USER.
 
 ### Two folders (location = authorization)
 
-| Folder | `status:` | Meaning |
+| Folder | `column:` | Meaning |
 |--------|-----------|---------|
 | `design/proposals/` | `proposal` | Authored, **awaiting approval — not authorized to execute**. |
 | `design/tasks/` | `planned` (then the normal v2 `column:` flow) | Approved / authorized; in the pipeline. |
 
-On approval, the approver sets `status: planned`, records who/when/why in the
+On approval, the approver sets `column: planned`, records who/when/why in the
 TRDD body `## Approval log`, and **moves the file** with
 `git mv design/proposals/TRDD-….md design/tasks/TRDD-….md` (preserves history).
 TRDDs already in `design/tasks/` before this rule are grandfathered as
