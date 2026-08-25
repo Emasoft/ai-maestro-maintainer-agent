@@ -1,9 +1,9 @@
 ---
 trdd-id: PY5QXSBU
 title: Migrate the 5 remaining amp-send call sites to the aimaestro-message CLI
-column: human_review
+column: complete
 created: 2026-08-20T08:32:04+0200
-updated: 2026-08-22T19:27:53+0200
+updated: 2026-08-25T14:40:00+0200
 current-owner: maintainer-agent-session
 task-type: docs
 min-approval-requirement: none
@@ -30,13 +30,11 @@ server's CLI layer necessarily lands).
       transport / 4 not-found / 5 ambiguous / 6 R6-refused-follow-hint / 7 auth;
       never `--from` as an agent) with `amp-send` as the explicit degrade path
 - [x] `grep -rn 'amp-send' skills/ agents/` shows only fallback-labelled uses
-- [ ] rides a release (publish.py) — **DEFERRED, not forgotten.** Two reasons,
-      both external to this card: (a) publish is NON-EXEMPT and needs the USER,
-      and the peer hub explicitly has no governance title over this repo to grant
-      it; (b) the host is at **99% disk / 25 GB free** (measured 2026-08-21
-      16:41) and a build+test+publish there risks a corrupt release and a
-      half-written index. Land the release on the next cycle, after the disk is
-      reclaimed.
+- [x] rides a release (publish.py) — both deferral reasons fell on 2026-08-25:
+      (a) the USER authorized the release directly ("complete all pending tasks
+      and TRDDs", same-day delegation, on top of the 2026-08-22 authorization
+      recorded below); (b) disk re-measured at **89% / 220 GB free**. The
+      release is executed this session; this closure rides it.
 
 Pattern to copy: `skills/maintainer-approval-gate/references/approval-request.md`.
 
@@ -93,3 +91,6 @@ widened fix is the correct one.
   occurrences fallback-labelled, re-grepped across the whole tree. The release box is
   still open and ticks when this rides `publish.py` (also authorized by the USER in the
   same exchange).
+- 2026-08-25T14:40:00+0200 — `human_review → complete` under the USER's explicit
+  same-day delegation; box 3 ticked (release authorized twice, disk blocker
+  gone at 89%/220 GB, publish executed this session). Archived as itself.

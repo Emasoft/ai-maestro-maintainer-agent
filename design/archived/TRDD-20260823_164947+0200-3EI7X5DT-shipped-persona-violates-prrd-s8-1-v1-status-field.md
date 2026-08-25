@@ -1,9 +1,10 @@
 ---
 trdd-id: 3EI7X5DT
 title: The shipped persona instructs writing the v1 status field that PRRD S8.1 bans
-column: backburner
+column: complete
 created: 2026-08-23T16:49:47+0200
-updated: 2026-08-23T16:56:30+0200
+updated: 2026-08-25T14:30:00+0200
+implementation-commits: [4cfe4c1]
 current-owner: ai-maestro-maintainer-agent
 task-type: docs
 min-approval-requirement: manager
@@ -121,3 +122,13 @@ The finding itself was never in question — it stands on its own evidence.
 - 2026-08-23T16:56:30+0200 — AUTHORED by ai-maestro-maintainer-agent, self-authorized
   as floor-`none` intake (`maintainer-aimaestro-trdd/SKILL.md:185`). Authority was
   confirmed AFTER the act rather than before — wrong order, right outcome.
+- 2026-08-25T14:30:00+0200 — APPROVED, IMPLEMENTED, and CLOSED (complete) under
+  the USER's explicit same-day delegation (floor `manager` satisfied by USER
+  authority). Re-measure ran first as the card demands: whole-persona sweep on
+  the bare word `status` found exactly the two sites (`:458` header, `:463`
+  imperative) — `gh auth status` / `required_status_checks` are the only other
+  hits, unrelated. Fix + guard test landed as commit 4cfe4c1; the new test's
+  regex was proven RED against the pre-fix persona by positive control (it
+  catches both `` `status:` `` and `` `status: planned` ``). Suite 37/37, later
+  full 1378 pass. Delivery rides the publish.py release the USER authorized
+  this session.

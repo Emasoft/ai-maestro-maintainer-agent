@@ -1,9 +1,10 @@
 ---
 trdd-id: G88RIN1C
 title: Detect guards that are committed but never executed on entrusted repos
-column: backburner
+column: complete
 created: 2026-08-22T19:47:45+0200
-updated: 2026-08-22T19:47:45+0200
+updated: 2026-08-25T14:35:00+0200
+implementation-commits: [ca61321]
 current-owner: maintainer-agent-session
 task-type: feature
 approval-tier: 0
@@ -270,38 +271,53 @@ a PR, never a direct edit.
 
 ## Acceptance
 
-- [ ] the repo set comes from the ECOSYSTEM SSOT, resolved BY NAME and found at depth —
+- [x] the repo set comes from the ECOSYSTEM SSOT, resolved BY NAME and found at depth —
       never `~/Code/*` or any directory glob. A glob is both too wide (it audits the
       owner's private projects, which the 2026-08-22 directive forbids) and too narrow
       (in-scope repos nest below depth 1)
-- [ ] hook files are DISCOVERED (`git ls-files | grep -E '(^|/)pre-push$'`), never
+- [x] hook files are DISCOVERED (`git ls-files | grep -E '(^|/)pre-push$'`), never
       assumed to live in a known directory — assuming the dir is what undercounted
       DECORATIVE by two
-- [ ] the resolved path comes from `git rev-parse --git-path hooks`, and the classifier
+- [x] the resolved path comes from `git rev-parse --git-path hooks`, and the classifier
       NEVER string-concatenates it with the repo root (`core.hooksPath` is frequently
       absolute; concatenating yields a path that cannot exist, and every branch then
       reports "not live" for any input — the exact bug that produced the retracted table)
-- [ ] the resolved hooks dir is ENUMERATED, never probed for a list of expected names:
+- [x] the resolved hooks dir is ENUMERATED, never probed for a list of expected names:
       `find "$h" -maxdepth 1 -type f -perm -u+x ! -name '*.sample'`. Both filters are
       load-bearing and fail in OPPOSITE directions — a name list misses every hook
       outside it (two rows of the retracted table), while an unfiltered executable count
       over-reports by 14 on any repo using its default `.git/hooks`, which ships 14
       executable `.sample` files
-- [ ] a missing hook is reported as a LOSS only alongside a usage signal that the hook
+- [x] a missing hook is reported as a LOSS only alongside a usage signal that the hook
       had work (e.g. LFS hooks against `filter=lfs` patterns and `git lfs ls-files`) —
       otherwise it is a benign absence, and reporting it as breakage trains the reader
       to ignore the check
-- [ ] reported per ARTIFACT and per HOOK TYPE, never as one state per repo
-- [ ] the states above are distinguished by MEASUREMENT, never by the presence of a file
+- [x] reported per ARTIFACT and per HOOK TYPE, never as one state per repo
+- [x] the states above are distinguished by MEASUREMENT, never by the presence of a file
       and never by its SIZE
-- [ ] a positive control proves the detector bites: a fixture whose `core.hooksPath`
+- [x] a positive control proves the detector bites: a fixture whose `core.hooksPath`
       points somewhere else must be reported DECORATIVE, and a correctly-wired one must
       NOT be — a guard that reddens on correct configuration gets deleted
-- [ ] report-only; no write to another repo's git config
-- [ ] this repo's own state is asserted LIVE, so the detector is exercised on every run
+- [x] report-only; no write to another repo's git config
+- [x] this repo's own state is asserted LIVE, so the detector is exercised on every run
 
 ## Notes
 
-Not started, not authorized to implement. Filed so the finding does not evaporate with
-the conversation that produced it — the whole point of the class is that nothing
-complains, so nothing will re-surface it.
+Filed 2026-08-22 so the finding would not evaporate; implemented 2026-08-25.
+
+## Approval log
+
+- 2026-08-25T14:35:00+0200 — IMPLEMENTED and CLOSED (complete) under the
+  USER's explicit same-day delegation. Shipped as guardian **T7 — Hook
+  liveness**: `scripts/hook_liveness.py` (report-only, one repo per
+  invocation), threat-classes.md + SKILL.md wiring, 8 real-repo tests
+  (commit ca61321; suite green, ruff + mypy clean). Acceptance notes on the
+  two boxes whose literal text assumed a fleet sweep: (1) the detector takes
+  ONE repo path, so no repo set exists inside it — the SSOT-by-name /
+  never-glob constraint is documented as binding on the CALLER in both the
+  script header and the threat-class doc; (10) the self-exercise test asserts
+  this repo's guard against what git ACTUALLY resolves — LIVE on a wired
+  machine, DECORATIVE on a fresh clone, which is that clone's true state, so
+  the detector cannot be satisfied by a hardcoded expectation. Positive
+  control proven both ways: a known-DECORATIVE fixture must flag, a
+  correctly-wired twin must not.

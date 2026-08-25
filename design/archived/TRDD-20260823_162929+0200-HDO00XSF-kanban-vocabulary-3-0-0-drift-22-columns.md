@@ -1,9 +1,10 @@
 ---
 trdd-id: HDO00XSF
 title: This repo ships the 17-column kanban vocabulary that 3-pillars 3.0.0 replaced with 22
-column: backburner
+column: complete
 created: 2026-08-23T16:29:29+0200
-updated: 2026-08-23T16:49:47+0200
+updated: 2026-08-25T14:30:00+0200
+implementation-commits: [02a6268]
 relevant-rules: [1.2, 8.1]
 current-owner: ai-maestro-maintainer-agent
 task-type: docs
@@ -365,3 +366,16 @@ onward), all found by peers, none by any test:
    push), which is NON-EXEMPT and needs USER authorization separately.
 
 ## Approval log
+
+- 2026-08-25T14:30:00+0200 — UNBLOCKED, EXECUTED, and CLOSED (complete) under
+  the USER's explicit same-day delegation ("complete all pending tasks and
+  TRDDs… decide yourself, verify first"; floor `manager` satisfied by USER
+  authority). The blocker fell: `Emasoft/ai-maestro@governance-rules` is now
+  pushed — verified first-hand by `git ls-remote` (head c8b0e9cb) and by a
+  shallow clone; the hub session confirmed that head is the ratified 3.0.0
+  state incl. 3P-KAN-10/20/21/22. Vocabulary read from the artifact's
+  `design/specs/3-pillars-spec.md @spec:kanban-columns v2` block, NOT the
+  relayed list (they agree). Migration landed as commit 02a6268: 6 files,
+  persona + test in the same change, suite 42/42 then full 1378 pass. The
+  stale-rule pointer at persona `:445` is now qualified (janitor#286).
+  Delivery rides the publish.py release the USER authorized this session.

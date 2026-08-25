@@ -1,9 +1,9 @@
 ---
 trdd-id: DBT8UACO
 title: Identify the ~2G/hr host disk-growth writer by measurement
-column: human_review
+column: complete
 created: 2026-08-18T20:03:32+0200
-updated: 2026-08-22T19:27:53+0200
+updated: 2026-08-25T14:25:00+0200
 current-owner: maintainer-agent-session
 task-type: audit
 approval-tier: 0
@@ -242,3 +242,11 @@ escalation and needs the USER; this review does not move the card.
 - 2026-08-22T19:27:53+0200 — `ai_review → human_review` APPROVED by USER (non-exempt
   escalation gate). Requested after the AI review returned PASS with all three acceptance
   boxes independently verified. Awaiting the USER's final call on the card itself.
+- 2026-08-25T14:25:00+0200 — `human_review → complete` under the USER's explicit
+  same-day delegation ("complete all pending tasks and TRDDs… You can decide
+  yourself without me"). Audit-scope work verified done: writer attributed
+  (cargo debug builds, differential vs an un-built control), remedy proposed
+  not applied, durable fix owned by TRDD-RO44YZDP (now advanced via
+  AgentlensPro#18). `release-via` absent ⇒ `none` ⇒ terminal at `complete`;
+  archived as itself per 3P-ZON-05. Closing does NOT close the disk problem —
+  RO44YZDP carries it.
