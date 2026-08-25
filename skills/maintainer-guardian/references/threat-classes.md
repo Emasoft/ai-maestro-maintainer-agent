@@ -1,10 +1,4 @@
-# Guardian threat classes — T1 through T6
-
-The Guardian skill detects 6 classes of supply-chain threat. Each
-class has a detector (read-only), a delta-vs-baseline check, and a
-route (what the Guardian does when a delta is positive). T3
-additionally carries an absolute baseline-compliance check that fires
-independent of any delta (see T3).
+# Guardian threat classes — T1 through T7
 
 ## Table of Contents
 
@@ -17,6 +11,12 @@ independent of any delta (see T3).
 - [T7 — Hook liveness](#t7--hook-liveness)
 - [Routing table](#routing-table)
 - [Atomic write pattern](#atomic-write-pattern)
+
+The Guardian skill detects 7 classes of supply-chain threat. Each
+class has a detector (read-only), a delta-vs-baseline check, and a
+route (what the Guardian does when a delta is positive). T3
+additionally carries an absolute baseline-compliance check that fires
+independent of any delta (see T3).
 
 ---
 

@@ -180,8 +180,6 @@ per ARTIFACT and never classify a repo into one bucket.
 > The state may stay in the model as an OBSERVATION. Its acceptance criterion is the
 > matrix **AND** the usage signal, together, always.
 
-
-
 `core.hooksPath` **replaces the entire hooks directory**; there is no per-hook fallback
 to the global one. So a repo that sets it to ADD a push gate silently REMOVES every
 other hook type the global dir was providing.
