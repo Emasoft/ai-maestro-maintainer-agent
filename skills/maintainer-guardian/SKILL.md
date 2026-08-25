@@ -17,7 +17,7 @@ description: |
 The maintainer agent IS the guardian of the repo. This skill runs
 the proactive half of that job. BASELINE captures a clean snapshot
 at session start; SCAN diffs every patrol cycle against it and
-routes T1-T6 detections to auto-fix / file-issue / alert. The
+routes T1-T7 detections to auto-fix / file-issue / alert. The
 inspiration is Atai Barkai's 2026-05-20 supply-chain article — the
 maintainer no longer waits for someone to file an issue saying
 "your CI is broken", it watches and reacts.
@@ -55,12 +55,15 @@ maintainer no longer waits for someone to file an issue saying
 5. If `package.json` exists, snapshot the four pkg-manager safety
    knobs from `.pnpm` / `.npmrc` / `pnpm-workspace.yaml` and the
    source-file SHAs (T6); else mark `is_node_repo: false` and skip.
-6. Aggregate into `guardian-baseline.json` and write atomically to
+6. Run `uv run scripts/hook_liveness.py .` (T7 — what does git ACTUALLY
+   execute?) and record the per-artifact hook states. This repo's own
+   shipped guard exercising as LIVE is part of a clean baseline.
+7. Aggregate into `guardian-baseline.json` and write atomically to
    `$AGENT_DIR/.aimaestro/state/guardian-baseline.json`.
 
 **SCAN** (mode=scan, invoked at every patrol pre-cycle):
 
-1. Re-run all 6 detectors.
+1. Re-run all 7 detectors.
 2. Diff against the baseline; produce a per-class delta.
 3. Route each delta:
    - T1 new zizmor finding → if safe-fixable, propose workflow-fix-safe
@@ -74,6 +77,9 @@ maintainer no longer waits for someone to file an issue saying
    - T6 pkg-manager safety knob weakened/stripped → alert authorized
      user, refuse to push; standing-missing on a Node repo → file
      tracking issue with template paste from workflow-bootstrap.
+   - T7 DECORATIVE (a shipped hook git never resolves) → file a tracking
+     issue on the entrusted repo; SHADOWED / DEPRIVED-with-loss → note in
+     the patrol report. Report-only: NEVER write another repo's git config.
 4. Write the running tally to `guardian-state.json`.
 5. Return disposition; patrol decides whether to early-exit the cycle.
 
@@ -86,16 +92,18 @@ Full per-class commands + routing tables:
 - T4 — Protected-path activity
 - T5 — Secret-leak markers
 - T6 — Package-manager safety-config drift
+- T7 — Hook liveness (decorative / shadowed guards)
 - Routing table
 - Atomic write pattern
 
 ## Output
 
 - **BASELINE**: `{mode, snapshot_path, t1_count, t2_count, t3_status,
-  t3_compliance, t4_count, t5_count, t6_status}` + the refreshed snapshot
-  file. (`t3_compliance` is `compliant` or a non-empty deviations list
-  from the T3-absolute check; `t6_status` is `clean`, `missing-knobs`, or
-  `not-a-node-repo`.)
+  t3_compliance, t4_count, t5_count, t6_status, t7_status}` + the refreshed
+  snapshot file. (`t3_compliance` is `compliant` or a non-empty deviations
+  list from the T3-absolute check; `t6_status` is `clean`, `missing-knobs`,
+  or `not-a-node-repo`; `t7_status` is `clean` or the non-empty
+  DECORATIVE/SHADOWED findings list from `hook_liveness.py`.)
 - **SCAN**: `{mode, delta, route_decisions[], state_path, report}` plus the refreshed state file plus (optionally) issues/PRs filed.
 
 ## Error Handling
@@ -106,6 +114,7 @@ Full per-class commands + routing tables:
 | `workflow-scan` chain fails | Skip T1/T2, continue T3/T4/T5 |
 | `workflow-protect-branch` SHOW fails | Mark T3 status `unknown`, continue |
 | Baseline file missing during SCAN | Re-run BASELINE first, retry |
+| `hook_liveness.py` fails (exit 2 or crash) | Mark T7 status `unknown`, continue |
 | T5 hit (suspected secret leak) | Stop; escalate URGENT to MANAGER via `aimaestro-message.sh send` (fallback `amp-send`; self-id line opens the body) AND alert the authorized user; do NOT scan further (see threat-classes T5 → Route) |
 
 ## Examples
@@ -133,7 +142,7 @@ Patrol cycle 11 → guardian scan
 
 ## Scope
 
-ONLY runs supply-chain detectors T1-T6 against the entrusted repo
+ONLY runs supply-chain detectors T1-T7 against the entrusted repo
 (BASELINE writes a snapshot; SCAN diffs vs the snapshot). Does NOT:
 
 - Apply fixes directly — it ROUTES findings to the right
