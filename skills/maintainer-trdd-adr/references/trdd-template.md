@@ -99,7 +99,9 @@ applying the ratified baseline as-is) skips the proposal stage — author it
 directly in `design/tasks/` as `column: planned`. The MAINTAINER is a
 governance-layer peer and files manager-floor proposals
 (`min-approval-requirement: manager`) DIRECTLY to MANAGER (no CHIEF-OF-STAFF
-hop) — see `~/.claude/rules/trdd-approval-tiers.md`.
+hop) — see `~/.claude/rules/trdd-approval-tiers.md` (which still teaches the
+RETIRED numeric `approval-tier:` scheme, janitor#286 — read it only for the
+folder model, never for the floor field).
 
 ## Body sections
 

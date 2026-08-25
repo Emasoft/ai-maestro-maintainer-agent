@@ -78,7 +78,9 @@ authorized) → terminal-DONE TRDDs `git mv` to `design/archived/`
 (`completed`/`cancelled`/`superseded`); refused proposals `git mv` to
 `design/refused/` (`column: refused`). Tier-0 work authors directly in
 `design/tasks/` as `planned`. Full model:
-`~/.claude/rules/trdd-approval-tiers.md`.
+`~/.claude/rules/trdd-approval-tiers.md` (still teaches the RETIRED numeric
+`approval-tier:` scheme, janitor#286 — read it only for the folder model,
+never for the floor field; the live field is `min-approval-requirement:`).
 
 ## Body sections
 

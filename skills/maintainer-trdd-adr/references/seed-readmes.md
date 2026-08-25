@@ -87,7 +87,9 @@ testing → ai_review → (human_review) → complete`, then `publish → publis
 | superseded | Replaced by a newer TRDD (must add `superseded-by: [TRDD-<uid>]` list) |
 
 Approval overlay + 4 zone folders (`proposals`/`tasks`/`refused`/`archived`):
-`~/.claude/rules/trdd-approval-tiers.md`. The approval floor is the
+`~/.claude/rules/trdd-approval-tiers.md` (still teaches the RETIRED numeric
+`approval-tier:` scheme, janitor#286 — read it only for the folder model,
+never for the floor field). The approval floor is the
 `min-approval-requirement:` field — `none | orchestrator | chief-of-staff |
 manager | user` (`user` is the top rung; `maestro` is a deprecated read-alias,
 never written). `approval-tier: N` is deprecated: decode-only, migrated on
