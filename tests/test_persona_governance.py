@@ -27,14 +27,21 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 PERSONA = REPO / "agents" / "ai-maestro-maintainer-agent-main-agent.md"
 
-# The ratified 17-column kanban vocabulary, in pipeline order (14 lifecycle),
-# plus the 3 exception columns. Canonical source: the universal-kanban rule.
-# Written out in full rather than derived, because a test that computes the
-# expected value from the file under test proves nothing.
+# The ratified 22-column kanban vocabulary, in pipeline order (19 lifecycle),
+# plus the 3 exception columns. Canonical source: 3-pillars spec 3.0.0
+# (@spec:kanban-columns v2, Emasoft/ai-maestro design/specs/3-pillars-spec.md,
+# ratified head c8b0e9cb; PRRD G2.1, USER 2026-08-23). Written out in full
+# rather than derived, because a test that computes the expected value from the
+# file under test proves nothing.
 LIFECYCLE_COLUMNS = (
     "backburner",
-    "todo",
+    "approval",
     "design",
+    "design_ai_review",
+    "design_human_review",
+    "todo",
+    "verify_assumptions",
+    "plan",
     "dispatch",
     "dev",
     "testing",
@@ -63,17 +70,20 @@ def persona() -> str:
 # ───────────────────────── the board (#29 Q4, bullet 2) ─────────────────────────
 
 
-def test_persona_states_the_kanban_has_exactly_17_columns(persona: str) -> None:
-    """The persona names the board's size as exactly 17 — the ratified count."""
-    assert re.search(r"\b17\b", persona), "the persona never states the column count"
-    assert re.search(r"(?i)17[- ]column|exactly\s+\*{0,2}17\*{0,2}\s+column", persona), "the persona mentions 17 but not as the column count — a bare number is not a contract a reader can act on"
+def test_persona_states_the_kanban_has_exactly_22_columns(persona: str) -> None:
+    """The persona names the board's size as exactly 22 — the ratified count (3.0.0)."""
+    assert re.search(r"\b22\b", persona), "the persona never states the column count"
+    assert re.search(r"(?i)22[- ]column|exactly\s+\*{0,2}22\*{0,2}\*?\s+column", persona), "the persona mentions 22 but not as the column count — a bare number is not a contract a reader can act on"
+    # Two-way: the pre-3.0.0 count must be GONE, not merely supplemented — a
+    # persona stating both counts teaches whichever one the reader lands on.
+    assert not re.search(r"(?i)17[- ]column|exactly\s+\*{0,2}17\*{0,2}\*?\s+column", persona), "the retired 17-column claim is still in the persona alongside 22"
 
 
 @pytest.mark.parametrize("column", LIFECYCLE_COLUMNS + EXCEPTION_COLUMNS)
-def test_persona_names_every_one_of_the_17_columns(persona: str, column: str) -> None:
-    """Each of the 17 column names appears verbatim.
+def test_persona_names_every_one_of_the_22_columns(persona: str, column: str) -> None:
+    """Each of the 22 column names appears verbatim.
 
-    Parametrized one-per-column on purpose: a single test asserting "all 17"
+    Parametrized one-per-column on purpose: a single test asserting "all 22"
     reports one failure no matter how many are missing, which is exactly the
     information you need and do not get.
     """
@@ -88,7 +98,7 @@ def test_persona_states_the_board_must_drain(persona: str) -> None:
     from accumulates stalled cards whose column lies about them.
     """
     assert "blocked-by:" in persona, "the blocked-licence field is never named"
-    assert re.search(r"(?i)\bdrain\b", persona), "the persona never says the pipeline must drain — without it the 17 columns are a filing cabinet"
+    assert re.search(r"(?i)\bdrain\b", persona), "the persona never says the pipeline must drain — without it the 22 columns are a filing cabinet"
 
 
 def test_persona_does_not_invent_columns_outside_the_ratified_set(persona: str) -> None:
@@ -101,14 +111,13 @@ def test_persona_does_not_invent_columns_outside_the_ratified_set(persona: str) 
         set(LIFECYCLE_COLUMNS)
         | set(EXCEPTION_COLUMNS)
         | {
-            # The folder-lifecycle values BRACKET the pipeline; they are legal values
-            # of the same field, documented in the TRDD rules.
+            # The five BRACKET values sit outside the board but are legal values
+            # of the same field (3P-KAN-20: board = 22, legal column: set = 27).
             "proposal",
             "planned",
             "refused",
             "cancelled",
             "completed",
-            "superseded",
         }
     )
     used = set(re.findall(r"^column:\s*([a-z_]+)\s*$", persona, re.MULTILINE))

@@ -65,16 +65,21 @@ State is the single `column:` field. There is no v1 `status:` field.
 
 ## Column enum (v2 kanban)
 
-Lifecycle: `backburner → todo → design → dispatch → dev → testing → ai_review
-→ (human_review) → complete`, then `publish → published` (tools) or
-`deploy → live` (services).
+Lifecycle: `backburner → approval → design → design_ai_review →
+(design_human_review) → todo → verify_assumptions → plan → dispatch → dev →
+testing → ai_review → (human_review) → complete`, then `publish → published`
+(tools) or `deploy → live → (live_auditing)` (services). 22 board columns
+(3-pillars 3.0.0 / PRRD G2.1); the five bracket states (`proposal`, `planned`,
+`refused`, `completed`, `cancelled`) sit outside the board (3P-KAN-20).
 
 | Value | Meaning |
 |---|---|
-| backburner | Authored; parked backlog (no work yet) |
-| todo / design / dispatch | Promoted; being shaped + assigned |
+| backburner | Authored; not yet approved |
+| approval | Awaiting its `min-approval-requirement:` authority |
+| design / design_ai_review / design_human_review | Design expanded IN the card, then reviewed (human step skipped at floor `none`) |
+| todo / verify_assumptions / plan / dispatch | Approved + designed; fact gate, plan gate, then assigned |
 | dev | At least one commit references this TRDD; implementation underway |
-| testing / ai_review / human_review | Tests + reviews running |
+| testing / ai_review / human_review | Tests + reviews running (`human_review` rests on the USER's verdict) |
 | complete | Acceptance criteria met (internal-done) |
 | published / live | Terminal — shipped to users / serving traffic |
 | blocked | Waiting on another TRDD (must add `blocked-by: [TRDD-<uid>]` list) |

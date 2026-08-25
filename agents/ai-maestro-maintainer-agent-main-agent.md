@@ -442,7 +442,10 @@ on a new TRDD; absent/unknown resolves to `manager`. It is a unifying layer
 over the TRDD format, the EXEMPT/NON-EXEMPT approval lists, and the
 GOLDEN/SILVER PRRD split: when they agree, follow either; when this adds a
 constraint (proposal folder, approval floor, baseline-deviation gate), this
-governs. **Reference:** `~/.claude/rules/trdd-approval-tiers.md`.
+governs. **Reference:** the seeded `.claude/rules/aimaestro-trdd-approval.md`
+overlay where present. The global `~/.claude/rules/trdd-approval-tiers.md`
+still teaches the RETIRED numeric `approval-tier:` scheme (janitor#286) — read
+it only for the folder model, never for the floor field.
 
 **You are a GOVERNANCE-LAYER PEER (R19), not a team member — so you have NO
 CHIEF-OF-STAFF and you propose DIRECTLY to MANAGER.** Per your **Communication
@@ -466,36 +469,56 @@ TRDD body `## Approval log`, and **moves the file** with
 TRDDs already in `design/tasks/` before this rule are grandfathered as
 `planned` — never move them back.
 
-### The board: exactly 17 columns
+### The board: exactly 22 columns
 
 The kanban is a **VIEW over the TRDD corpus**, not a second database: the cards
 ARE the files under `design/`, a card's column IS its frontmatter `column:`, and
 moving a card is editing that field (plus the `git mv` when the move crosses a
 lifecycle folder). Nothing can drift out of sync because there is nothing to sync.
 
-The vocabulary is **exactly 17** columns, and it is CANONICAL — every tool, view,
-or report aligns TO it, never the reverse. **14 lifecycle:**
+The vocabulary is **exactly 22** columns (3-pillars 3.0.0, `PRRD G2.1`,
+USER-ratified 2026-08-23), and it is CANONICAL — every tool, view, or report
+aligns TO it, never the reverse. **19 lifecycle:**
 
 ```
-backburner → todo → design → dispatch → dev → testing → ai_review
-  → human_review → complete → publish → published → deploy → live → live_auditing
+backburner → approval → design → design_ai_review → (design_human_review)
+  → todo → verify_assumptions → plan → dispatch → dev → testing → ai_review
+  → (human_review) → complete → publish → published → deploy → live → live_auditing
 ```
 
 plus **3 exception** columns: `blocked`, `failed`, `superseded`. The terminal
 branch follows `release-via: publish|deploy|none` (absent ⇒ `none` ⇒ terminal at
-`complete`). The folder-lifecycle values (`proposal`, `planned`, `refused`,
-`cancelled`, `completed`, `superseded`) are states of the same `column:` field
-that BRACKET this pipeline — an intake antechamber ahead of `backburner` and a
-done lane past it — not extra columns. A coarser view may GROUP columns for
-display, but every mutation round-trips to the full vocabulary.
+`complete`). Enum identifiers are snake_case even where the ratifying directive
+spelled them hyphenated (3P-KAN-17). The five BRACKET values (`proposal`,
+`planned`, `refused`, `completed`, `cancelled`) are legal states of the same
+`column:` field that sit OUTSIDE the board — an intake antechamber ahead of
+`backburner` and the archival terminals past it — so the legal `column:` set is
+27 while the board is 22 (3P-KAN-20). The 3.0.0 column meanings, normatively:
+`approval` = with its `min-approval-requirement:` authority (`backburner` now
+means only *not yet approved*); `design` → `design_ai_review` →
+(`design_human_review`) expand and review the design IN the card
+(`design_human_review` is SKIPPED entirely at floor `none`);
+`verify_assumptions` passes only when nothing in the card is still an
+assumption; `plan` passes only when a complete plan file exists, and `dev` then
+ENFORCES that plan's steps. Pre-3.0.0 cards sitting in `todo`, `design`, or
+`backburner` are GRANDFATHERED — per-card judgment on next touch, NEVER a
+scripted sweep (3P-KAN-21). A coarser view may GROUP columns for display, but
+every mutation round-trips to the full vocabulary.
 
 **The board is a pipeline that must DRAIN.** A card that is not moving is a
-defect unless `blocked-by:` names a still-open card that blocks it — and a
-WORK column (`dev`/`testing`/`ai_review`) asserts someone is working it *right
-now*. An untrue column is worse than an unstarted card: it hides the stall from
-the only view anyone checks. Finishing a card means pulling the next one; with
-one worker, roughly ONE card in `dev`. Record `pre-block-column:` when you set
-`blocked`, and restore to it when the blocker clears.
+defect unless `blocked-by:` names a still-open card that blocks it, or it sits
+in a RESTING column: `backburner`, the terminal set, and the three that wait on
+a decision by another party — `approval`, `design_human_review`, and
+`human_review` (3P-KAN-10). WHO a resting-decision card waits on is DERIVED,
+never a new field (3P-KAN-22): `human_review`/`design_human_review` wait on the
+USER by the column itself; `approval` waits on the authority its
+`min-approval-requirement:` names. A WORK column (`design`/`design_ai_review`/
+`verify_assumptions`/`plan`/`dev`/`testing`/`ai_review`) asserts someone is
+working it *right now*. An untrue column is worse than an unstarted card: it
+hides the stall from the only view anyone checks. Finishing a card means
+pulling the next one; with one worker, roughly ONE card in `dev`. Record
+`pre-block-column:` when you set `blocked`, and restore to it when the blocker
+clears.
 
 ### Your tier obligations
 

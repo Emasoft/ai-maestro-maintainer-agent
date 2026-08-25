@@ -78,9 +78,13 @@ degrade explicitly when the surface is absent.
 
 `column:` moves through the v2 pipeline (lifecycle order):
 
-`backburner → todo → design → dispatch → dev → testing → ai_review →
+`backburner → approval → design → design_ai_review → (design_human_review) →
+todo → verify_assumptions → plan → dispatch → dev → testing → ai_review →
 (human_review) → complete` — then for tool TRDDs `→ publish → published`, for
-service TRDDs `→ deploy → live → (live_auditing)`. Exceptions, orthogonal to
+service TRDDs `→ deploy → live → (live_auditing)` (22 board columns, 3-pillars
+3.0.0 / PRRD G2.1; the five bracket states `proposal`/`planned`/`refused`/
+`completed`/`cancelled` sit outside the board — legal `column:` set 27,
+3P-KAN-20). Exceptions, orthogonal to
 the pipeline: `blocked` (🔴 `blocked-by:` non-empty; restores to
 `pre-block-column:` when cleared), `failed` (retryable — stays in
 `design/tasks/`), `superseded` (terminal).
