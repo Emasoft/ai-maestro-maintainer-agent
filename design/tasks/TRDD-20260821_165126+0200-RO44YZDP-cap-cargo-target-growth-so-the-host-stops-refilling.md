@@ -1,9 +1,9 @@
 ---
 trdd-id: RO44YZDP
 title: Cap cargo target growth so the host stops refilling to 99 percent
-column: backburner
+column: human_review
 created: 2026-08-21T16:51:26+0200
-updated: 2026-08-21T16:51:26+0200
+updated: 2026-08-25T14:20:00+0200
 current-owner: maintainer-agent-session
 task-type: infra
 min-approval-requirement: user
@@ -12,7 +12,27 @@ parent-trdd: DBT8UACO
 
 # Cap cargo target growth so the host stops refilling to 99 percent
 
-## ⏵ STATE — READ THIS FIRST — 2026-08-21 17:0x
+## ⏵ STATE — READ THIS FIRST — 2026-08-25 14:20
+
+**APPROACH CHOSEN (USER-delegated 2026-08-25: "complete all pending tasks…
+You can decide yourself without me"): preventive `[profile.dev]` limits,
+proposed to the owner as GitHub issue — nothing deletes, nothing edits a repo
+this agent does not own.** ✓ VERIFIED first: `rust-core/Cargo.toml` carries
+`[profile.release]` tuning and NO `[profile.dev]`; target measured 70,050 MB
+on 2026-08-25; host at 89% (220 GB free).
+
+- Filed **Emasoft/AgentlensPro#18** (cross-project Method 1) with the
+  DBT8UACO differential evidence and the candidate config as TEXT for the
+  owner to run. Shared `CARGO_TARGET_DIR` offered as the structural
+  alternative, explicitly the owner's decision.
+- Reporting-only candidate NOT implemented here: the janitor already reports
+  host disk pressure machine-wide; a duplicate reporter in this plugin would
+  be a second source of truth.
+- Column → `human_review` (3P-KAN-10 resting: waits on the USER — acting on
+  #18, and the 14-day floor observation in acceptance box 3, which no session
+  can tick today by construction).
+
+## Prior STATE — 2026-08-21 17:0x
 
 **SCOPE CORRECTED HOURS AFTER FILING. This card may NOT propose anything that
 deletes to free space.** The OWNER ruled on 2026-08-21: *"i'm the only one
@@ -93,10 +113,14 @@ deletes. It is recorded because the reasoning generalizes past disk.
 
 ## Acceptance
 
-- [ ] an approach is chosen with the USER (every candidate touches repos this
-      agent does not own, so this is theirs to decide, not a Tier-0 call)
-- [ ] nothing this card produces deletes anything to free space — verified by
-      reading the implementation, not by its description
+- [x] an approach is chosen with the USER (every candidate touches repos this
+      agent does not own, so this is theirs to decide, not a Tier-0 call) —
+      chosen under the USER's explicit 2026-08-25 delegation; the touch on the
+      other repo is an ISSUE (AgentlensPro#18), so the owner still decides the
+      actual config change
+- [x] nothing this card produces deletes anything to free space — verified by
+      reading the implementation: the card's output is one GitHub issue whose
+      commands are prose for the owner; no script, hook, or config ships
 - [ ] free space stays above an agreed floor for 14 consecutive days **because
       growth was prevented**, not because something reclaimed
 - [ ] DBT8UACO's STATE block links here, so the mechanism and the fix stay joined
