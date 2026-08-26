@@ -514,13 +514,30 @@ _BOM = b"\xef\xbb\xbf"
 # `git ls-files` is the set, which also makes gitignored runtime state
 # (`.claude/janitor/`, `.claude/scheduled_tasks.*`, the memgrep index) fall out
 # for free rather than by an exclusion list that would need its own maintenance.
+# The SUFFIX list is still an enumeration, and knowingly so — it omits `.jsonc`,
+# `.sh`, `.js`, `.txt`, `.env`. That is a bounded, visible, one-line judgement
+# rather than a hidden one, and the omitted types fail LOUDLY: a BOM before
+# `#!/usr/bin/env bash` is an exec-format error, not a silent skip. Widening to
+# every tracked file would need a binary-file exclusion, which is a new
+# judgement call — a worse trade than the gap it closes.
 _BOM_SUFFIXES = frozenset({".md", ".json", ".toml", ".yml", ".yaml"})
 
 
 def _bom_sensitive_files() -> list[Path]:
-    """Every git-TRACKED text file. No enumeration, so nothing to keep current."""
-    out = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, capture_output=True, text=True, check=True).stdout
-    return sorted(p for rel in out.split("\0") if rel and (p := REPO / rel).suffix in _BOM_SUFFIXES and p.is_file())
+    """Every git-TRACKED text file. No enumeration, so nothing to keep current.
+
+    SKIPS rather than errors without git. `check=True` here made a git-less
+    checkout — an sdist export, a Docker stage that COPYs source without `.git`,
+    a vendored install — fail two tests with a CalledProcessError traceback
+    about git, which says "your repo is broken" when the truth is "not checked
+    here". Every other detector in this file degrades to a smaller set when its
+    input is thin; this one detonated. Measured: 2 failed, 20 passed in a clone
+    with `.git` removed. Same `pytest.skip` shape the hooks.json detector uses.
+    """
+    proc = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, capture_output=True, text=True, check=False)
+    if proc.returncode != 0:
+        pytest.skip(f"no git work tree at {REPO} — BOM scan needs `git ls-files` for its file set")
+    return sorted(p for rel in proc.stdout.split("\0") if rel and (p := REPO / rel).suffix in _BOM_SUFFIXES and p.is_file())
 
 
 def _has_bom(path: Path) -> bool:
