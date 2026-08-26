@@ -336,16 +336,37 @@ def test_the_permission_rule_detector_cuts_both_ways() -> None:
 # subcommand, e.g. `Bash(git * main)`. The reason is a real widening, not a
 # style nit: such a rule ALSO matches options inserted before the subcommand, so
 # `Bash(git * main)` grants `git -c core.pager=<anything> main` and every other
-# option smuggled into that slot. A trailing `*` (`Bash(gh *)`) and the
-# prefix-colon form (`Bash(git commit:*)`) are the safe spellings and must stay
-# quiet, or the guard reddens on correct writing and gets deleted.
+# option smuggled into that slot. A trailing `*` (`Bash(gh *)`), the
+# prefix-colon form (`Bash(git commit:*)`) and a trailing glob after a dash
+# (`Bash(git -*)`) all leave nothing standing after the wildcard, so they are
+# safe and must stay quiet — a guard that reddens on correct writing gets
+# deleted.
+#
+# MATCH THE CLASS, NOT THE CHANGELOG'S EXAMPLE. The first version of this
+# detector required the `*` to be a space-delimited token, because that is how
+# upstream's `Bash(git * main)` happens to be written. Measured: it missed
+# `Bash(git *main)` and `Bash(git *:*)`, which front a subcommand just as
+# widely and are the spellings a real rule is more likely to use. Reading an
+# example as the spec is the exact proxy-for-the-thing failure this file exists
+# to catch, and it had got inside the detector meant to catch it. The condition
+# is therefore positional, not lexical: a `*` with any later non-space,
+# non-wildcard character — i.e. something the wildcard stands IN FRONT OF.
 _BASH_RULE = re.compile(r"Bash\(([^)]*)\)")
-# A bare `*` token with a further non-wildcard token after it — i.e. something
-# the wildcard is standing IN FRONT OF.
-_WILDCARD_BEFORE_TOKEN = re.compile(r"(?:^|\s)\*(?=\s+\S)")
+_WILDCARD_BEFORE_TOKEN = re.compile(r"\*[^*]*[^\s*]")
 
 
 def _bash_rules_with_leading_wildcard(text: str) -> list[str]:
+    """Two KNOWN limits, both fail-open, both deliberate rather than unnoticed.
+
+    `[^)]*` cannot cross a `)`, so a rule whose command embeds a paren
+    (`Bash(bash -c 'f() { :; }' * main)`) truncates early and is skipped, as is
+    a rule wrapped across a line. And the `Bash(` literal is unanchored, so a
+    shipped `.md` that QUOTES the bad form to warn against it would redden the
+    suite. Both are priced deliberately: anchoring to a rule context means
+    parsing markdown and JSON string boundaries, which costs more than the
+    class is worth here, and the sweep that measured this tree clean was
+    whole-tree and did not depend on this regex.
+    """
     return [m.group(0) for m in _BASH_RULE.finditer(text) if _WILDCARD_BEFORE_TOKEN.search(m.group(1))]
 
 
@@ -359,12 +380,20 @@ def test_no_bash_allow_rule_puts_a_wildcard_before_the_subcommand() -> None:
 
 def test_the_leading_wildcard_detector_cuts_both_ways() -> None:
     """It must catch the widened form and leave every safe spelling alone."""
-    assert _bash_rules_with_leading_wildcard("Bash(git * main)")
+    assert _bash_rules_with_leading_wildcard("Bash(git * main)")  # upstream's own example
     assert _bash_rules_with_leading_wildcard("Bash(* main)")
     assert _bash_rules_with_leading_wildcard("Bash(npm * run build)")
+    # THE GLUED SPELLINGS. Same widening, no space around the `*`. An earlier
+    # token-based regex missed both; they are pinned so it cannot regress to
+    # matching only the changelog's spacing.
+    assert _bash_rules_with_leading_wildcard("Bash(git *main)")
+    assert _bash_rules_with_leading_wildcard("Bash(git *:*)")
     # Trailing wildcard: nothing sits after the `*`, so nothing is being fronted.
     assert not _bash_rules_with_leading_wildcard("Bash(gh *)")
     assert not _bash_rules_with_leading_wildcard("Bash(npm run *)")
+    assert not _bash_rules_with_leading_wildcard("Bash(git * )")
+    # A trailing glob after a dash is still trailing — `git -*` fronts nothing.
+    assert not _bash_rules_with_leading_wildcard("Bash(git -*)")
     # The prefix-colon form is the prescribed spelling.
     assert not _bash_rules_with_leading_wildcard("Bash(git commit:*)")
     assert not _bash_rules_with_leading_wildcard("Bash(npm run test:*)")
