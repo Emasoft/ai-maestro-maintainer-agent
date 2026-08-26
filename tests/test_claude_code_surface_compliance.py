@@ -5,8 +5,9 @@ measured absent from this tree on 2026-08-07 against Claude Code 2.1.224, then
 re-measured on 2026-08-15 against Claude Code 2.1.233 (auditing the 2.1.225 →
 2.1.232 changelog; the CLI claims below were re-run against the live binary,
 not re-dated), then again on 2026-08-22 against 2.1.240 (auditing the 2.1.233 →
-2.1.240 changelog). The file exists so that stays true without anyone re-reading
-a changelog.
+2.1.240 changelog), then again on 2026-08-26 against 2.1.246 (auditing the
+2.1.240 → 2.1.246 changelog). The file exists so that stays true without anyone
+re-reading a changelog.
 
 The 2026-08-22 pass added ONE detector (the Todo/Task tool family, removed on
 modern models in 2.1.233) and confirmed the rest of that changelog needed no
@@ -16,6 +17,32 @@ bare-name `SendMessage` delivery, and a whole-tree grep found no model id, no
 `allowed-tools` frontmatter for the renamed/aliased surfaces to invalidate. That
 "nothing to change" is recorded deliberately — an audit that finds nothing looks
 identical to an audit nobody ran.
+
+The 2026-08-26 pass added TWO detectors — the wildcard-before-subcommand Bash
+allow rule that now warns at startup (2.1.246), and a UTF-8 BOM at the head of a
+shipped file (2.1.239 for agent/skill/command `.md`, 2.1.246 for `plugin.json`).
+Both were measured ABSENT from the whole tree before the guards were written, so
+neither is a fix; each is a trap set on a class upstream has just shown can
+break us. The BOM one earns its place by FAILURE MODE, not by regex: a BOM made
+a shipped `.md` *silently ignored* — no error, no warning, the skill simply did
+not exist — which is the one class a green suite can never otherwise reveal.
+
+Everything else in the 2.1.240 → 2.1.246 delta was measured and needed no edit,
+recorded here for the same reason as above. Whole-tree greps (the instrument
+sanity-checked against known-present strings first) found: no Todo/Task tool
+name, no `ultraplan`/`ultrareview` outside this file's own detectors and one
+archived TRDD, no `extraKnownMarketplaces`/`strictKnownMarketplaces`, no
+`allowed-tools`/`disallowed-tools` frontmatter, no `claude-*-N` model id, no
+`subagent_type`, no `context: fork`. The GitLab token families from 2.1.232 were
+re-confirmed already complete across `scripts/security_catalog.json`,
+`scripts/redact.py` and `skills/maintainer-redact/references/redaction-map.md`
+(both routable prefixes plus all nine non-routable ones). `maintainer-config-lint`
+was checked specifically and is NOT affected by the new 2.1.235–2.1.243 settings
+keys (`spellcheck`, `keybindingFlavor`, `modelPicker`, `promptCacheTtl`,
+`subagentPromptCacheTtl`, `modelPricing`, `workflowSizeGuideline`): it lints
+generic JSON/YAML/TOML/.env/Dockerfile and carries no Claude Code settings-key
+allowlist to go stale. The `Unknown key` logic in `scripts/sentinel/policy.py`
+governs the sentinel's own policy file, not Claude Code settings.
 
 MIND THE GAP BETWEEN THAT SWEEP AND THESE GUARDS. The 2026-08-22 sweep was
 whole-tree; `_shipped_files()` below is NOT. It covers `.md`/`.json` under
@@ -301,6 +328,91 @@ def test_the_permission_rule_detector_cuts_both_ways() -> None:
     assert not WARNED_PERM_RULE.search("Read(docs/**)")
     # Prose naming the tools is not a permission rule.
     assert not WARNED_PERM_RULE.search("use the Write tool, then Glob for files")
+
+
+# ── Bash allow rules: no wildcard BEFORE the subcommand (2.1.246) ────────────
+
+# 2.1.246 warns at startup on a Bash allow rule whose `*` sits before the
+# subcommand, e.g. `Bash(git * main)`. The reason is a real widening, not a
+# style nit: such a rule ALSO matches options inserted before the subcommand, so
+# `Bash(git * main)` grants `git -c core.pager=<anything> main` and every other
+# option smuggled into that slot. A trailing `*` (`Bash(gh *)`) and the
+# prefix-colon form (`Bash(git commit:*)`) are the safe spellings and must stay
+# quiet, or the guard reddens on correct writing and gets deleted.
+_BASH_RULE = re.compile(r"Bash\(([^)]*)\)")
+# A bare `*` token with a further non-wildcard token after it — i.e. something
+# the wildcard is standing IN FRONT OF.
+_WILDCARD_BEFORE_TOKEN = re.compile(r"(?:^|\s)\*(?=\s+\S)")
+
+
+def _bash_rules_with_leading_wildcard(text: str) -> list[str]:
+    return [m.group(0) for m in _BASH_RULE.finditer(text) if _WILDCARD_BEFORE_TOKEN.search(m.group(1))]
+
+
+def test_no_bash_allow_rule_puts_a_wildcard_before_the_subcommand() -> None:
+    """`Bash(git * main)` warns since 2.1.246 — the `*` also matches inserted options."""
+    offenders: list[str] = []
+    for path, text in _text(_shipped_files()):
+        offenders.extend(f"{path.relative_to(REPO)}: {r}" for r in _bash_rules_with_leading_wildcard(text))
+    assert not offenders, f"Bash allow rules with a wildcard before the subcommand warn at startup and match options inserted before it (2.1.246): {offenders}"
+
+
+def test_the_leading_wildcard_detector_cuts_both_ways() -> None:
+    """It must catch the widened form and leave every safe spelling alone."""
+    assert _bash_rules_with_leading_wildcard("Bash(git * main)")
+    assert _bash_rules_with_leading_wildcard("Bash(* main)")
+    assert _bash_rules_with_leading_wildcard("Bash(npm * run build)")
+    # Trailing wildcard: nothing sits after the `*`, so nothing is being fronted.
+    assert not _bash_rules_with_leading_wildcard("Bash(gh *)")
+    assert not _bash_rules_with_leading_wildcard("Bash(npm run *)")
+    # The prefix-colon form is the prescribed spelling.
+    assert not _bash_rules_with_leading_wildcard("Bash(git commit:*)")
+    assert not _bash_rules_with_leading_wildcard("Bash(npm run test:*)")
+    # Prose naming the tool is not a permission rule.
+    assert not _bash_rules_with_leading_wildcard("run Bash(git status) then read the output")
+
+
+# ── A UTF-8 BOM makes a shipped file silently ignored (2.1.239, 2.1.246) ─────
+
+# 2.1.239 fixed agents, skills and commands whose `.md` starts with a UTF-8 BOM
+# being SILENTLY IGNORED; 2.1.246 fixed plugin installation failing on a
+# `plugin.json` saved with one. Both are upstream fixes, so a BOM is no longer
+# fatal on a current CLI — the guard exists because the failure mode is
+# invisible: no error, no warning, the skill simply does not appear, and every
+# user still on an older CLI sees exactly that. An editor or a Windows
+# round-trip adds one without anyone typing it.
+_BOM = b"\xef\xbb\xbf"
+
+
+def _has_bom(path: Path) -> bool:
+    """The predicate, kept separate so the bite test can call it on a tmp path."""
+    with path.open("rb") as fh:
+        return fh.read(3) == _BOM
+
+
+def _files_starting_with_a_bom(paths: list[Path]) -> list[str]:
+    return [str(p.relative_to(REPO)) for p in paths if _has_bom(p)]
+
+
+def test_no_shipped_file_starts_with_a_utf8_bom() -> None:
+    """A BOM makes a shipped .md silently ignored (2.1.239) and a plugin.json fail to install (2.1.246)."""
+    offenders = _files_starting_with_a_bom(_shipped_files())
+    assert not offenders, f"UTF-8 BOM at the head of a shipped file — silently ignored by Claude Code before 2.1.239/2.1.246, and still on any older CLI: {offenders}"
+
+
+def test_the_bom_detector_cuts_both_ways(tmp_path: Path) -> None:
+    """It must catch a real BOM and stay quiet on ordinary UTF-8, including non-ASCII."""
+    bommed = tmp_path / "bommed.md"
+    bommed.write_bytes(_BOM + b"---\nname: x\n---\n")
+    clean = tmp_path / "clean.md"
+    # Non-ASCII but no BOM — the case a naive "is it ASCII" check would flunk.
+    clean.write_text("---\nname: x — dash\n---\n", encoding="utf-8")
+    assert _has_bom(bommed)
+    assert not _has_bom(clean)
+    # And an empty file must not read as a BOM (short read, not a match).
+    empty = tmp_path / "empty.md"
+    empty.write_bytes(b"")
+    assert not _has_bom(empty)
 
 
 # ── Hook `if:` path semantics changed (2.1.214) ──────────────────────────────
