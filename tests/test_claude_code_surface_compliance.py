@@ -562,8 +562,20 @@ def test_the_bom_set_actually_contains_the_manifest() -> None:
     stops existing at the expected path, and the guard stops guarding without
     saying so. A plugin repo without a manifest is broken anyway, so the honest
     assertion is that it exists AND is covered.
+
+    THE EMPTY-SET FLOOR IS FIRST, and it is not redundant with the manifest
+    assertion below. Measured: `git ls-files` in a repo with nothing tracked
+    exits 0 with no output, so `returncode != 0` does not skip and the set comes
+    back EMPTY — at which point `test_no_shipped_file_starts_with_a_utf8_bom`
+    passes vacuously, scanning nothing. The manifest line does catch it, but
+    reports "the manifest is missing" for a set that is entirely absent, sending
+    the reader after the wrong fault. This is the gate-pointed-at-nothing shape
+    the docstring above spends four paragraphs on, in the one detector kept, and
+    it was the only detector without the non-empty floor every other one has.
     """
-    covered = {str(p.relative_to(REPO)) for p in _bom_sensitive_files()}
+    files = _bom_sensitive_files()
+    assert len(files) > 20, f"BOM set collapsed to {len(files)} files — scanning nothing passes vacuously"
+    covered = {str(p.relative_to(REPO)) for p in files}
     assert ".claude-plugin/plugin.json" in covered, "2.1.246 names plugin.json — the BOM set must reach the manifest, and a plugin repo must have one"
     # The whole point of the tracked-files set is that it needs no per-type
     # upkeep; this pins the property rather than any particular glob.
