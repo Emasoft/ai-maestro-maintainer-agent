@@ -23,8 +23,9 @@ file (2.1.239 for agent/skill/command `.md`, 2.1.246 for `plugin.json`). It was
 measured ABSENT from the whole tree first, so it is not a fix but a trap, and it
 earns its place by FAILURE MODE rather than by pattern: a BOM made a shipped
 `.md` *silently ignored* — no error, no warning, the skill simply did not exist
-— which is the one class a green suite can never otherwise reveal. It is also
-byte-exact, so it has no oracle problem.
+— which is the one class a green suite can never otherwise reveal. Its PREDICATE
+is byte-exact and cannot be wrong; its FILE SET was wrong twice before it
+settled, which is the corollary below and the more useful half of the story.
 
 2.1.246's WILDCARD-BEFORE-SUBCOMMAND WARNING WAS AUDITED AND DELIBERATELY GOT NO
 DETECTOR. Upstream now warns at startup on a Bash allow rule whose `*` precedes
@@ -43,12 +44,13 @@ were demonstrably wrong and each was wrong in a NEW direction — missing glued
 spellings, biting `find . -name "*.py"`, dropping quoted-but-dangerous rules
 like `Bash(git * commit -m "*")`, and finally biting `cp * dest`. A fifth,
 scoped to `.json` so the surrounding context proves the string is a rule, is
-believed correct — and was NOT shipped, which is a distinction worth keeping
-straight. It was never measured against a case table, and asserting a pattern
-correct without one is the exact move the four failures had just discredited.
-Declining to ship an unmeasured guard is not the same as deleting a working one.
+believed correct — and was NOT shipped. Two reasons were given at the time and
+only ONE of them holds up. The weak one: it was never measured against a case
+table. That is true but carries little weight, because measuring it was one
+command away; "unmeasured" was a state that could have been fixed rather than a
+reason to drop it, and treating it as decisive would be a rationalisation.
 
-Its value is bounded anyway, and structurally, not by anyone's patience: scoped
+The reason that survives is structural, not a matter of anyone's patience: scoped
 to `.json` it would guard five files that hold no permission rules, so its worth
 is the chance this plugin ever ships a `settings.json` carrying a Bash allow
 rule, times the chance CI notices before the CLI does — and the CLI warns on
@@ -76,9 +78,25 @@ The BOM detector below shipped scanning a set inherited from detectors written
 for a different question, and that set excluded `.claude-plugin/plugin.json` —
 the one file 2.1.246 names. It was green because the set lacked the thing, which
 is the failure this docstring had just finished describing, in the guard that
-had been kept for having no such problem. Choose a detector's set deliberately
-and pin it, per detector; the tree-wide `>20 files` floor cannot see a gap of
-this shape.
+had been kept for having no such problem.
+
+The first repair was to ENUMERATE the set instead of inheriting it, and that was
+still wrong — the same failure with extra steps. Enumeration is green for
+whatever the author did not think to list, and the list came from the changelog
+entries read that day, so it missed `.mcp.json`, `.claude/settings.json` (named
+in this very docstring, two paragraphs up) and a root-level `marketplace.json`.
+That is v1's original error — deriving a rule from upstream's EXAMPLES rather
+than from the property — reproduced three commits after the lesson was written
+down, in the paragraph explaining the lesson.
+
+What finally worked was changing the QUESTION, not the answer. "Which files does
+Claude Code parse?" has no stable answer: it needs recall, it drifts every
+release, and being wrong is silent. "Does this repo ship a BOM in a tracked text
+file?" has no oracle at all — nothing to enumerate, nothing to keep current —
+and it strictly contains every parse surface, including ones upstream has not
+invented yet. When a set keeps being wrong, widen the property until the set
+stops being a judgement call. That is cheaper than getting the judgement right,
+and it cannot rot.
 
 Everything else in the 2.1.240 → 2.1.246 delta was measured and needed no edit,
 recorded here for the same reason as above. Whole-tree greps (the instrument
@@ -130,6 +148,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -382,16 +401,24 @@ def test_the_permission_rule_detector_cuts_both_ways() -> None:
     # Prose naming the tools is not a permission rule.
     assert not WARNED_PERM_RULE.search("use the Write tool, then Glob for files")
     # NOTE, since the docstring above says the Bash wildcard class got NO
-    # detector for being pattern-inseparable: this section is not a
-    # contradiction, but it is not immune either. `Write(...)`/`Glob(...)` have
-    # no meaning outside a permission rule, so unlike `Bash(cp * dest)` there is
-    # no ordinary-command twin to confuse them with — the class IS separable.
-    # What it shares with the deleted detector is the unanchored-literal risk: a
-    # skill documenting rule syntax verbatim would redden this. That has not
-    # happened (the suite is green), so it is left alone rather than
-    # pre-emptively re-engineered; if it ever fires on documentation, scope its
-    # file set the way the BOM detector's set was scoped, and do not widen the
-    # regex.
+    # detector for being pattern-inseparable. Two DIFFERENT questions, and an
+    # earlier version of this comment ran them together:
+    #
+    # SEPARABILITY — this section is fine. `Write(...)`/`Glob(...)` are
+    # permission-rule spellings with no ordinary-command twin, unlike
+    # `Bash(cp * dest)`, so there is no `git *main` vs `git *.py` ambiguity.
+    #
+    # FALSE POSITIVES — this section is NOT immune, and the earlier comment
+    # implied separability covered that too. It does not. `WARNED_PERM_RULE`
+    # needs only a non-empty argument, so a sentence about the Write TOOL that
+    # writes `Write(path)` WOULD match; the bite test below passes only because
+    # its example has no parentheses at all. This plugin ships skills that
+    # describe tool usage, so that is one documentation sentence away.
+    #
+    # Left alone rather than pre-emptively re-engineered, because the tree is
+    # green and the risk is stated. If it ever fires on documentation, do what
+    # the BOM detector did — fix the SET, or change the question — and do not
+    # widen the regex, which is the move that failed four times above.
 
 
 # ── The wildcard-before-subcommand class has NO detector, on purpose ─────────
@@ -467,17 +494,33 @@ def test_the_absence_guard_bites_and_does_not_self_match() -> None:
 # different question.
 _BOM = b"\xef\xbb\xbf"
 
-# Everything Claude Code PARSES here, where a BOM is silently fatal: the
-# instruction surfaces (2.1.239) plus the manifests (2.1.246).
-_MANIFEST_GLOBS = (".claude-plugin/plugin.json", ".claude-plugin/marketplace.json", "*.agent.toml")
+# THE SET IS NOT "WHAT CLAUDE CODE PARSES" — that question was got wrong twice.
+# First by inheriting `_shipped_files()`, which missed `.claude-plugin/plugin.json`,
+# the one file 2.1.246 names. Then by ENUMERATING three globs, which is the same
+# failure with extra steps: green for everything not thought of, and the list was
+# built from the changelog entries read that day, so it reproduced v1's original
+# error — deriving a rule from upstream's EXAMPLES instead of from the property.
+# `.mcp.json`, `.claude/settings.json` and a root-level `marketplace.json` were
+# all missing, and `hooks/hooks.json` was covered only by accident of another
+# detector's set.
+#
+# So the question changed instead of the answer. A BOM is never wanted in a
+# tracked UTF-8 text file — not by Claude Code, not by cspell, not by anything —
+# so the property is not "does Claude Code parse this" but "does this repo ship
+# a BOM anywhere". That has NO oracle: no list to keep current, nothing to
+# recall, and it strictly contains every parse surface that exists now or is
+# added later, including files upstream has not invented yet.
+#
+# `git ls-files` is the set, which also makes gitignored runtime state
+# (`.claude/janitor/`, `.claude/scheduled_tasks.*`, the memgrep index) fall out
+# for free rather than by an exclusion list that would need its own maintenance.
+_BOM_SUFFIXES = frozenset({".md", ".json", ".toml", ".yml", ".yaml"})
 
 
 def _bom_sensitive_files() -> list[Path]:
-    """The shipped instruction surfaces PLUS the manifests Claude Code parses."""
-    out = list(_shipped_files())
-    for rel in _MANIFEST_GLOBS:
-        out.extend(sorted(p for p in REPO.glob(rel) if p.is_file()))
-    return out
+    """Every git-TRACKED text file. No enumeration, so nothing to keep current."""
+    out = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, capture_output=True, text=True, check=True).stdout
+    return sorted(p for rel in out.split("\0") if rel and (p := REPO / rel).suffix in _BOM_SUFFIXES and p.is_file())
 
 
 def _has_bom(path: Path) -> bool:
@@ -494,15 +537,21 @@ def test_the_bom_set_actually_contains_the_manifest() -> None:
     """Per-detector empty-set pin: the tree-wide floor cannot see this gap.
 
     `test_the_shipped_file_set_is_not_empty` asserts >20 files and would stay
-    green with the manifest missing, which is exactly how the gap survived.
+    green with the manifest missing, which is exactly how that gap survived.
+
+    The manifest assertion is UNCONDITIONAL, deliberately. An earlier version
+    guarded it with `if manifest.is_file()`, which meant the pin went quiet in
+    the one scenario worth catching — someone relocates the manifest, the file
+    stops existing at the expected path, and the guard stops guarding without
+    saying so. A plugin repo without a manifest is broken anyway, so the honest
+    assertion is that it exists AND is covered.
     """
-    covered = {p.name for p in _bom_sensitive_files()}
-    manifest = REPO / ".claude-plugin" / "plugin.json"
-    if manifest.is_file():
-        assert "plugin.json" in covered, "2.1.246 names plugin.json; the BOM set must reach the manifest"
-    toml = list(REPO.glob("*.agent.toml"))
-    if toml:
-        assert any(p.suffix == ".toml" for p in _bom_sensitive_files()), "a BOM in a parsed .agent.toml is the same silent class"
+    covered = {str(p.relative_to(REPO)) for p in _bom_sensitive_files()}
+    assert ".claude-plugin/plugin.json" in covered, "2.1.246 names plugin.json — the BOM set must reach the manifest, and a plugin repo must have one"
+    # The whole point of the tracked-files set is that it needs no per-type
+    # upkeep; this pins the property rather than any particular glob.
+    assert any(c.endswith(".agent.toml") for c in covered), "a BOM in a parsed .agent.toml is the same silent class"
+    assert "hooks/hooks.json" in covered, "hooks.json must be covered on purpose, not by another detector's set"
 
 
 def test_no_shipped_file_starts_with_a_utf8_bom() -> None:
