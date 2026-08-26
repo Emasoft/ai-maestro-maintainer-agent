@@ -3,7 +3,7 @@ trdd-id: RO44YZDP
 title: Cap cargo target growth so the host stops refilling to 99 percent
 column: human_review
 created: 2026-08-21T16:51:26+0200
-updated: 2026-08-25T14:20:00+0200
+updated: 2026-08-26T04:45:03+0200
 current-owner: maintainer-agent-session
 task-type: infra
 min-approval-requirement: user
@@ -31,6 +31,11 @@ on 2026-08-25; host at 89% (220 GB free).
 - Column → `human_review` (3P-KAN-10 resting: waits on the USER — acting on
   #18, and the 14-day floor observation in acceptance box 3, which no session
   can tick today by construction).
+- **USER directive 2026-08-26: "never touch AgentlensPro."** Absolute, and it
+  closes the only remaining agent-side path: #18 is the deliverable, and no
+  session may implement it in that repo, clone it, or measure inside it. This
+  card is now USER-only by construction — do not reopen it looking for an
+  agent-executable step.
 
 ## Prior STATE — 2026-08-21 17:0x
 
