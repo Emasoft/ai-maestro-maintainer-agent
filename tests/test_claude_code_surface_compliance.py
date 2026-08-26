@@ -27,6 +27,24 @@ break us. The BOM one earns its place by FAILURE MODE, not by regex: a BOM made
 a shipped `.md` *silently ignored* — no error, no warning, the skill simply did
 not exist — which is the one class a green suite can never otherwise reveal.
 
+WHAT THE BASH DETECTOR'S GREEN DOES NOT MEAN. Measured on 2026-08-26: the
+shipped file set is 140 files and contains **zero** `Bash(...)` occurrences of
+any kind. So that detector passing is not "we checked the Bash rules and none
+front a subcommand" — this plugin ships no Bash permission rules at all, and
+the guard verifies nothing about the present. It is purely forward-looking.
+Recorded because a gate pointed at an empty set looks exactly like a gate
+finding nothing wrong, and the difference is the whole point of this file.
+
+That detector also cost two wrong versions before this one, which is worth
+knowing before anyone "improves" it: a token-based regex measured 3/16 wrong
+(missed glued spellings), a positional rewrite measured 4/16 — WORSE, because
+it bit `Bash(find . -name "*.py" -delete)` and every other ordinary argument
+glob. The current narrow form measures 1/16, its single miss being a spelling
+that is lexically identical to a case that must stay quiet. The full reasoning
+sits with the regex; the lesson for this docstring is that the second attempt
+failed by testing a hand-rolled model against a table written from the same
+model, so the oracle could not see the instrument's error.
+
 Everything else in the 2.1.240 → 2.1.246 delta was measured and needed no edit,
 recorded here for the same reason as above. Whole-tree greps (the instrument
 sanity-checked against known-present strings first) found: no Todo/Task tool
@@ -342,30 +360,49 @@ def test_the_permission_rule_detector_cuts_both_ways() -> None:
 # safe and must stay quiet — a guard that reddens on correct writing gets
 # deleted.
 #
-# MATCH THE CLASS, NOT THE CHANGELOG'S EXAMPLE. The first version of this
-# detector required the `*` to be a space-delimited token, because that is how
-# upstream's `Bash(git * main)` happens to be written. Measured: it missed
-# `Bash(git *main)` and `Bash(git *:*)`, which front a subcommand just as
-# widely and are the spellings a real rule is more likely to use. Reading an
-# example as the spec is the exact proxy-for-the-thing failure this file exists
-# to catch, and it had got inside the detector meant to catch it. The condition
-# is therefore positional, not lexical: a `*` with any later non-space,
-# non-wildcard character — i.e. something the wildcard stands IN FRONT OF.
+# THE SCOPE IS DELIBERATELY NARROW, AND THE NARROWING IS THE INTERESTING PART.
+# Two earlier versions of this detector were measured wrong, in opposite
+# directions, and the second was worse than the first:
+#
+#   token-based  `(?:^|\s)\*(?=\s+\S)`   3/16 wrong — missed glued spellings
+#   positional   `\*[^*]*[^\s*]`         4/16 wrong — bit `find . -name "*.py"`
+#
+# The positional rewrite was an attempt to "match the class instead of the
+# example". It matched a WIDER class than 2.1.246 warns about, and the case
+# table could not see it because the table and the regex had the same author —
+# the proxy failure reappearing one level up, in the oracle rather than the
+# instrument.
+#
+# The tension is not fixable by a better regex. `git *main` (a fronted
+# subcommand, which upstream warns about) and `git *.py` (a trailing file glob,
+# which it does not) are the SAME lexical shape; only intent separates them. A
+# guard that fires on `Bash(find . -name "*.py" -delete)` gets deleted by the
+# first person it annoys — which is this file's own stated failure mode — so
+# the honest move is to cover the shape we can define and say plainly what is
+# out of scope, rather than to bite a class we cannot express.
+#
+# So: a bare `*` TOKEN followed by a bare WORD token — upstream's own spelling
+# and the realistic hand-written variants. Measured 1/16 wrong, and that one is
+# the glued `git *main`, knowingly out of scope per the paragraph above.
 _BASH_RULE = re.compile(r"Bash\(([^)]*)\)")
-_WILDCARD_BEFORE_TOKEN = re.compile(r"\*[^*]*[^\s*]")
+_WILDCARD_BEFORE_TOKEN = re.compile(r"(?:^|\s)\*\s+[A-Za-z0-9][A-Za-z0-9._-]*(?=\s|$)")
 
 
 def _bash_rules_with_leading_wildcard(text: str) -> list[str]:
-    """Two KNOWN limits, both fail-open, both deliberate rather than unnoticed.
+    """Known gaps, stated rather than left to be rediscovered.
 
-    `[^)]*` cannot cross a `)`, so a rule whose command embeds a paren
-    (`Bash(bash -c 'f() { :; }' * main)`) truncates early and is skipped, as is
-    a rule wrapped across a line. And the `Bash(` literal is unanchored, so a
-    shipped `.md` that QUOTES the bad form to warn against it would redden the
-    suite. Both are priced deliberately: anchoring to a rule context means
-    parsing markdown and JSON string boundaries, which costs more than the
-    class is worth here, and the sweep that measured this tree clean was
-    whole-tree and did not depend on this regex.
+    OUT OF SCOPE (fail-open, accepted): the glued spelling `Bash(git *main)`,
+    for the reason above; and a rule whose command embeds a paren
+    (`Bash(bash -c 'f() { :; }' * main)`) or wraps across a line, because
+    `[^)]*` cannot cross a `)`.
+
+    WILL FIRE ON DOCUMENTATION, and that is a policy, not an oversight. The
+    `Bash(` literal is unanchored, so a shipped `.md` that pastes the bad form
+    verbatim to warn against it reddens the suite. A comment cannot mitigate a
+    false positive — only the regex can — so this one is not filed under
+    "documented limit": the rule is that a shipped file NAMES the anti-pattern
+    ("a wildcard before the subcommand") instead of pasting a live rule. If a
+    literal example is truly needed, break the token so it is not a rule.
     """
     return [m.group(0) for m in _BASH_RULE.finditer(text) if _WILDCARD_BEFORE_TOKEN.search(m.group(1))]
 
@@ -383,22 +420,44 @@ def test_the_leading_wildcard_detector_cuts_both_ways() -> None:
     assert _bash_rules_with_leading_wildcard("Bash(git * main)")  # upstream's own example
     assert _bash_rules_with_leading_wildcard("Bash(* main)")
     assert _bash_rules_with_leading_wildcard("Bash(npm * run build)")
-    # THE GLUED SPELLINGS. Same widening, no space around the `*`. An earlier
-    # token-based regex missed both; they are pinned so it cannot regress to
-    # matching only the changelog's spacing.
-    assert _bash_rules_with_leading_wildcard("Bash(git *main)")
-    assert _bash_rules_with_leading_wildcard("Bash(git *:*)")
+    assert _bash_rules_with_leading_wildcard("Bash(git * checkout)")
+    # ORDINARY ASTERISKS IN ARGUMENTS. Every one of these is a normal command a
+    # tooling repo writes, and NONE is the 2.1.246 class. They are pinned first
+    # because a previous "wider" version of this detector bit all four — the
+    # regression that would get the guard deleted, so it is the one most worth
+    # holding down.
+    assert not _bash_rules_with_leading_wildcard('Bash(echo "a * b")')
+    assert not _bash_rules_with_leading_wildcard('Bash(find . -name "*.py" -delete)')
+    assert not _bash_rules_with_leading_wildcard("Bash(git *.py)")
+    assert not _bash_rules_with_leading_wildcard('Bash(grep -r "TODO.*x" src)')
     # Trailing wildcard: nothing sits after the `*`, so nothing is being fronted.
     assert not _bash_rules_with_leading_wildcard("Bash(gh *)")
     assert not _bash_rules_with_leading_wildcard("Bash(npm run *)")
     assert not _bash_rules_with_leading_wildcard("Bash(git * )")
+    assert not _bash_rules_with_leading_wildcard("Bash(git * *)")
     # A trailing glob after a dash is still trailing — `git -*` fronts nothing.
+    # It is arguably dangerous on its own (`git -c core.pager=…` reaches
+    # arbitrary config), but that is not 2.1.246's warning: the warning is about
+    # a rule that still LOOKS scoped to a subcommand while admitting inserted
+    # options. `git -*` is transparently broad. Pinned so the point stays settled.
     assert not _bash_rules_with_leading_wildcard("Bash(git -*)")
     # The prefix-colon form is the prescribed spelling.
     assert not _bash_rules_with_leading_wildcard("Bash(git commit:*)")
     assert not _bash_rules_with_leading_wildcard("Bash(npm run test:*)")
     # Prose naming the tool is not a permission rule.
     assert not _bash_rules_with_leading_wildcard("run Bash(git status) then read the output")
+
+
+def test_the_glued_spelling_is_a_documented_scope_gap_not_an_accident() -> None:
+    """`git *main` is out of scope BECAUSE it cannot be told from `git *.py`.
+
+    Pinned as an explicit expectation rather than left as silence: the next
+    reader who notices the miss should find the reason here instead of
+    "widening" the regex back into biting every `find -name "*.py"`.
+    """
+    assert not _bash_rules_with_leading_wildcard("Bash(git *main)")
+    # The indistinguishable twin — same lexical shape, opposite verdict wanted.
+    assert not _bash_rules_with_leading_wildcard("Bash(git *.py)")
 
 
 # ── A UTF-8 BOM makes a shipped file silently ignored (2.1.239, 2.1.246) ─────
