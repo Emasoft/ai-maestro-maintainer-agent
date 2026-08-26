@@ -584,8 +584,22 @@ def test_the_bom_set_actually_contains_the_manifest() -> None:
 
 
 def test_no_shipped_file_starts_with_a_utf8_bom() -> None:
-    """A BOM makes a shipped .md silently ignored (2.1.239) and a plugin.json fail to install (2.1.246)."""
-    offenders = _files_starting_with_a_bom(_bom_sensitive_files())
+    """A BOM makes a shipped .md silently ignored (2.1.239) and a plugin.json fail to install (2.1.246).
+
+    THE FLOOR LIVES HERE, in the test that consumes the set. It was first put
+    only in the sibling manifest test, which bought less than it appeared to:
+    that made a sibling go red on an empty set, but this test's own verdict
+    stayed PASS, so `pytest -k utf8_bom`, a bare node id, `--last-failed`, or a
+    CI shard running a subset still scanned zero files green with nothing red
+    anywhere. Measured: this test alone passes against a repo tracking one file.
+
+    A guard that depends on which tests were selected is not a guard on the
+    property — and putting it beside the problem instead of on it is the same
+    shape as the defect it was added to fix.
+    """
+    files = _bom_sensitive_files()
+    assert len(files) > 20, f"BOM set collapsed to {len(files)} files — scanning nothing passes vacuously"
+    offenders = _files_starting_with_a_bom(files)
     assert not offenders, f"UTF-8 BOM at the head of a parsed file — silently ignored by Claude Code before 2.1.239/2.1.246, and still on any older CLI: {offenders}"
 
 
