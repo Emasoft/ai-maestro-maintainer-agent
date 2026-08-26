@@ -41,21 +41,44 @@ fix. No guard was added, for a reason worth recording:
 Five implementations were written and measured before that was accepted; four
 were demonstrably wrong and each was wrong in a NEW direction — missing glued
 spellings, biting `find . -name "*.py"`, dropping quoted-but-dangerous rules
-like `Bash(git * commit -m "*")`, and finally biting `cp * dest`. Do not write a
-sixth. The enforcement point for this class is the CLI itself, which sees real
-rules with a real parser at startup; a regex over markdown cannot beat it, and
-the whole-tree sweep above is what actually establishes the tree is clean.
+like `Bash(git * commit -m "*")`, and finally biting `cp * dest`. A fifth,
+scoped to `.json` so the surrounding context proves the string is a rule, is
+believed correct — and was NOT shipped, which is a distinction worth keeping
+straight. It was never measured against a case table, and asserting a pattern
+correct without one is the exact move the four failures had just discredited.
+Declining to ship an unmeasured guard is not the same as deleting a working one.
 
-THE LESSON FROM THAT, because it generalises past this one detector: every
-wrong version was validated against a hand-written case table, and the table was
-written by the author of the regex it was testing — so the oracle shared the
-instrument's blind spot and could not reveal it. Generating cases from the SPEC
-instead of from the pattern did help (it found three real misses nobody had
-named), but it was not sufficient: a spec-derived table still inherits its
-author's sense of which dimensions matter, and the dimension a FIX introduces is
-the one its author is least likely to probe. Bigger table, same blind spot, one
-axis over. When a guard needs its fifth rewrite, the thing to question is
-whether the property is checkable at this cost — not the pattern.
+Its value is bounded anyway, and structurally, not by anyone's patience: scoped
+to `.json` it would guard five files that hold no permission rules, so its worth
+is the chance this plugin ever ships a `settings.json` carrying a Bash allow
+rule, times the chance CI notices before the CLI does — and the CLI warns on
+exactly this at startup, with a real parser, on the real rules. That product is
+small for reasons that can be stated. `test_the_bash_wildcard_class_still_has_no_detector`
+below is the enforceable form of "do not write a sixth"; a docstring is not a
+control.
+
+THE LESSON FROM THAT, because it generalises past this one detector: every wrong
+version was validated against a hand-written case table, and the table was
+written AFTER the pattern, from the pattern's shape — so the oracle inherited
+the instrument's blind spot and could not reveal it. It is an ORDERING failure,
+not an authorship one: a table written from the spec BEFORE any pattern exists
+does not share the blind spot, and the same author can write it. Generating
+cases from the spec did help here (it found three real misses nobody had named)
+but was not sufficient, because those cases were generated along the axis the
+last fix had just changed — the dimension a fix introduces is the one its author
+is least likely to probe. Bigger table, same blind spot, one axis over. When a
+guard needs its fifth rewrite, question whether the property is checkable at
+this cost, not the pattern.
+
+AND THE COROLLARY, learned immediately afterwards at this file's own expense: a
+byte-exact predicate has no oracle problem, but its FILE LIST is an oracle too.
+The BOM detector below shipped scanning a set inherited from detectors written
+for a different question, and that set excluded `.claude-plugin/plugin.json` —
+the one file 2.1.246 names. It was green because the set lacked the thing, which
+is the failure this docstring had just finished describing, in the guard that
+had been kept for having no such problem. Choose a detector's set deliberately
+and pin it, per detector; the tree-wide `>20 files` floor cannot see a gap of
+this shape.
 
 Everything else in the 2.1.240 → 2.1.246 delta was measured and needed no edit,
 recorded here for the same reason as above. Whole-tree greps (the instrument
@@ -358,6 +381,67 @@ def test_the_permission_rule_detector_cuts_both_ways() -> None:
     assert not WARNED_PERM_RULE.search("Read(docs/**)")
     # Prose naming the tools is not a permission rule.
     assert not WARNED_PERM_RULE.search("use the Write tool, then Glob for files")
+    # NOTE, since the docstring above says the Bash wildcard class got NO
+    # detector for being pattern-inseparable: this section is not a
+    # contradiction, but it is not immune either. `Write(...)`/`Glob(...)` have
+    # no meaning outside a permission rule, so unlike `Bash(cp * dest)` there is
+    # no ordinary-command twin to confuse them with — the class IS separable.
+    # What it shares with the deleted detector is the unanchored-literal risk: a
+    # skill documenting rule syntax verbatim would redden this. That has not
+    # happened (the suite is green), so it is left alone rather than
+    # pre-emptively re-engineered; if it ever fires on documentation, scope its
+    # file set the way the BOM detector's set was scoped, and do not widen the
+    # regex.
+
+
+# ── The wildcard-before-subcommand class has NO detector, on purpose ─────────
+
+# The symbols the four measured-wrong versions used. Matched at a LINE START
+# only, so this file's own indented mention of them does not count as a revival.
+_DELETED_BASH_SYMBOLS = ("_BASH_RULE", "_WILDCARD_BEFORE_TOKEN", "_bash_rules_with_leading_wildcard")
+
+
+def _revived_bash_detector_names(source: str) -> list[str]:
+    return [n for n in _DELETED_BASH_SYMBOLS if f"\n{n}" in source or f"def {n}" in source]
+
+
+def test_the_bash_wildcard_class_still_has_no_detector() -> None:
+    """A guard on the DECISION, since a docstring saying "do not" is not a control.
+
+    Five patterns were written for 2.1.246's wildcard-before-subcommand warning
+    and four were measured wrong, each in a new direction, because
+    `Bash(git * main)` and `Bash(cp * dest)` are the same lexical shape. The
+    module docstring records that; this fails if someone re-derives a sixth
+    without reading it. It cannot false-positive — it asserts about this file,
+    not about the tree.
+
+    If a future Claude Code release makes the class separable (a documented rule
+    grammar, say), delete this test in the same commit that adds the detector,
+    and say so.
+    """
+    revived = _revived_bash_detector_names(Path(__file__).read_text(encoding="utf-8"))
+    assert not revived, f"a Bash wildcard detector was re-added ({revived}) — read the docstring's account of the four measured-wrong versions first, then delete this test deliberately if you still mean to"
+
+
+def test_the_absence_guard_bites_and_does_not_self_match() -> None:
+    """It must fire on a revived symbol and NOT on its own mention of the names.
+
+    A test that greps its own source is the `pgrep` self-match hazard: the
+    scanner's argv contains the pattern. Anchoring on a line start is what keeps
+    the indented tuple above from matching itself.
+
+    THE FIXTURES ARE ASSEMBLED, NEVER WRITTEN OUT, and that is not fussiness —
+    the first version of this test spelled `"def _bash_rules_with_leading_..."`
+    as a literal and turned the suite red, because the fixture WAS a revival
+    occurrence in the very file the guard scans. Same shape as the `[w]rite`
+    bracket trick for `pgrep`: a self-scanning check must not contain the
+    string it looks for.
+    """
+    const, helper = _DELETED_BASH_SYMBOLS[0], _DELETED_BASH_SYMBOLS[2]
+    assert _revived_bash_detector_names(f'import re\n{const} = re.compile(r"x")\n') == [const]
+    assert _revived_bash_detector_names("def " + helper + "(t):\n    pass\n") == [helper]
+    # An indented mention (this file's own tuple) must stay quiet.
+    assert not _revived_bash_detector_names(f'    names = ("{const}",)\n')
 
 
 # ── A UTF-8 BOM makes a shipped file silently ignored (2.1.239, 2.1.246) ─────
@@ -369,7 +453,31 @@ def test_the_permission_rule_detector_cuts_both_ways() -> None:
 # invisible: no error, no warning, the skill simply does not appear, and every
 # user still on an older CLI sees exactly that. An editor or a Windows
 # round-trip adds one without anyone typing it.
+#
+# THE SET IS CHOSEN HERE, NOT INHERITED, AND THAT IS THE LOAD-BEARING PART.
+# This detector first shipped scanning `_shipped_files()` — the set the OTHER
+# detectors use, which is `.md`/`.json` under agents/skills/commands/hooks plus
+# README. Measured afterwards: that set does NOT contain
+# `.claude-plugin/plugin.json`, which is the one file 2.1.246 actually names,
+# nor the repo-root `*.agent.toml`. The predicate was unimpeachable and the
+# guard was pointed at nothing — the same correct-instrument-wrong-set failure
+# the docstring above describes for the Bash class, reproduced in the detector
+# kept BECAUSE it "had no oracle problem". A byte-exact predicate has no oracle
+# problem; a file list is an oracle, and this one had been chosen for a
+# different question.
 _BOM = b"\xef\xbb\xbf"
+
+# Everything Claude Code PARSES here, where a BOM is silently fatal: the
+# instruction surfaces (2.1.239) plus the manifests (2.1.246).
+_MANIFEST_GLOBS = (".claude-plugin/plugin.json", ".claude-plugin/marketplace.json", "*.agent.toml")
+
+
+def _bom_sensitive_files() -> list[Path]:
+    """The shipped instruction surfaces PLUS the manifests Claude Code parses."""
+    out = list(_shipped_files())
+    for rel in _MANIFEST_GLOBS:
+        out.extend(sorted(p for p in REPO.glob(rel) if p.is_file()))
+    return out
 
 
 def _has_bom(path: Path) -> bool:
@@ -382,10 +490,25 @@ def _files_starting_with_a_bom(paths: list[Path]) -> list[str]:
     return [str(p.relative_to(REPO)) for p in paths if _has_bom(p)]
 
 
+def test_the_bom_set_actually_contains_the_manifest() -> None:
+    """Per-detector empty-set pin: the tree-wide floor cannot see this gap.
+
+    `test_the_shipped_file_set_is_not_empty` asserts >20 files and would stay
+    green with the manifest missing, which is exactly how the gap survived.
+    """
+    covered = {p.name for p in _bom_sensitive_files()}
+    manifest = REPO / ".claude-plugin" / "plugin.json"
+    if manifest.is_file():
+        assert "plugin.json" in covered, "2.1.246 names plugin.json; the BOM set must reach the manifest"
+    toml = list(REPO.glob("*.agent.toml"))
+    if toml:
+        assert any(p.suffix == ".toml" for p in _bom_sensitive_files()), "a BOM in a parsed .agent.toml is the same silent class"
+
+
 def test_no_shipped_file_starts_with_a_utf8_bom() -> None:
     """A BOM makes a shipped .md silently ignored (2.1.239) and a plugin.json fail to install (2.1.246)."""
-    offenders = _files_starting_with_a_bom(_shipped_files())
-    assert not offenders, f"UTF-8 BOM at the head of a shipped file — silently ignored by Claude Code before 2.1.239/2.1.246, and still on any older CLI: {offenders}"
+    offenders = _files_starting_with_a_bom(_bom_sensitive_files())
+    assert not offenders, f"UTF-8 BOM at the head of a parsed file — silently ignored by Claude Code before 2.1.239/2.1.246, and still on any older CLI: {offenders}"
 
 
 def test_the_bom_detector_cuts_both_ways(tmp_path: Path) -> None:
