@@ -117,9 +117,14 @@ allowlist to go stale. The `Unknown key` logic in `scripts/sentinel/policy.py`
 governs the sentinel's own policy file, not Claude Code settings.
 
 THE 2026-08-27 PASS AGAINST 2.1.247 ADDED NO DETECTOR AND CHANGED NO SHIPPED
-FILE. All 33 changelog bullets were read and triaged: 25 are CLI-internal (TUI
-input handling, cloud-session and sign-in plumbing, terminal rendering) with no
-plugin surface, and the 8 that touch one were each measured clean. No
+FILE. All 33 changelog bullets were read IN FULL — the first draft of this pass
+triaged eleven of them from a 140-character truncation, which is a proxy for a
+bullet and got caught before it was believed — and triaged: 25 are CLI-internal
+(TUI input handling, cloud-session and sign-in plumbing, terminal rendering)
+with no plugin surface, and the 8 that touch one were each measured clean.
+Sixteen topics were settled by grep over the tracked tree; the remainder were
+dismissed from the bullet text alone, which is judgement, and is recorded as
+judgement rather than folded into the word "measured". No
 `SendFeedback`/`feedbackDrafts`/`/feedback` reference, and still no
 `allowed-tools`/`disallowed-tools`/`tools:` frontmatter for the new feedback
 surface to land on. No `spinnerTipsOverride` or `tipsFile`. No shipped
@@ -146,10 +151,21 @@ delegate's blind spot arrives together with its findings.
 2.1.247's CONTROL/INVISIBLE-CHARACTER NAME REJECTION WAS AUDITED AND
 DELIBERATELY GOT NO DETECTOR. Upstream now rejects a plugin or marketplace name
 containing control or invisible characters. Measured:
-`.claude-plugin/plugin.json` is the only tracked manifest, and a scan of all 229
-tracked `.md`/`.json`/`.toml`/`.yml`/`.yaml` files for C0 controls, DEL, NBSP,
-soft hyphen, zero-width characters, bidi overrides and isolates, word joiner and
-U+FEFF found ZERO occurrences anywhere — not in a `name`, not in prose.
+`.claude-plugin/plugin.json` is the only tracked manifest, and all 229 tracked
+`.md`/`.json`/`.toml`/`.yml`/`.yaml` files — 1,654,338 characters — were scanned
+for any codepoint whose Unicode general category is Cc, Cf, Co or Cs (newline
+and tab excepted), plus NBSP and narrow NBSP. ZERO occurrences: not in a `name`,
+not in prose. The instrument was sanity-checked against a needle first and bit
+on all four classes.
+
+THE PREDICATE IS A CATEGORY QUERY, NOT A CODEPOINT LIST, and the first draft of
+this paragraph is why. It enumerated NBSP, soft hyphen, zero-width, bidi, word
+joiner and U+FEFF — silently omitting the TAG block U+E0000-U+E007F (the modern
+invisible-text-smuggling vector), the invisible math operators U+2061-U+2064,
+and whatever Unicode assigns next. A paragraph whose thesis is that a file set
+is an oracle had chosen its codepoint set the same way, one line below saying
+so. `unicodedata.category` is maintained by someone else and updates with the
+standard; a list in a docstring is maintained by whoever last remembered it.
 
 Two shapes were considered and both rejected. Scoping the check to `name`
 fields rebuilds the field-and-file oracle this docstring documents getting
