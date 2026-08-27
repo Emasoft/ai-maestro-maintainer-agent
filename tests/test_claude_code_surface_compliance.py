@@ -6,8 +6,9 @@ re-measured on 2026-08-15 against Claude Code 2.1.233 (auditing the 2.1.225 →
 2.1.232 changelog; the CLI claims below were re-run against the live binary,
 not re-dated), then again on 2026-08-22 against 2.1.240 (auditing the 2.1.233 →
 2.1.240 changelog), then again on 2026-08-26 against 2.1.246 (auditing the
-2.1.240 → 2.1.246 changelog). The file exists so that stays true without anyone
-re-reading a changelog.
+2.1.240 → 2.1.246 changelog), then again on 2026-08-27 against 2.1.247 (auditing
+the 2.1.246 → 2.1.247 changelog). The file exists so that stays true without
+anyone re-reading a changelog.
 
 The 2026-08-22 pass added ONE detector (the Todo/Task tool family, removed on
 modern models in 2.1.233) and confirmed the rest of that changelog needed no
@@ -114,6 +115,63 @@ keys (`spellcheck`, `keybindingFlavor`, `modelPicker`, `promptCacheTtl`,
 generic JSON/YAML/TOML/.env/Dockerfile and carries no Claude Code settings-key
 allowlist to go stale. The `Unknown key` logic in `scripts/sentinel/policy.py`
 governs the sentinel's own policy file, not Claude Code settings.
+
+THE 2026-08-27 PASS AGAINST 2.1.247 ADDED NO DETECTOR AND CHANGED NO SHIPPED
+FILE. All 33 changelog bullets were read and triaged: 25 are CLI-internal (TUI
+input handling, cloud-session and sign-in plumbing, terminal rendering) with no
+plugin surface, and the 8 that touch one were each measured clean. No
+`SendFeedback`/`feedbackDrafts`/`/feedback` reference, and still no
+`allowed-tools`/`disallowed-tools`/`tools:` frontmatter for the new feedback
+surface to land on. No `spinnerTipsOverride` or `tipsFile`. No shipped
+statement of a Sonnet auto-compact threshold — the two `context window` hits
+are an ADR's generic phrase and a frozen archived TRDD. No claim that a
+sub-agent DIES on a first-call model 404: README's model-overload paragraph is
+about the session `fallbackModel`, which the new fallback chain is compatible
+with rather than contradicted by. No UNC, `/net/` or `/Volumes/` markdown link
+target, and no control or invisible codepoint in any `](...)` target. No
+`/claude-api` reference to go stale on its new `cost-optimize` and Admin API
+coverage. And no marketplace plugin entry, version-less or otherwise, because
+this repo ships a plugin and no `marketplace.json` (nor a tracked `.mcp.json`).
+
+COUNT THE SOURCE, NOT THE SUMMARY. That triage was delegated and came back as
+eight items, which is what a complete audit and a partial one both look like.
+The changelog has THIRTY-THREE bullets. Re-running the eight greps confirms
+those eight are clean and says nothing at all about the other twenty-five: a
+list's COMPLETENESS is the one property re-running its own instrument cannot
+test. Reading the source settled it — the pre-filter was right, all 25 really
+are CLI-internal — but "the filter was right" was an unverified assumption
+until the source was read, which is the file-set failure one level up. A
+delegate's blind spot arrives together with its findings.
+
+2.1.247's CONTROL/INVISIBLE-CHARACTER NAME REJECTION WAS AUDITED AND
+DELIBERATELY GOT NO DETECTOR. Upstream now rejects a plugin or marketplace name
+containing control or invisible characters. Measured:
+`.claude-plugin/plugin.json` is the only tracked manifest, and a scan of all 229
+tracked `.md`/`.json`/`.toml`/`.yml`/`.yaml` files for C0 controls, DEL, NBSP,
+soft hyphen, zero-width characters, bidi overrides and isolates, word joiner and
+U+FEFF found ZERO occurrences anywhere — not in a `name`, not in prose.
+
+Two shapes were considered and both rejected. Scoping the check to `name`
+fields rebuilds the field-and-file oracle this docstring documents getting
+wrong twice. Widening it to "no invisible codepoint anywhere" — the move that
+rescued the BOM guard — does NOT transfer, and the reason is exact: the BOM
+property has no exceptions, nothing wants a BOM, whereas U+200D is the joiner
+inside ordinary multi-person and skin-tone emoji, NBSP and the bidi marks have
+legitimate typographic uses, and CR is a legal line ending. The widened
+predicate therefore has real false positives, which makes it a guard that gets
+suppressed rather than fixed. That is the separability failure again, one level
+up from the Bash class: "invisible codepoint" is no more separable from
+"legitimate Unicode" by a codepoint list than `git * main` is from `cp * dest`
+by a lexical one.
+
+What remains is the wildcard-class trade, and it lands the same way. The worth
+is P(an invisible character reaches a hand-typed kebab-case name in this repo)
+times P(CI notices before the CLI does) — and 2.1.247 IS upstream driving the
+second term to nearly zero, by rejecting exactly this itself, at load, on the
+real field. Should one ever land, the fix is the narrowest available: a charset
+pin `^[a-z0-9-]+$` on `plugin.json`'s own `name`, whose coverage is already
+pinned by `test_the_bom_set_actually_contains_the_manifest`. Not the widened
+predicate.
 
 MIND THE GAP BETWEEN THAT SWEEP AND THESE GUARDS. The 2026-08-22 sweep was
 whole-tree; `_shipped_files()` below is NOT. It covers `.md`/`.json` under
