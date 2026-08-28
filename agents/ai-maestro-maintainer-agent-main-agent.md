@@ -326,6 +326,13 @@ authoritative.
 > every session runs as the same user, that consent is set to accept so
 > fleet messaging stays alive. The gates are operationally open and
 > enforce nothing R6-shaped.
+> 2.1.248 changed that setting's FAILURE mode, not the gate: an INVALID
+> `crossSessionInbound` value used to be ignored, so a bad write left the
+> channel open; it now warns and HOLDS messages (user settings) or
+> REFUSES them (managed settings) until fixed. The self-repair below
+> writes a valid value, so this bites a hand-edit — but it adds a second
+> reading to a silent channel: a typo in that value, not only an absent
+> peer.
 > **On that channel R6 is yours to obey unilaterally.** Do not read
 > "a gate exists" as "every send is checked against the graph": a send
 > that succeeds there is not a send that was permitted. Route to a

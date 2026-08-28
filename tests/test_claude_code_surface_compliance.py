@@ -7,8 +7,9 @@ re-measured on 2026-08-15 against Claude Code 2.1.233 (auditing the 2.1.225 →
 not re-dated), then again on 2026-08-22 against 2.1.240 (auditing the 2.1.233 →
 2.1.240 changelog), then again on 2026-08-26 against 2.1.246 (auditing the
 2.1.240 → 2.1.246 changelog), then again on 2026-08-27 against 2.1.247 (auditing
-the 2.1.246 → 2.1.247 changelog). The file exists so that stays true without
-anyone re-reading a changelog.
+the 2.1.246 → 2.1.247 changelog), then again on 2026-08-28 against 2.1.248
+(auditing the 2.1.247 → 2.1.248 changelog). The file exists so that stays true
+without anyone re-reading a changelog.
 
 The 2026-08-22 pass added ONE detector (the Todo/Task tool family, removed on
 modern models in 2.1.233) and confirmed the rest of that changelog needed no
@@ -188,6 +189,60 @@ real field. Should one ever land, the fix is the narrowest available: a charset
 pin `^[a-z0-9-]+$` on `plugin.json`'s own `name`, whose coverage is already
 pinned by `test_the_bom_set_actually_contains_the_manifest`. Not the widened
 predicate.
+
+THE 2026-08-28 PASS AGAINST 2.1.248 ADDED NO DETECTOR EITHER, BUT UNLIKE THE
+LAST TWO IT FOUND A REAL BUG. 49 bullets, counted from the fetched changelog
+before triage and all read in full. Two shipped files changed, neither of them
+this one:
+
+`scripts/worktree.py` — 2.1.248 makes a backgrounded session HOLD THE
+WORKTREE'S LOCK while it runs, expressly so cleanup leaves its checkout alone.
+`remove_worktree` did `if not _git_ok("worktree","remove","--force",path):
+_rmtree_with_backoff(path)`, and its own comment named "a lock" as an expected
+cause of that refusal — so the fallback took the directory anyway. Measured on
+real git 2.55.0, not assumed: `remove --force` on a locked worktree exits 128
+with `cannot remove a locked working tree` and leaves the directory in place
+(a lock needs `-f -f`). So upstream's new safety signal was being converted
+into precisely the data loss it was added to prevent, and `force=` made it
+worse rather than better — a live session that happens to be clean and on the
+expected branch passes every `assert_safe_to_destroy` check, leaving the lock
+as the only thing between it and the rm-rf. The guard now consults the `locked`
+flag the porcelain parser was already producing and refuses, naming the lock
+reason; `force=` deliberately does not override it, because callers mean
+"discard work I own" by it, never "kill someone else's session".
+
+`agents/…-main-agent.md` — the session-channel bullet's gate list now records
+that 2.1.248 changed `crossSessionInbound`'s FAILURE mode: an invalid value
+used to be ignored (a bad write left the channel open) and now warns and HOLDS,
+or REFUSES under managed settings. The passage's thesis is unchanged; what is
+new is that a silent channel has a second reading — a typo in that value, not
+only an absent peer.
+
+2.1.248's `experimental.cacheTtl` AGENT-FRONTMATTER FIELD WAS AUDITED AND
+DELIBERATELY NOT ADOPTED. The changelog alone could not settle it, so the
+decision came from the installed binary's own schema: `experimental: {cacheTtl}`
+is documented there as "Prompt cache TTL for this agent's requests … when no
+`subagentPromptCacheTtl` setting or env var is set", with "1h" ignored during
+subscription overage — while the neighbouring MAIN-conversation TTL already
+defaults to "1 hour on a Claude subscription within its usage limits". This
+plugin ships one agent, launched by README as `claude --agent …`, i.e. as the
+main conversation. So the field is a no-op in the documented launch mode, live
+only if the agent is ever spawned as a SUBAGENT with no subagent TTL set, and
+inert in overage regardless. An `experimental.` key that buys nothing in the
+mode we actually run is a maintenance surface, not a saving.
+
+The remaining 45 bullets were measured and needed no edit. The one that could
+have broken this plugin at runtime — a hook whose stdout is a `{…}` that is not
+valid JSON is now a hook ERROR, where it used to pass through as text — does
+not apply: `hooks/hooks.json` carries exactly one hook (`SessionStart`, an
+`echo` of prose beginning `[`), there are no `PermissionRequest`/`PreToolUse`
+hooks to print an invalid answer, and `.claude/settings.json` declares no hooks
+at all. Whole-tree greps found no reference to `ultrareview`, `--restricted` /
+`CLAUDE_CODE_RESTRICTED`, `workflow-authoring`, `/loop`, `ScheduleWakeup`, or
+`prod.env`, so the items touching those surfaces have nothing here to
+invalidate. `recover_stale` was checked specifically and is NOT exposed to the
+lock hazard: a locked worktree is still REGISTERED, so the orphan scan skips it
+and `git worktree prune` never prunes it.
 
 MIND THE GAP BETWEEN THAT SWEEP AND THESE GUARDS. The 2026-08-22 sweep was
 whole-tree; `_shipped_files()` below is NOT. It covers `.md`/`.json` under

@@ -98,6 +98,10 @@ class Worktree:
     detached: bool = False
     bare: bool = False
     locked: bool = False
+    # Porcelain emits `locked` bare OR `locked <reason>`. The reason is the only
+    # thing that tells a human WHOSE lock it is, so it is kept rather than
+    # collapsed into the bool — remove_worktree puts it in the refusal message.
+    lock_reason: str | None = None
     prunable: bool = False
 
     def as_dict(self) -> dict[str, object]:
@@ -217,6 +221,7 @@ def list_worktrees(cwd: Path | str | None = None) -> list[Worktree]:
                 detached="detached" in cur,
                 bare="bare" in cur,
                 locked="locked" in cur,
+                lock_reason=cur.get("locked") or None,
                 prunable="prunable" in cur,
             )
         )
@@ -654,11 +659,34 @@ def remove_worktree(
     assert_safe_to_destroy(path, expected, force=force)
 
     if path.exists():
+        # A LOCK MEANS ANOTHER PROCESS DECLARED THIS WORKTREE LIVE — REFUSE.
+        # Claude Code 2.1.248 holds the worktree's lock for the whole life of a
+        # backgrounded session, precisely so cleanup and `git worktree remove`
+        # leave its checkout alone. A single `--force` removes a DIRTY worktree
+        # but still refuses a LOCKED one (git wants `-f -f` for that), so before
+        # this check the refusal fell straight through to the rm-rf below and
+        # destroyed exactly what the lock was protecting.
+        #
+        # Checked BEFORE the attempt, not after it: `_git_ok` reports only a
+        # return code, so at the fallback a lock is indistinguishable from a
+        # stale registration or a mount still releasing — the three cases that
+        # comment names, of which only one is safe to bulldoze.
+        #
+        # `force=` deliberately does NOT override this. Callers pass it meaning
+        # "discard uncommitted work I own", never "kill someone else's running
+        # session"; a live background session that happens to be clean and on
+        # the expected branch passes every assert_safe_to_destroy check, so the
+        # lock is the only thing left standing between it and the rm-rf.
+        here = safe_realpath(path)
+        held = next((w for w in list_worktrees(root) if safe_realpath(w.path) == here and w.locked), None)
+        if held is not None:
+            why = f" ({held.lock_reason})" if held.lock_reason else ""
+            raise WorktreeError(f"refusing to remove {path}: the worktree is LOCKED{why} — a live background session may be using it. If nothing is, run `git worktree unlock {path}` and retry.")
         # _git_ok, not _git: `git worktree remove` is SILENT on success, so its
         # stdout is "" either way and `not _git(...)` would take the fallback on
         # every call — rm-rf'ing a directory git had already removed cleanly.
         if not _git_ok("worktree", "remove", "--force", str(path), cwd=root):
-            # `git worktree remove` refused (a lock, a stale registration, a
+            # Refused for a reason that is NOT a lock (a stale registration, a
             # sandbox still holding the mount). Take the directory ourselves and
             # let `prune` reconcile git's bookkeeping below.
             _rmtree_with_backoff(path)

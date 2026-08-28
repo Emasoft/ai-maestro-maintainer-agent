@@ -307,6 +307,31 @@ def test_force_is_the_explicit_opt_out(spaced_repo: Path) -> None:
     assert not wt.path.exists()
 
 
+def test_force_does_not_override_a_lock(spaced_repo: Path) -> None:
+    """A LOCKED worktree survives force=True — a lock means another process is live inside it.
+
+    Claude Code 2.1.248 holds a worktree's lock for the life of a backgrounded
+    session so cleanup leaves its checkout alone. `git worktree remove --force`
+    (single -f) still refuses a lock, and the refusal used to fall through to the
+    rm-rf fallback — destroying exactly what the lock was protecting. The dirty
+    file below is what a live session's uncommitted work looks like, and force=
+    means "discard work I own", never "kill someone else's session".
+    """
+    wt = worktree.create_worktree(spaced_repo, "feat")
+    (wt.path / "session-work.txt").write_text("a live background session's only copy\n")
+    _git(spaced_repo, "worktree", "lock", str(wt.path), "--reason", "claude-code background session")
+
+    with pytest.raises(WorktreeError, match="LOCKED") as exc:
+        worktree.remove_worktree(spaced_repo, "feat", force=True)
+    assert "background session" in str(exc.value), "the lock reason is the only thing that names WHO holds it"
+    assert (wt.path / "session-work.txt").exists(), "the rm-rf fallback destroyed a locked worktree"
+
+    # Unlocking restores the normal path — the guard is a lock check, not a wall.
+    _git(spaced_repo, "worktree", "unlock", str(wt.path))
+    worktree.remove_worktree(spaced_repo, "feat", force=True)
+    assert not wt.path.exists()
+
+
 def test_force_still_does_not_delete_someone_elses_branch(spaced_repo: Path) -> None:
     """Forcing discards OUR worktree and OUR branch — never the branch the agent made."""
     wt = worktree.create_worktree(spaced_repo, "feat")
