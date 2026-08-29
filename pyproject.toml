@@ -98,6 +98,16 @@ ignore_missing_imports = true
 # matching extraPaths from pyrightconfig.json.
 mypy_path = "scripts"
 
+[tool.pytest.ini_options]
+# Scope bare `uv run pytest` to this repo's OWN tests. Without this, a
+# no-args run walks the whole tree and dies during COLLECTION on the
+# gitignored `_corpus_dev/` (third-party plugin corpora that ship their
+# own broken-in-isolation test files) — exit 2, zero of our tests run,
+# and the failure reads as if this repo were broken. testpaths applies
+# only when no path argument is given, so `uv run pytest tests` and
+# publish.py's explicit invocation are unaffected.
+testpaths = ["tests"]
+
 [project.optional-dependencies]
 dev = [
     "pytest",
