@@ -9,6 +9,7 @@ metadata:
   tier: hub
   functionality: architecture
   globs: ["skills/**", "agents/**", "commands/**", "hooks/**", "scripts/**"]
+publish-globally: false
 ---
 ai-maestro-maintainer-agent — a Claude Code PLUGIN that acts as the fleet
 **MAINTAINER**: it hardens entrusted GitHub repos (branch + tag rulesets,
