@@ -3,8 +3,8 @@ trdd-id: RO44YZDP
 title: Cap cargo target growth so the host stops refilling to 99 percent
 column: human_review
 created: 2026-08-21T16:51:26+0200
-updated: 2026-08-30T00:13:56+0200
-review-after: 2026-09-08
+updated: 2026-08-30T00:16:13+0200
+review-after: 2026-09-13
 external-refs: ["github.com/Emasoft/AgentlensPro/issues/18"]
 current-owner: maintainer-agent-session
 task-type: infra
@@ -14,7 +14,49 @@ parent-trdd: DBT8UACO
 
 # Cap cargo target growth so the host stops refilling to 99 percent
 
-## ⏵ STATE — READ THIS FIRST — 2026-08-25 14:20
+## ⏵ STATE — READ THIS FIRST — 2026-08-30 00:16
+
+**The five bullets here are the whole operative state. Everything below them is
+the RECORD of how it was reached — read it only if you need the reasoning.**
+
+1. **THE DIRECTIVE, verbatim (2026-08-26T02:44:00):**
+   `never touch agentlensp5o. resume your pending tasks`
+   Unqualified, and verified to be the only one. **Never query AgentlensPro by
+   ANY means** — issue tracker, API, repo slug, clone, filesystem — however the
+   object of the query is characterised. Do not restate this as an enumerated
+   list of forbidden acts; that gloss is what licensed two violations.
+2. **THE FLOOR IS SET: 100 GB free.** Chosen by this session under the USER's
+   delegation to decide, on 2026-08-30 with the host at 106 GB free / 95%. It
+   sits just BELOW the current level deliberately, so it discriminates: if
+   growth is prevented it holds, and if growth continues it breaches within
+   days. It is not a deletion trigger and authorises nothing — **this agent
+   never deletes to free space** (USER, 2026-08-21).
+3. **OBSERVATION WINDOW: 2026-08-30 → 2026-09-13** (14 consecutive days).
+   **Baseline reading, taken at window open (2026-08-30T00:16:13+0200):
+   `df -m /` → 110,154 MB free** — i.e. 107.6 GiB, above the 100 GB floor at
+   the start, so the window opens un-breached and the test is live.
+4. **NEXT ACTION — runnable as written, by any session, on or after 2026-09-13:**
+   `df -m / | awk 'NR==2{print $4" MB free"}'`
+   Box 3 **PASSES** iff free space was ≥ 100 GB at every observation across the
+   window AND no reclamation event occurred on this host (no `cargo clean`, no
+   bulk delete). Box 3 **FAILS** on any breach. Record the reading and tick or
+   leave the box accordingly — never tick it on a partial window.
+5. **WHY THIS IS EVALUABLE WITHOUT READING AgentlensPro** (an earlier draft
+   wrongly called box 3 "not evaluable" on this point): the box distinguishes
+   *prevented* from *reclaimed*, and BOTH are observable HERE. Free space is
+   local; reclamation is local and this agent performs none. Holding above the
+   floor with no reclamation IS prevention, by elimination. No causal fact from
+   inside that repo is required. What the card genuinely cannot do is finish
+   early — only elapsed time closes the window.
+
+**USER decision still outstanding (does not block the above):** whether to act
+on AgentlensPro#18 at all. If the owner never applies a limit, the floor simply
+breaches and box 3 fails — which is the honest outcome, since the box measures
+whether the problem was solved, not whether the paperwork was filed.
+
+---
+
+### RECORD — how the above was reached (archaeology; not operative)
 
 **APPROACH CHOSEN (USER-delegated 2026-08-25: "complete all pending tasks…
 You can decide yourself without me"): preventive `[profile.dev]` limits,
@@ -292,7 +334,12 @@ deletes. It is recorded because the reasoning generalizes past disk.
       reading the implementation: the card's output is one GitHub issue whose
       commands are prose for the owner; no script, hook, or config ships
 - [ ] free space stays above an agreed floor for 14 consecutive days **because
-      growth was prevented**, not because something reclaimed
+      growth was prevented**, not because something reclaimed —
+      **FLOOR: 100 GB free. WINDOW: 2026-08-30 → 2026-09-13.** Evaluable by any
+      session with `df -m /`, no access to AgentlensPro required: prevented vs
+      reclaimed is decidable HERE, because this agent performs no reclamation
+      (see STATE §4–5). PASSES iff free ≥ 100 GB throughout AND no reclamation
+      event; FAILS on any breach. Do not tick on a partial window
 - [x] DBT8UACO's STATE block links here, so the mechanism and the fix stay joined
       — ✓ VERIFIED 2026-08-29: `design/archived/TRDD-20260818_200332+0200-DBT8UACO-hunt-host-disk-growth-writer.md`
       line 60 reads "**That card now exists: TRDD-RO44YZDP.**", and it sits
