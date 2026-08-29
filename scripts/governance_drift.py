@@ -38,6 +38,7 @@ import argparse
 import json
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 REPO = "Emasoft/ai-maestro"
@@ -63,7 +64,12 @@ WATCHED = (
 BASELINE = Path(__file__).resolve().parents[1] / "design" / "governance-baseline.json"
 
 
-def compare(baseline: dict[str, str], current: dict[str, str | None]) -> list[str]:
+# Mapping, not dict: this function only READS its arguments, and dict is INVARIANT
+# in its value type — so a plain `dict[str, str]` (what every caller naturally
+# builds, tests included) is rejected where `dict[str, str | None]` is declared.
+# Mapping is covariant in the value, so the same call sites type-check with no cast
+# and no widening at the call site. Fixing it here fixes every caller at once.
+def compare(baseline: Mapping[str, str], current: Mapping[str, str | None]) -> list[str]:
     """Report lines for every watched path whose blob differs from the baseline.
 
     PURE — no network, no filesystem. This is the part worth testing, and keeping
