@@ -1,12 +1,11 @@
 ---
 trdd-id: RO44YZDP
 title: Cap cargo target growth so the host stops refilling to 99 percent
-column: blocked
-pre-block-column: human_review
-blocked-by: [AgentlensPro#18]
+column: human_review
 created: 2026-08-21T16:51:26+0200
-updated: 2026-08-30T00:00:19+0200
+updated: 2026-08-30T00:14:00+0200
 review-after: 2026-09-08
+external-refs: ["github.com/Emasoft/AgentlensPro/issues/18"]
 current-owner: maintainer-agent-session
 task-type: infra
 min-approval-requirement: user
@@ -73,9 +72,11 @@ on 2026-08-25; host at 89% (220 GB free).
 - **Host state, recorded as LEVELS ONLY — deliberately not a rate.** `df -h /`
   reads **106 GB free at 95%**. `du -sm ~/* ~/.[!.]*` (stderr KEPT, sorted
   descending so nothing large can be cut off) puts **`~/Code` first at 509,388 MB
-  and `~/Library` second at 384,250 MB**. `~/Code`'s figure is a **LOWER BOUND,
-  not a total**: that run exited 1 with 196 stderr lines, 168 of them naming
-  paths under `~/Code` it could not traverse. An earlier revision of this bullet (commit `87c8bc5`)
+  and `~/Library` second at 384,250 MB**. Both are **LOWER BOUNDS, not totals**:
+  that run exited 1 with 196 stderr lines, 168 naming unreadable paths under
+  `~/Code` and the remaining 28 elsewhere — so this is an ordering between two
+  floors, and the honest claim is *largest MEASURED*, not largest. The 125 GB
+  gap makes the ordering likely, not proven. An earlier revision of this bullet (commit `87c8bc5`)
   differenced today's `df` against the **220 GB free at 89%** recorded here on
   2026-08-25 and asserted "114 GB lost in 4 days (~28 GB/day) — the refill this
   card predicted". **That claim is WITHDRAWN as unsound**, on three counts:
@@ -88,16 +89,30 @@ on 2026-08-25; host at 89% (220 GB free).
   the `disk-growth-writer` memory note names ("a level is not a rate; bracket
   with a du delta"). A real rate needs two `du` readings of the same target
   set, taken by this session, bracketing a quiet interval.
-- **Column moved `human_review` → `blocked` (2026-08-30), on a peer's challenge.**
-  Consulted `ai-maestro-d7`, which disagreed with parking this in `human_review`
-  and was right: a card whose blocker is a NAMED external fact should say so.
-  `human_review` asserts a review somebody is performing; nobody was. `blocked`
-  + `blocked-by: [AgentlensPro#18]` names what would unblock it, and
-  `pre-block-column: human_review` restores the prior state when it clears.
-  `review-after: 2026-09-08` stays as the snooze on top. Peer-measured, twice
-  independently: **#18 is OPEN with ZERO comments since 2026-08-25**, so
-  conjunct (i) — the agreed floor — was never agreed, which blocks box 3 on its
-  own without any appeal to the unreadable conjunct (iii).
+- **Column stays `human_review`; the blocker is recorded in `external-refs:`.**
+  A round trip worth recording, because the lesson is about SCHEMA, not disk. A
+  peer (`ai-maestro-d7`) argued `human_review` lies — "it asserts a review nobody
+  is performing" — and proposed `blocked` + `blocked-by: [AgentlensPro#18]`. I
+  took it (commit `a7c0505`) and it was WRONG on the mechanics: `blocked` is
+  licensed only by a non-empty `blocked-by:` **naming a card that is itself still
+  open**, and `blocked-by:` is a TRDD-id citation field in every rule that
+  defines it. A GitHub issue is not a card, so that value made the predicate
+  untestable and left a dangling ref for any board tool that resolves it — i.e.
+  the move made specifically to stop a column lying introduced a blocker claim
+  nothing can verify. Corpus precedent is unanimous: every other `blocked-by:`
+  here is `[]`, and every issue reference lives in `external-refs:` as a full
+  `github.com/owner/repo/issues/N` string. So: reverted to `human_review`, which
+  in this project's kanban asserts *waits on the USER* — true, and already what
+  this card's own STATE recorded (3P-KAN-10 resting) — with the issue moved to
+  `external-refs:` in the corpus's format. `review-after: 2026-09-08` unchanged.
+  **The peer's INSTINCT was right and its MECHANISM was wrong, and I adopted the
+  mechanism without checking the field's contract** — inferring a schema from a
+  field's NAME is the same proxy read as inferring a measurement from a proxy.
+- Box 3's first conjunct — an agreed floor — was never agreed, which stops the
+  box on its own, without any appeal to the conjunct that lives in a repo this
+  session may not read. (A peer separately reports #18 OPEN with 0 comments; that
+  is THEIR measurement, not this session's, and nothing here rests on it — the
+  14-day arithmetic and the never-agreed floor are both established locally.)
 
 ## Prior STATE — 2026-08-21 17:0x
 
