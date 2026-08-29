@@ -3,7 +3,7 @@ trdd-id: RO44YZDP
 title: Cap cargo target growth so the host stops refilling to 99 percent
 column: human_review
 created: 2026-08-21T16:51:26+0200
-updated: 2026-08-30T00:12:18+0200
+updated: 2026-08-30T00:13:56+0200
 review-after: 2026-09-08
 external-refs: ["github.com/Emasoft/AgentlensPro/issues/18"]
 current-owner: maintainer-agent-session
@@ -150,9 +150,27 @@ on 2026-08-25; host at 89% (220 GB free).
   2026-08-26T02:44 were enumerated, machine shapes (heartbeat, task-notification,
   local-command, cross-session/agent message, stop-hook, system-reminder) removed
   by marker only, leaving **42** human-authored turns — 24 of them skill-invocation
-  bodies — and the remaining 18 were read in full. **None narrows, amends, or
-  grants an exception to the directive.** A claim about what a USER never said
-  requires enumerating what they DID say; a keyword search cannot establish it.
+  bodies. A first attempt then read the remaining 18 **truncated at 230 chars**
+  and concluded about their full content — a preview standing in for the file,
+  and not idle: several of those turns are long (documentation-alignment
+  instructions, security-review prompts with diffs), and a narrowing clause is
+  MORE likely inside a long instruction than as its own short message. Redone
+  over FULL text with a deliberately broad pattern that does not require the
+  project to be named — `agentlens|that repo|its issue|issue tracker|you can
+  (read|check|query|look)|fine to (read|check|query)|touch` — giving **50
+  matches, of which exactly 2 mention AgentlensPro and both are the same
+  2026-08-26 line** (it matches twice, on "agentlens" and on "touch"). Every
+  other match is unrelated prose, chiefly janitor skill bodies saying "does NOT
+  touch other sessions". **So no message narrows, amends, or grants an exception
+  to the directive** — established on full text, not on previews.
+  Method caveat, stated so a later reader can judge it: the machine-shape filter
+  tests only the first 400 characters, so a human turn that OPENS by pasting a
+  heartbeat or task-notification would be discarded. Such a turn is an unlikely
+  carrier for an amendment, and re-running was judged not worth it — but the gap
+  is real and named rather than hidden.
+  A claim about what a USER never said requires enumerating what they DID say
+  and reading it WHOLE; neither a keyword search nor a truncated read can
+  establish it.
   **The**
   elaboration this card has been quoting — "no session may implement it in that
   repo, clone it, or measure inside it" — is a PRIOR SESSION'S GLOSS, not the
