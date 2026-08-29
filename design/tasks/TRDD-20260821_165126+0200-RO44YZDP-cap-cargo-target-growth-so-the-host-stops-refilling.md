@@ -3,7 +3,7 @@ trdd-id: RO44YZDP
 title: Cap cargo target growth so the host stops refilling to 99 percent
 column: human_review
 created: 2026-08-21T16:51:26+0200
-updated: 2026-08-29T22:51:23+0200
+updated: 2026-08-29T23:31:40+0200
 review-after: 2026-09-08
 current-owner: maintainer-agent-session
 task-type: infra
@@ -51,24 +51,38 @@ on 2026-08-25; host at 89% (220 GB free).
   only): act on AgentlensPro#18, agree a free-space floor, start the 14-day
   clock.** Do NOT tick box 3 to close this card: it asserts something about the
   world that is false today, and ticking it would fabricate evidence.
-- **2026-08-29 22:51 — box 3 is now FALSIFIED, not merely un-elapsed, and the
-  card is parked to a DATE instead of indefinitely.** Under a USER directive to
-  drain the board deciding on verified facts, `df -h /` on this host reads
-  **106 GB free at 95%**, against the **220 GB free at 89%** this card recorded
-  on 2026-08-25 — a **114 GB loss in 4 days (~28 GB/day)**, which is the refill
-  rate the card predicted ("roughly a week"). This is a measurement of THIS
-  host's filesystem, never inside AgentlensPro, so it respects the directive.
-  Box 3 requires free space to HOLD above a floor *because growth was
-  prevented*; growth is demonstrably not prevented, so the box is false on its
-  merits today — arithmetic alone already forbade it (issue filed 2026-08-25,
-  14-day window cannot close before **2026-09-08**). Added
-  `review-after: 2026-09-08`: the card self-releases and is re-examined on the
-  earliest date box 3 could conceivably hold, converting an open-ended wait into
-  a dated one. Nothing was ticked, no column moved, no config touched.
+- **2026-08-29 22:51 — box 3 is NOT EVALUABLE, and the card is parked to a DATE
+  instead of indefinitely.** Under a USER directive to drain the board deciding
+  on verified facts. Box 3 has three conjuncts: (i) an agreed floor exists,
+  (ii) free space stays ≥ that floor for 14 consecutive days, (iii) **because**
+  growth was prevented. **(i) was never met** — no floor has ever been agreed —
+  so (ii) has no truth value to take; and (iii)'s antecedent is unverifiable by
+  construction, since prevention would live in a repo this session may not read.
+  A box whose subject cannot be measured cannot be ticked and cannot be
+  falsified either. Independently, arithmetic already forbade it: the issue was
+  filed 2026-08-25, so a 14-day window cannot close before **2026-09-08**.
+  Added `review-after: 2026-09-08` so the card self-releases and is re-examined
+  on the earliest date box 3 could conceivably hold. Nothing ticked, no column
+  moved, no config touched.
   **The agent CANNOT set the floor itself either** — not for want of authority
-  (the USER granted decision-making here) but because box 3 attributes the
-  stability to prevention, and prevention lives in a repo this session may not
-  read; a floor with no way to attribute the result is an unmeasurable box.
+  (the USER granted decision-making here) but because (iii) attributes the
+  stability to prevention; a floor with no way to attribute the result would
+  make box 3 look tickable while still measuring nothing.
+- **Host state, recorded as LEVELS ONLY — deliberately not a rate.** `df -h /`
+  reads **106 GB free at 95%**; `du -sm ~/Code` reads **~497 GB**, the dominant
+  consumer under `$HOME`. An earlier revision of this bullet (commit `87c8bc5`)
+  differenced today's `df` against the **220 GB free at 89%** recorded here on
+  2026-08-25 and asserted "114 GB lost in 4 days (~28 GB/day) — the refill this
+  card predicted". **That claim is WITHDRAWN as unsound**, on three counts:
+  `df /` measures the whole 1.9 TB volume while this card's subject is cargo
+  `target/` growth specifically; the 220 GB endpoint was quoted from another
+  session's prose, not re-measured; and the window between the two endpoints
+  CONTAINS the manual 49.4 GiB `cargo clean` this card itself records, so the
+  difference is not attributable to growth. Two levels taken by two observers
+  across a window with a known intervention do not make a rate — the same trap
+  the `disk-growth-writer` memory note names ("a level is not a rate; bracket
+  with a du delta"). A real rate needs two `du` readings of the same target
+  set, taken by this session, bracketing a quiet interval.
 
 ## Prior STATE — 2026-08-21 17:0x
 
