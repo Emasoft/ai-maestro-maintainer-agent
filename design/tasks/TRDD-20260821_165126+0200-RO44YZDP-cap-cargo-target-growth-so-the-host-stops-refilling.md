@@ -3,7 +3,7 @@ trdd-id: RO44YZDP
 title: Cap cargo target growth so the host stops refilling to 99 percent
 column: human_review
 created: 2026-08-21T16:51:26+0200
-updated: 2026-08-30T00:14:00+0200
+updated: 2026-08-30T00:04:50+0200
 review-after: 2026-09-08
 external-refs: ["github.com/Emasoft/AgentlensPro/issues/18"]
 current-owner: maintainer-agent-session
@@ -73,10 +73,11 @@ on 2026-08-25; host at 89% (220 GB free).
   reads **106 GB free at 95%**. `du -sm ~/* ~/.[!.]*` (stderr KEPT, sorted
   descending so nothing large can be cut off) puts **`~/Code` first at 509,388 MB
   and `~/Library` second at 384,250 MB**. Both are **LOWER BOUNDS, not totals**:
-  that run exited 1 with 196 stderr lines, 168 naming unreadable paths under
-  `~/Code` and the remaining 28 elsewhere — so this is an ordering between two
-  floors, and the honest claim is *largest MEASURED*, not largest. The 125 GB
-  gap makes the ordering likely, not proven. An earlier revision of this bullet (commit `87c8bc5`)
+  that run exited 1 with 196 stderr lines; the partition was CHECKED, not
+  inferred — 168 name unreadable paths under `~/Code`, and all 28 remaining are
+  under `~/Library` (`du: cannot read directory 'Library…`), disjoint, 196 total.
+  So this is an ordering between two floors, and the honest claim is *largest
+  MEASURED*, not largest. The 125 GB gap makes the ordering likely, not proven. An earlier revision of this bullet (commit `87c8bc5`)
   differenced today's `df` against the **220 GB free at 89%** recorded here on
   2026-08-25 and asserted "114 GB lost in 4 days (~28 GB/day) — the refill this
   card predicted". **That claim is WITHDRAWN as unsound**, on three counts:
@@ -101,10 +102,17 @@ on 2026-08-25; host at 89% (220 GB free).
   the move made specifically to stop a column lying introduced a blocker claim
   nothing can verify. Corpus precedent is unanimous: every other `blocked-by:`
   here is `[]`, and every issue reference lives in `external-refs:` as a full
-  `github.com/owner/repo/issues/N` string. So: reverted to `human_review`, which
-  in this project's kanban asserts *waits on the USER* — true, and already what
-  this card's own STATE recorded (3P-KAN-10 resting) — with the issue moved to
-  `external-refs:` in the corpus's format. `review-after: 2026-09-08` unchanged.
+  `github.com/owner/repo/issues/N` string. So: reverted to `human_review`, with
+  the issue moved to `external-refs:` in the corpus's format.
+  `review-after: 2026-09-08` unchanged. **The column is justified from the
+  RATIFIED sources, not from this card's own prose** — an earlier draft cited
+  this very STATE block's "3P-KAN-10 resting: waits on the USER", which made the
+  card its own authority for the column it sits in. The independent basis:
+  `universal-kanban.md` — "the USER steers by approving proposals and reviewing
+  `human_review` cards"; `manager-approval-defaults.md` — `ai_review →
+  human_review` is "Escalating to USER", and `human_review → complete` / `→ dev`
+  are each "USER decision". So `human_review` IS the awaiting-a-USER-decision
+  column, which is exactly this card's state.
   **The peer's INSTINCT was right and its MECHANISM was wrong, and I adopted the
   mechanism without checking the field's contract** — inferring a schema from a
   field's NAME is the same proxy read as inferring a measurement from a proxy.
