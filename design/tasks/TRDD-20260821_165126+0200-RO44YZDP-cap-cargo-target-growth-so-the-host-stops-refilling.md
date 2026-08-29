@@ -3,7 +3,7 @@ trdd-id: RO44YZDP
 title: Cap cargo target growth so the host stops refilling to 99 percent
 column: human_review
 created: 2026-08-21T16:51:26+0200
-updated: 2026-08-26T04:45:03+0200
+updated: 2026-08-29T15:08:15+0200
 current-owner: maintainer-agent-session
 task-type: infra
 min-approval-requirement: user
@@ -36,6 +36,16 @@ on 2026-08-25; host at 89% (220 GB free).
   session may implement it in that repo, clone it, or measure inside it. This
   card is now USER-only by construction — do not reopen it looking for an
   agent-executable step.
+- **2026-08-29 board drain — re-verified, still USER-blocked, now down to ONE open
+  box.** Acceptance box 4 ticked: the DBT8UACO→RO44YZDP link is real and lives in
+  that card's STATE block (evidence recorded on the box itself). **Box 3 is all
+  that remains, and no session can advance it**: `gh issue view 18 --repo
+  Emasoft/AgentlensPro` returns `state OPEN, comments 0, createdAt
+  2026-08-25T15:31:45Z` — the owner has not acted on the proposal, so the 14-day
+  prevented-growth window has not started, let alone elapsed. **NEXT ACTION (USER
+  only): act on AgentlensPro#18, agree a free-space floor, start the 14-day
+  clock.** Do NOT tick box 3 to close this card: it asserts something about the
+  world that is false today, and ticking it would fabricate evidence.
 
 ## Prior STATE — 2026-08-21 17:0x
 
@@ -128,6 +138,11 @@ deletes. It is recorded because the reasoning generalizes past disk.
       commands are prose for the owner; no script, hook, or config ships
 - [ ] free space stays above an agreed floor for 14 consecutive days **because
       growth was prevented**, not because something reclaimed
-- [ ] DBT8UACO's STATE block links here, so the mechanism and the fix stay joined
+- [x] DBT8UACO's STATE block links here, so the mechanism and the fix stay joined
+      — ✓ VERIFIED 2026-08-29: `design/archived/TRDD-20260818_200332+0200-DBT8UACO-hunt-host-disk-growth-writer.md`
+      line 60 reads "**That card now exists: TRDD-RO44YZDP.**", and it sits
+      INSIDE that file's STATE block (STATE starts line 15, next heading at
+      line 198). The box was unticked by oversight, not because the link was
+      missing
 
 ## Notes and lessons learned
