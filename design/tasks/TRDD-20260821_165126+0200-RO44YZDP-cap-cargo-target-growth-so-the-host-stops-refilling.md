@@ -3,7 +3,8 @@ trdd-id: RO44YZDP
 title: Cap cargo target growth so the host stops refilling to 99 percent
 column: human_review
 created: 2026-08-21T16:51:26+0200
-updated: 2026-08-29T15:23:49+0200
+updated: 2026-08-29T22:51:23+0200
+review-after: 2026-09-08
 current-owner: maintainer-agent-session
 task-type: infra
 min-approval-requirement: user
@@ -50,6 +51,24 @@ on 2026-08-25; host at 89% (220 GB free).
   only): act on AgentlensPro#18, agree a free-space floor, start the 14-day
   clock.** Do NOT tick box 3 to close this card: it asserts something about the
   world that is false today, and ticking it would fabricate evidence.
+- **2026-08-29 22:51 — box 3 is now FALSIFIED, not merely un-elapsed, and the
+  card is parked to a DATE instead of indefinitely.** Under a USER directive to
+  drain the board deciding on verified facts, `df -h /` on this host reads
+  **106 GB free at 95%**, against the **220 GB free at 89%** this card recorded
+  on 2026-08-25 — a **114 GB loss in 4 days (~28 GB/day)**, which is the refill
+  rate the card predicted ("roughly a week"). This is a measurement of THIS
+  host's filesystem, never inside AgentlensPro, so it respects the directive.
+  Box 3 requires free space to HOLD above a floor *because growth was
+  prevented*; growth is demonstrably not prevented, so the box is false on its
+  merits today — arithmetic alone already forbade it (issue filed 2026-08-25,
+  14-day window cannot close before **2026-09-08**). Added
+  `review-after: 2026-09-08`: the card self-releases and is re-examined on the
+  earliest date box 3 could conceivably hold, converting an open-ended wait into
+  a dated one. Nothing was ticked, no column moved, no config touched.
+  **The agent CANNOT set the floor itself either** — not for want of authority
+  (the USER granted decision-making here) but because box 3 attributes the
+  stability to prevention, and prevention lives in a repo this session may not
+  read; a floor with no way to attribute the result is an unmeasurable box.
 
 ## Prior STATE — 2026-08-21 17:0x
 
