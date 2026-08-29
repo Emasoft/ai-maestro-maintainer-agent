@@ -3,7 +3,7 @@ trdd-id: RO44YZDP
 title: Cap cargo target growth so the host stops refilling to 99 percent
 column: human_review
 created: 2026-08-21T16:51:26+0200
-updated: 2026-08-30T00:16:13+0200
+updated: 2026-08-30T00:17:23+0200
 review-after: 2026-09-13
 external-refs: ["github.com/Emasoft/AgentlensPro/issues/18"]
 current-owner: maintainer-agent-session
@@ -16,8 +16,9 @@ parent-trdd: DBT8UACO
 
 ## ⏵ STATE — READ THIS FIRST — 2026-08-30 00:16
 
-**The five bullets here are the whole operative state. Everything below them is
-the RECORD of how it was reached — read it only if you need the reasoning.**
+**The six numbered bullets here are the whole operative state. Everything below
+them is the RECORD of how it was reached — read it only if you need the
+reasoning.**
 
 1. **THE DIRECTIVE, verbatim (2026-08-26T02:44:00):**
    `never touch agentlensp5o. resume your pending tasks`
@@ -44,10 +45,28 @@ the RECORD of how it was reached — read it only if you need the reasoning.**
 5. **WHY THIS IS EVALUABLE WITHOUT READING AgentlensPro** (an earlier draft
    wrongly called box 3 "not evaluable" on this point): the box distinguishes
    *prevented* from *reclaimed*, and BOTH are observable HERE. Free space is
-   local; reclamation is local and this agent performs none. Holding above the
-   floor with no reclamation IS prevention, by elimination. No causal fact from
-   inside that repo is required. What the card genuinely cannot do is finish
-   early — only elapsed time closes the window.
+   local; reclamation is local. Holding above the floor with no reclamation IS
+   prevention, by elimination. No causal fact from inside that repo is required.
+   What the card genuinely cannot do is finish early — only elapsed time closes
+   the window.
+6. **TWO LIMITS ON §4–5, named because they can make a PASS unearned:**
+   (a) **"No reclamation" must cover EVERY actor on this host, not just this
+   agent.** The USER deletes, other Claude sessions run `cargo clean`, the
+   janitor purges its trashcan — several were active on 2026-08-29. So "this
+   agent reclaims nothing" is NOT sufficient. Detection that does not require
+   trusting anyone's report: a reclamation event shows up as a **sudden LARGE
+   RISE in free space** between consecutive observations. Any single-observation
+   jump upward of ≳10 GB VOIDS the window — restart it — because a floor held by
+   someone else's cleanup is exactly the "reclaimed, not prevented" case box 3
+   was written to exclude.
+   (b) **A single reading at window close proves only the endpoint.** "≥ floor at
+   every observation" needs observations to exist. There is no scheduled
+   observer: session crons are session-only and expire in 7 days, so nothing
+   here reliably samples for 14 days. **Therefore box 3 PASSES only if a series
+   of intermediate readings was actually recorded in this card. Absent that
+   series, the honest outcome is that the box cannot be evaluated for that
+   window — NOT a pass.** Any session touching this card between 2026-08-30 and
+   2026-09-13 should append a dated `df -m /` line to build the series.
 
 **USER decision still outstanding (does not block the above):** whether to act
 on AgentlensPro#18 at all. If the owner never applies a limit, the floor simply
@@ -339,7 +358,10 @@ deletes. It is recorded because the reasoning generalizes past disk.
       session with `df -m /`, no access to AgentlensPro required: prevented vs
       reclaimed is decidable HERE, because this agent performs no reclamation
       (see STATE §4–5). PASSES iff free ≥ 100 GB throughout AND no reclamation
-      event; FAILS on any breach. Do not tick on a partial window
+      event by ANY actor on this host (see STATE §6a — a sudden ≳10 GB rise in
+      free space voids the window); FAILS on any breach. Requires a recorded
+      series of intermediate readings, not one closing reading (STATE §6b). Do
+      not tick on a partial window
 - [x] DBT8UACO's STATE block links here, so the mechanism and the fix stay joined
       — ✓ VERIFIED 2026-08-29: `design/archived/TRDD-20260818_200332+0200-DBT8UACO-hunt-host-disk-growth-writer.md`
       line 60 reads "**That card now exists: TRDD-RO44YZDP.**", and it sits
