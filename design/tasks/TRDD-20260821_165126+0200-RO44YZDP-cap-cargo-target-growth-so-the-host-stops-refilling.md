@@ -3,7 +3,7 @@ trdd-id: RO44YZDP
 title: Cap cargo target growth so the host stops refilling to 99 percent
 column: human_review
 created: 2026-08-21T16:51:26+0200
-updated: 2026-08-30T00:04:50+0200
+updated: 2026-08-30T00:06:18+0200
 review-after: 2026-09-08
 external-refs: ["github.com/Emasoft/AgentlensPro/issues/18"]
 current-owner: maintainer-agent-session
@@ -118,9 +118,21 @@ on 2026-08-25; host at 89% (220 GB free).
   field's NAME is the same proxy read as inferring a measurement from a proxy.
 - Box 3's first conjunct — an agreed floor — was never agreed, which stops the
   box on its own, without any appeal to the conjunct that lives in a repo this
-  session may not read. (A peer separately reports #18 OPEN with 0 comments; that
-  is THEIR measurement, not this session's, and nothing here rests on it — the
-  14-day arithmetic and the never-agreed floor are both established locally.)
+  session may not read.
+- **First-hand verification, 2026-08-30 — replacing two second-hand acceptances.**
+  Both facts below had been taken from a peer or a review agent and are now
+  measured by THIS session, because a decision resting on someone else's reading
+  is an assumption however reliable the reader:
+  (a) `gh issue view 18 --repo Emasoft/AgentlensPro --json state,comments,…` →
+  **state OPEN, comments 0, created 2026-08-25T15:31:45Z, updated identical**.
+  Reading the ISSUE is the card's own deliverable channel and is not "measuring
+  inside the repo", so it stays within the never-touch-AgentlensPro directive.
+  (b) The `blocked-by` contract, read in the rules rather than accepted from a
+  review agent: `the-kanban-is-a-pipeline-that-must-drain.md` — a licence to sit
+  still is "a non-empty `blocked-by:` **naming a card that is itself still
+  open**"; `trdd-design-tasks.md` groups it with `parent-trdd`/`npt`/`eht` as the
+  TRDD-citation fields and ties the `blocked` column to it being non-empty. The
+  revert stands, now on this session's own reading.
 
 ## Prior STATE — 2026-08-21 17:0x
 
