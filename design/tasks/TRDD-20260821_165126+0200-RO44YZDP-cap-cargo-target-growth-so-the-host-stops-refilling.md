@@ -3,7 +3,7 @@ trdd-id: RO44YZDP
 title: Cap cargo target growth so the host stops refilling to 99 percent
 column: human_review
 created: 2026-08-21T16:51:26+0200
-updated: 2026-08-29T15:08:15+0200
+updated: 2026-08-29T15:23:49+0200
 current-owner: maintainer-agent-session
 task-type: infra
 min-approval-requirement: user
@@ -41,8 +41,12 @@ on 2026-08-25; host at 89% (220 GB free).
   that card's STATE block (evidence recorded on the box itself). **Box 3 is all
   that remains, and no session can advance it**: `gh issue view 18 --repo
   Emasoft/AgentlensPro` returns `state OPEN, comments 0, createdAt
-  2026-08-25T15:31:45Z` — the owner has not acted on the proposal, so the 14-day
-  prevented-growth window has not started, let alone elapsed. **NEXT ACTION (USER
+  2026-08-25T15:31:45Z` — i.e. **the issue shows no owner response**. That is
+  what was measured; it is NOT the same as "the owner has not acted", since the
+  owner could have changed the config in that repo without touching the issue,
+  and this agent may not look (see the directive above). The conclusion holds
+  either way: box 3 needs 14 ELAPSED days and the issue was filed 2026-08-25, so
+  the window cannot have closed regardless of who did what. **NEXT ACTION (USER
   only): act on AgentlensPro#18, agree a free-space floor, start the 14-day
   clock.** Do NOT tick box 3 to close this card: it asserts something about the
   world that is false today, and ticking it would fabricate evidence.
