@@ -132,14 +132,23 @@ jobs:
         # ${CLAUDE_PLUGIN_ROOT}; 2.1.283: uninstallable marketplace names,
         # missing/out-of-tree outputStyles/themes/monitors/lspServers paths).
         # CPV is a separate pinned validator and does not replicate these
-        # checks, so both run. Non-strict on the manifest (the intentional
-        # `cpv` metadata block is a tolerated unknown-field warning — CPV's
-        # cpv_pipeline_profile.py reads it from exactly this location); strict
-        # on the component dirs, which carry no custom fields.
+        # checks, so both run. Plain (non-strict) on the manifest: the
+        # intentional `cpv` metadata block is a tolerated unknown-field warning
+        # (CPV's cpv_pipeline_profile.py reads it from exactly this location)
+        # and --strict would fail on it — the hard failures 2.1.283 added
+        # (uninstallable marketplace names, missing/out-of-tree paths) fire
+        # under non-strict too. Strict on the component dirs, which carry no
+        # custom fields.
+        # The installer is intentionally UNPINNED (`stable` moves): pinning it
+        # would freeze the validator's strictness at a stale CLI. Drift is
+        # accepted and visible — a stricter CLI failing this step IS the
+        # signal this step exists to give. Install path $HOME/.local/bin is
+        # UNTESTED on an ubuntu-latest runner (verified locally on macOS only).
+        # Budget: adds ~1-3 min cold download on top of the uvx CPV build.
         run: |
           curl -fsSL https://claude.ai/install.sh | bash -s stable
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          claude plugin validate . --strict || true
+          claude plugin validate .
           claude plugin validate agents --strict
           claude plugin validate commands --strict
           claude plugin validate skills --strict
