@@ -361,7 +361,13 @@ deletes. It is recorded because the reasoning generalizes past disk.
       event by ANY actor on this host (see STATE §6a — a sudden ≳10 GB rise in
       free space voids the window); FAILS on any breach. Requires a recorded
       series of intermediate readings, not one closing reading (STATE §6b). Do
-      not tick on a partial window
+      not tick on a partial window —
+      **FAILED 2026-09-27T19:00:27+0200: `df -m /` → 96,062 MB free < 100 GB
+      floor. BREACHED. Additionally, no intermediate readings were ever recorded
+      (STATE §6b), so the box could not have passed regardless. The floor held
+      ~4 weeks (110,154 MB on 2026-08-30 → 96,062 MB on 2026-09-27), then
+      breached — growth continued, as the card predicted. Recorded 2026-09-27 by
+      the maintainer session on the expired review-after window.**
 - [x] DBT8UACO's STATE block links here, so the mechanism and the fix stay joined
       — ✓ VERIFIED 2026-08-29: `design/archived/TRDD-20260818_200332+0200-DBT8UACO-hunt-host-disk-growth-writer.md`
       line 60 reads "**That card now exists: TRDD-RO44YZDP.**", and it sits
