@@ -364,9 +364,10 @@ deletes. It is recorded because the reasoning generalizes past disk.
       not tick on a partial window —
       **FAILED 2026-09-27T19:00:27+0200: `df -m /` → 96,062 MB free < 100 GB
       floor. BREACHED. Additionally, no intermediate readings were ever recorded
-      (STATE §6b), so the box could not have passed regardless — and without the
-      series, the mechanism of the fall (cargo growth vs any other actor's
-      volume change) is undetermined. Recorded 2026-09-27 by
+      (STATE §6b), so the box could not have passed regardless. The floor held
+      ~4 weeks (110,154 → 96,062 MB, 2026-08-30 → 2026-09-27), then breached;
+      without the series, the mechanism of the fall (cargo growth vs any other
+      actor's volume change) is undetermined. Recorded 2026-09-27 by
       the maintainer session on the expired review-after window.**
 - [x] DBT8UACO's STATE block links here, so the mechanism and the fix stay joined
       — ✓ VERIFIED 2026-08-29: `design/archived/TRDD-20260818_200332+0200-DBT8UACO-hunt-host-disk-growth-writer.md`
