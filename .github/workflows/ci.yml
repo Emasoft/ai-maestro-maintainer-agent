@@ -140,11 +140,11 @@ jobs:
         # under non-strict too. Strict on the component dirs, which carry no
         # custom fields.
         # The installer is intentionally UNPINNED (`stable` moves): pinning it
-        # would freeze the validator's strictness at a stale CLI. A stricter
-        # CLI's new hard failures fire here; its warning-class drift is
-        # visible in the log output, not gated. Install path
-        # $HOME/.local/bin is UNTESTED on an ubuntu-latest runner (verified
-        # locally on macOS only).
+        # would freeze the validator's strictness at a stale CLI. Non-warning
+        # findings fire here (e.g. uninstallable marketplace names, missing
+        # declared paths); warning-class drift is visible in the log output,
+        # not gated. Install path $HOME/.local/bin is UNTESTED on an
+        # ubuntu-latest runner (verified locally on macOS only).
         # Budget: adds ~1-3 min cold download on top of the uvx CPV build.
         run: |
           curl -fsSL https://claude.ai/install.sh | bash -s stable
