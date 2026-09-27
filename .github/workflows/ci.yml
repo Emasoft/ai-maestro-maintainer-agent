@@ -126,6 +126,24 @@ jobs:
           restore-keys: |
             cpv-scan-cache-${{ runner.os }}-
 
+      - name: Native plugin validation (claude plugin validate)
+        # The native CLI's validator has grown much stricter (2.1.281: .mcp.json
+        # drops, ${user_config.*} refs, insecure URLs, unquoted
+        # ${CLAUDE_PLUGIN_ROOT}; 2.1.283: uninstallable marketplace names,
+        # missing/out-of-tree outputStyles/themes/monitors/lspServers paths).
+        # CPV is a separate pinned validator and does not replicate these
+        # checks, so both run. Non-strict on the manifest (the intentional
+        # `cpv` metadata block is a tolerated unknown-field warning — CPV's
+        # cpv_pipeline_profile.py reads it from exactly this location); strict
+        # on the component dirs, which carry no custom fields.
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash -s stable
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          claude plugin validate . --strict || true
+          claude plugin validate agents --strict
+          claude plugin validate commands --strict
+          claude plugin validate skills --strict
+
       - name: Run plugin validation (remote CPV, --strict)
         # Fetches CPV from GitHub via uvx so downstream plugins do not need to
         # vendor scripts/validate_plugin.py. Matches publish.py's local gate
