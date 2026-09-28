@@ -2,7 +2,7 @@
 name: architecture
 description: "how does ai-maestro-maintainer-agent work — overview, the main parts (guardian/patrol/workflow-* skills, the main agent, publish pipeline), where the key pieces live / how does the Sentinel scanning engine behind workflow-scan work and how do I add a rule to it / what severity should a new rule use / I edited the main agent persona and the test suite went red — what pins the kanban columns and the frozen-CLI prohibition / the test table shows no docstring on every row"
 ocd: 2026-06-16
-lmd: 2026-08-06
+lmd: 2026-09-27
 metadata:
   node_type: memory
   type: project
@@ -33,14 +33,6 @@ and is the single authoritative writer of the ruleset-config domain (PRRD S9).
 - **Publish pipeline** — `scripts/publish.py` (CPV canonical; the ONLY push
   path — a pre-push hook refuses all other pushes), `.github/workflows/`
   (validate / release / notify-marketplace).
-
-## Applies to
-- (radiates down to component/aspect pages as they're written — wire the
-  reciprocal `## Governed by` on each)
-
-## See also
-- (lateral links to other functionality hubs, once they exist)
-
 
 ^ATOM-23QN-F7D8 [desc:"Sentinel is the workflow-scan engine: scripts/sentinel/ + rules/ — adding a rule is adding a FILE, there is no registry to edit; DERIVE the rule count, never quote one (three defensible numbers exist)", keywords: how_does_the_sentinel_scanner_work where_do_workflow_findings_come_from how_do_I_add_a_new_sentinel_rule workflow_scan_engine_layout how_many_sentinel_rules_are_there_right_now, ocd: 2026-08-06, lmd: 2026-08-08]
 
@@ -169,6 +161,13 @@ Only the pure `compare()` is tested; the fetch half shells out to `gh`, and a
 mocked hub would only assert that the fake returns what it was told. Shipped
 v1.13.0 after three sessions in one day each cited a governance rule that had
 moved underneath them.
+
+## Applies to
+- (radiates down to component/aspect pages as they're written — wire the
+  reciprocal `## Governed by` on each)
+
+## See also
+- (lateral links to other functionality hubs, once they exist)
 
 ## Notes and lessons learned
 
