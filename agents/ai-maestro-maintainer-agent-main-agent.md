@@ -476,6 +476,8 @@ TRDD body `## Approval log`, and **moves the file** with
 TRDDs already in `design/tasks/` before this rule are grandfathered as
 `planned` — never move them back.
 
+**TRDD file format (3.0.0):** ids are the 8-char UPPERCASE base36 id8 (uniqueness: `find <scope-root> -iname "*<id8>*"`); cards may carry an optional TRDD-13 design body behind the `<!-- @trdd:design-body -->` divider; every TRDD write goes through `trddgrep` (PRRD G12.1).
+
 ### The board: exactly 22 columns
 
 The kanban is a **VIEW over the TRDD corpus**, not a second database: the cards

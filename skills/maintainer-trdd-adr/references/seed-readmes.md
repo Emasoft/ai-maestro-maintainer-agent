@@ -39,21 +39,23 @@ and use a conventional commit message instead.
 
 ## Filename
 
-`TRDD-<YYYYMMDD_HHMMSS+ZHHMM>-<uid-first-8>-<short-slug>.md`
+`TRDD-<YYYYMMDD_HHMMSS+ZHHMM>-<id8>-<short-slug>.md`
 
 Three components separated by `-`:
 - `<YYYYMMDD_HHMMSS+ZHHMM>` — local datetime + GMT offset
   (compact form, no `:` in the offset). Generate via
   `date +%Y%m%d_%H%M%S%z`.
-- `<uid-first-8>` — first 8 hex chars of an RFC 4122 UUID.
-  Generate via `python3 -c "import uuid; print(uuid.uuid4())"`.
+- `<id8>` — 8-char UPPERCASE base36 id (`A-Z0-9`). Generate via
+  `python3 -c "import secrets,string; print(''.join(secrets.choice(string.ascii_uppercase+string.digits) for _ in range(8)))"`.
+  Uniqueness: `find <all scope roots> -iname "*<id8>*" | grep -q .`
+  (never `ls` globs).
 - `<short-slug>` — kebab-case summary (2-4 words).
 
 ## Frontmatter (mandatory — v2 `column:` schema)
 
 \`\`\`yaml
 ---
-trdd-id: <full UUID>
+trdd-id: <id8>
 title: <single line, no colon, ≤ 80 chars>
 column: backburner
 created: <ISO 8601 datetime with TZ offset>

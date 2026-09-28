@@ -5,12 +5,13 @@
 - [Frontmatter rules](#frontmatter-rules-mandatory-per-claude-rules-trdd-design-tasks-md)
 - [Column enum + approval overlay](#column-enum--approval-overlay)
 - [Body sections](#body-sections)
+- [Design body (TRDD-13)](#design-body-trdd-13)
 - [Template](#template)
 
 The template below is what `new-trdd` mode writes after
-substituting `$UID` (full UUID), `$SHORT` (first 8 chars),
-`$ISO` (full ISO 8601 datetime with TZ offset), and `$SLUG`
-(short kebab-case summary).
+substituting `$ID8` (8-char UPPERCASE base36 id8 — the same `<SHORT>` that
+appears in the filename), `$ISO` (full ISO 8601 datetime with TZ offset),
+and `$SLUG` (short kebab-case summary).
 
 The substituted file goes to:
 `design/tasks/TRDD-<TS>-<SHORT>-<SLUG>.md` (a Tier-0 / already-authorized
@@ -22,7 +23,11 @@ offset — Windows filesystem-safe).
 
 ## Frontmatter rules (mandatory per ~/.claude/rules/trdd-design-tasks.md)
 
-- `trdd-id:` — full RFC 4122 UUID, matches the filename's `<SHORT>` prefix.
+- `trdd-id:` — 8-char UPPERCASE base36 id8 (`A-Z0-9`), minted with
+  `python3 -c "import secrets,string; print(''.join(secrets.choice(string.ascii_uppercase+string.digits) for _ in range(8)))"`,
+  tested for uniqueness with `find <all scope roots> -iname "*<id8>*" | grep -q .`
+  (never `ls` globs). The id8 IS the filename's `<SHORT>` prefix, written
+  uppercase everywhere (filename, field value, `TRDD-<id8>` references).
 - `title:` — single line, no colons, ≤ 80 chars. Use `—` or `-` for sub-clauses.
 - `column:` — bare kebab-case v2 kanban state (see the enum below). **There is
   no v1 `status:` field** — the `column:` field is the single source of state.
@@ -38,7 +43,10 @@ default): `current-owner:`, `assignee:`, `priority:`, `task-type:`
 `test-requirements:`, `relevant-rules:` (PRRD rule numbers), `npt:`/`eht:`
 (prerequisite / effect-handling child TRDDs), `created-by:` (authorship, set
 once — distinct from `current-owner:` (write-lock) and `assignee:` (executor),
-which change hands), and the approval/mandate/derived fields below.
+which change hands), and the approval/mandate/derived fields below. Design-body
+bookkeeping (TRDD-13), all four optional/absent by default: `design-included:`
+(bool — the card carries its design body), `design-approved:` (bool),
+`first-design-draft:` and `last-design-revision:` (ISO 8601 with offset).
 
 ## Approval, mandate, and derived fields (supersede `approval-tier:` — USER, 2026-07-10)
 
@@ -103,6 +111,16 @@ hop) — see `~/.claude/rules/trdd-approval-tiers.md` (which still teaches the
 RETIRED numeric `approval-tier:` scheme, janitor#286 — read it only for the
 folder model, never for the floor field).
 
+## Design body (TRDD-13)
+
+The design expands INSIDE the card, after the exact divider line
+`<!-- @trdd:design-body -->` — no sidecar folders, no ATRDD. trddgrep exposes
+`--design-body` / `--no-design-body` to read either half (spec + design, or
+spec only). Design-body bookkeeping rides in the frontmatter (`design-included:`,
+`design-approved:`, `first-design-draft:`, `last-design-revision:` — see the
+optional v2 fields above).
+
+
 ## Body sections
 
 1. **Context** — what's the problem? Why does this matter now?
@@ -117,7 +135,7 @@ folder model, never for the floor field).
 
 ```markdown
 ---
-trdd-id: ${UID}
+trdd-id: ${ID8}
 title: <single line, no colon, ≤ 80 chars>
 column: backburner
 created: ${ISO}

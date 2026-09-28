@@ -202,3 +202,24 @@ def test_trdd_adr_template_is_v2_column_schema() -> None:
         # no v1 status: frontmatter line (allow prose like "no v1 `status:` field")
         assert not re.search(r"^status:\s*(not-started|in-progress|completed|failed|blocked|superseded)\s*$", text, re.M), \
             f"{ref}: still emits a v1 status: frontmatter line"
+
+def test_no_trdd_envsubst_writer() -> None:
+    """No skill teaches the envsubst TRDD writer; trddgrep new is the writer (3.0.0).
+
+    ADR templates are substituted with envsubst by design — only the TRDD
+    template pipeline must not be.
+    """
+    for ref in SKILLS_ROOT.rglob("*.md"):
+        text = ref.read_text(encoding="utf-8")
+        assert 'envsubst < "$SKILL_REFS/trdd-template.md"' not in text, \
+            f"{ref.relative_to(REPO_ROOT)}: still teaches the envsubst TRDD writer"
+
+
+def test_trdd_id_documentation_matches_id8() -> None:
+    """trdd-template teaches the id8 id (UPPERCASE base36), not UUID (3.0.0)."""
+    text = (SKILLS_ROOT / "maintainer-trdd-adr" / "references" / "trdd-template.md").read_text()
+    for gone in ("RFC 4122", "${UID}"):
+        assert gone not in text, f"trdd-template.md: still teaches {gone}"
+    for want in ("${ID8}", "@trdd:design-body"):
+        assert want in text, f"trdd-template.md: missing {want}"
+

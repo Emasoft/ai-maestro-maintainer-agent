@@ -18,8 +18,8 @@ branch switches because they live in git under `design/tasks/` and
 `design/adrs/`.
 
 This skill bootstraps both directories on a freshly-entrusted repo,
-scaffolds new TRDDs and ADRs with valid frontmatter (UUID, ISO 8601
-dates, status enum), and validates that every existing TRDD/ADR
+mints new TRDDs via `trddgrep new` and new ADRs with valid frontmatter
+(id8, ISO 8601 dates), and validates that every existing TRDD/ADR
 conforms to the canonical rule
 (`~/.claude/rules/trdd-design-tasks.md`).
 
@@ -32,7 +32,9 @@ that supersedes the old one (per ADR-0001's supersession protocol).
 
 - Working tree clean OR caller is prepared to commit the scaffolded
   files.
-- `python3` on PATH (used for UUID generation + YAML validation).
+- `python3` on PATH (used for YAML validation).
+- `trddgrep` on PATH (`~/.local/bin/trddgrep`) — the only sanctioned
+  TRDD writer (PRRD G12.1).
 - `git` configured (the skill uses `git config user.name` to
   populate ADR/TRDD `authors:` fields).
 
@@ -93,16 +95,48 @@ EOF
 
 ```bash
 SLUG="$1"   # short kebab-case (e.g. "add-rate-limit-backoff")
-UID=$(python3 -c "import uuid; print(uuid.uuid4())")
-SHORT=${UID:0:8}
-TS=$(date +%Y%m%d_%H%M%S%z)
-ISO=$(date +%Y-%m-%dT%H:%M:%S%z)
-FILE="design/tasks/TRDD-${TS}-${SHORT}-${SLUG}.md"
+TITLE="$2"  # human-readable; MUST NOT contain ":" (trddgrep refuses it)
+TYPE="${3:-feature}"   # feature|bugfix|refactor|docs|infra|security|artifact|spike|audit
 
-UID="$UID" ISO="$ISO" SLUG="$SLUG" SHORT="$SHORT" \
-  envsubst < "$SKILL_REFS/trdd-template.md" > "$FILE"
+# PRRD G12.1 (GOLDEN): every TRDD write goes through trddgrep
+# (new · move · edit · fix). Hand-writing a card via a redirect or
+# envsubst bypasses the lock, the staleness guard and the field gate,
+# and is forbidden. trddgrep mints the id8, the timestamps and the
+# zone placement itself; --authority defaults to none. The template
+# file stays documentation of a card's shape, not a writer input.
+trddgrep new \
+  --title "$TITLE" \
+  --task-type "$TYPE" \
+  --author ai-maestro-maintainer-agent \
+  --column backburner
 
-echo "$FILE"
+# trddgrep prints the minted card path. It mints every mandatory
+# frontmatter field (trdd-id id8, timestamps, current-owner from
+# --author, status, min-approval-requirement) but an EMPTY body —
+# fill it next, so the card matches the corpus norm (see the
+# template's "## Body sections" for the section set). `append`
+# refuses a missing heading, so each call needs the exact heading.
+# INTERRUPTED MID-FILL: appends are NOT idempotent — re-running a
+# section that already landed duplicates it. Bodyless card: re-run
+# the appends below. Partial fill: excise the duplicate with
+# `trddgrep edit` first, never a raw editor.
+
+# 1. Context — the WHY, required (paste the issue body here for
+#    new-trdd-from-issue; trim to what a card needs):
+trddgrep append <id> Context "What and why, 2-5 lines."
+
+# 2. Scope — required:
+trddgrep append <id> Scope "What this card covers; what is explicitly out."
+
+# 3. Optional sections only when they apply (Verification, Implementation
+#    order, Critical files, Reused utilities, Out of scope, Acceptance
+#    checklist) — same append shape.
+
+# 4. Fields absent by default — set ONLY when they apply:
+trddgrep set <id> release-via none          # only cards that ship via publish/deploy
+trddgrep set <id> relevant-rules "[3, 12]"  # only cards constrained by PRRD rules
+
+echo "run trddgrep new above; it prints the card path"
 ```
 
 ### new-adr mode
@@ -137,7 +171,9 @@ TITLE=$(gh issue view "$ISSUE" --repo "$REPO" --json title --jq .title)
 BODY=$(gh issue view "$ISSUE" --repo "$REPO" --json body --jq .body)
 # Sanitize TITLE: strip colons (TRDD title invariant)
 TITLE_CLEAN=$(echo "$TITLE" | sed 's/:/ —/g')
-# Then run the new-trdd flow with TITLE_CLEAN + Context = BODY
+# Then run the new-trdd flow with TITLE_CLEAN, then
+# `trddgrep append <id> Context "<BODY>"` as the FIRST body fill
+# (further appends per the new-trdd sequence).
 ```
 
 ### validate mode
@@ -155,27 +191,41 @@ for p in Path("design/tasks").glob("TRDD-*.md"):
         continue
     fm_end = text.find("\n---\n", 4)
     fm = yaml.safe_load(text[4:fm_end])
-    for required in ("trdd-id", "title", "status", "created", "updated"):
+    for required in ("trdd-id", "title", "column", "status", "created", "updated"):
         if required not in fm:
             errors.append(f"{p}: missing field `{required}`")
     if ":" in str(fm.get("title", "")):
         errors.append(f"{p}: title contains `:` (forbidden)")
-    if fm.get("status") not in {"not-started", "in-progress",
-                                  "completed", "failed", "blocked",
-                                  "superseded"}:
+    # v2 life-stage vocabulary (3-pillars 3.0.0): `column:` is the state
+    # machine; `status:` carries only proposed|tasked|archived. `status`
+    # stays REQUIRED (trddgrep new always emits it) — defaulting the enum
+    # check would let a missing status validate clean.
+    if fm.get("status") not in {"proposed", "tasked", "archived"}:
         errors.append(f"{p}: invalid status `{fm.get('status')}`")
+    if str(fm.get("trdd-id", "")) and not re.fullmatch(r"[A-Z0-9]{8}", str(fm.get("trdd-id"))):
+        errors.append(f"{p}: trdd-id is not an 8-char UPPERCASE base36 id8")
 print(f"{len(errors)} errors")
 for e in errors: print(f"  {e}")
 sys.exit(1 if errors else 0)
 PY
 ```
 
+
+
+### Design lives in the card (TRDD-13)
+
+A card's design expands INSIDE the card file, after the exact divider
+line `<!-- @trdd:design-body -->` (no design = nothing after it).
+Optional frontmatter: `design-included:`, `design-approved:`,
+`first-design-draft:`, `last-design-revision:`. Read one half at a
+time with `trddgrep show <id> --design-body` / `--no-design-body`.
+
 ## Output
 
 | Mode | Stdout | Filesystem |
 |---|---|---|
 | bootstrap | "Bootstrapped design/" + commit hash | seeds 3 files in the entrusted repo: `design/tasks/README.md`, `design/adrs/README.md`, and `design/adrs/ADR-0001-trdd-vs-adr-split.md` |
-| new-trdd | Path of the new TRDD file | new TRDD under `design/tasks/` |
+| new-trdd | Path of the new TRDD file | new TRDD under `design/tasks/`, body filled via `trddgrep append`, optional fields via `trddgrep set` |
 | new-adr | Path of the new ADR file + reminder to update index | new ADR under `design/adrs/` |
 | new-trdd-from-issue | Path of the new TRDD file | new TRDD with issue body as Context |
 | validate | Pass / fail summary + per-file errors | none |
@@ -184,6 +234,7 @@ PY
 
 | Error | Action |
 |---|---|
+| `trddgrep` not on PATH | Refuse and stop — no hand-write fallback exists (PRRD G12.1). Point the caller at `install-messaging.sh` from the ai-maestro checkout. |
 | `design/` already exists during bootstrap | Refuse; suggest new-trdd / new-adr instead |
 | Frontmatter parse failure in validate | Report file + error; continue with remaining files |
 | `gh issue view` rate-limited in new-trdd-from-issue | Retry per `~/.claude/rules/github-timeouts.md` |
