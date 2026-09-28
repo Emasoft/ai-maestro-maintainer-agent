@@ -94,9 +94,8 @@ EOF
 ### new-trdd mode
 
 ```bash
-SLUG="$1"   # short kebab-case (e.g. "add-rate-limit-backoff")
-TITLE="$2"  # human-readable; MUST NOT contain ":" (trddgrep refuses it)
-TYPE="${3:-feature}"   # feature|bugfix|refactor|docs|infra|security|artifact|spike|audit
+TITLE="$1"  # human-readable; MUST NOT contain ":" (trddgrep refuses it)
+TYPE="${2:-feature}"   # feature|bugfix|refactor|docs|infra|security|artifact|spike|audit
 
 # PRRD G12.1 (GOLDEN): every TRDD write goes through trddgrep
 # (new · move · edit · fix). Hand-writing a card via a redirect or
@@ -191,16 +190,17 @@ for p in Path("design/tasks").glob("TRDD-*.md"):
         continue
     fm_end = text.find("\n---\n", 4)
     fm = yaml.safe_load(text[4:fm_end])
-    for required in ("trdd-id", "title", "column", "status", "created", "updated"):
+    for required in ("trdd-id", "title", "column", "created", "updated"):
         if required not in fm:
             errors.append(f"{p}: missing field `{required}`")
     if ":" in str(fm.get("title", "")):
         errors.append(f"{p}: title contains `:` (forbidden)")
     # v2 life-stage vocabulary (3-pillars 3.0.0): `column:` is the state
-    # machine; `status:` carries only proposed|tasked|archived. `status`
-    # stays REQUIRED (trddgrep new always emits it) — defaulting the enum
-    # check would let a missing status validate clean.
-    if fm.get("status") not in {"proposed", "tasked", "archived"}:
+    # machine. `status:` is NOT required — the governing rule's minimal
+    # frontmatter omits it and the store derives it from the zone when
+    # absent (grandfathered status-less cards are conformant) — but when
+    # present it must carry only proposed|tasked|archived.
+    if "status" in fm and fm.get("status") not in {"proposed", "tasked", "archived"}:
         errors.append(f"{p}: invalid status `{fm.get('status')}`")
     if str(fm.get("trdd-id", "")) and not re.fullmatch(r"[A-Z0-9]{8}", str(fm.get("trdd-id"))):
         errors.append(f"{p}: trdd-id is not an 8-char UPPERCASE base36 id8")
