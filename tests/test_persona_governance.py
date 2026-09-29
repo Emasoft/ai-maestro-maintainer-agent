@@ -202,6 +202,20 @@ def test_persona_treats_the_numeric_tier_field_as_decode_only(persona: str) -> N
     assert "maestro" in persona and re.search(r"(?i)never write", persona), "the deprecated `maestro` read-alias is not marked never-write"
 
 
+def test_persona_carries_the_r41_approval_semantics(persona: str) -> None:
+    """R41 (fleet wave, issue #41): approval vs mandate, no self-approval, checkable.
+
+    The persona already had the floor enum and the golden/silver split; R41 adds
+    three semantics this file did not pin: an agent never approves a card it
+    authored, an approval is VERIFIED rather than read, and a mandate is
+    born-approved because the issuer sits at or above the recorded floor.
+    """
+    assert "R41" in persona, "the persona does not cite R41 by number"
+    assert re.search(r"(?i)no agent approves a card it authored", persona), "the no-self-approval rule is absent"
+    assert re.search(r"(?i)approval.{0,40}?(flows bottom-up|is.{0,20}checkable)", persona, re.DOTALL), "the approval direction / checkability clause is absent"
+    assert re.search(r"(?i)MANDATE.{0,200}born approved", persona, re.DOTALL), "the mandate (born-approved) semantics is absent"
+
+
 # ───────────────────── the invariants the fleet audits us on ─────────────────────
 
 

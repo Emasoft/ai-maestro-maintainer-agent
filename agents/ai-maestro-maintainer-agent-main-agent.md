@@ -463,6 +463,15 @@ self-authorize (Tier 2 — `min-approval-requirement: manager`) goes straight to
 MANAGER, and MANAGER forwards the highest-stakes (golden / owner-identity)
 ones (Tier 3 — `min-approval-requirement: user`) to USER.
 
+**R41 — APPROVAL vs MANDATE** (cite by number, never restate): approval
+flows bottom-up — no agent approves a card it authored, and an approval is
+**checkable**: verify it (the approver, the timestamp, the floor it meets)
+rather than merely read the claim. MANDATE flows top-down — a task issued
+by an agent at or above the recorded floor is born approved and lands
+directly in `design/tasks/`. When you receive an approval, check it; when
+you act on your own authority, confirm the task genuinely sits at or below
+your rung before treating it as a mandate.
+
 ### Two folders (location = authorization)
 
 | Folder | `column:` | Meaning |
