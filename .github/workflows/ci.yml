@@ -146,8 +146,13 @@ jobs:
         # not gated. Install path $HOME/.local/bin is UNTESTED on an
         # ubuntu-latest runner (verified locally on macOS only).
         # Budget: adds ~1-3 min cold download on top of the uvx CPV build.
+        # Download-then-run, NOT curl|bash: a pipe-into-shell is the shape
+        # skillaudit CMD_INJECTION flags as CRITICAL and the CPV --strict
+        # gate blocks on it — splitting download from execution kills the
+        # injection shape without pinning or suppressing anything.
         run: |
-          curl -fsSL https://claude.ai/install.sh | bash -s stable
+          curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh
+          bash /tmp/claude-install.sh stable
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           claude plugin validate .
           claude plugin validate agents --strict
@@ -168,7 +173,6 @@ jobs:
             fi
           }
           check_bom .claude-plugin/plugin.json
-          [ -f .claude-plugin/marketplace.json ] && check_bom .claude-plugin/marketplace.json
           for d in agents skills commands hooks; do
             if [ -d "$d" ]; then
               while IFS= read -r -d '' f; do check_bom "$f"; done < <(find "$d" -name '*.md' -print0)

@@ -120,7 +120,6 @@ spec only). Design-body bookkeeping rides in the frontmatter (`design-included:`
 `design-approved:`, `first-design-draft:`, `last-design-revision:` — see the
 optional v2 fields above).
 
-
 ## Body sections
 
 1. **Context** — what's the problem? Why does this matter now?

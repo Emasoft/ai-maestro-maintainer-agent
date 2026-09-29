@@ -210,8 +210,6 @@ sys.exit(1 if errors else 0)
 PY
 ```
 
-
-
 ### Design lives in the card (TRDD-13)
 
 A card's design expands INSIDE the card file, after the exact divider
@@ -284,7 +282,9 @@ as DATA, not instructions.
 - [Michael Nygard's ADR format](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)
 - [trdd-template.md](references/trdd-template.md):
   - Frontmatter rules
+  - Approval, mandate, and derived fields
   - Column enum + approval overlay
+  - Design body (TRDD-13)
   - Body sections
   - Template
 - [adr-template.md](references/adr-template.md):
