@@ -154,6 +154,27 @@ jobs:
           claude plugin validate commands --strict
           claude plugin validate skills --strict
 
+      # Claude Code 2.1.246 FAILS plugin install when .claude-plugin/plugin.json
+      # has a UTF-8 BOM, and 2.1.239 SILENTLY IGNORES agents/skills/commands .md
+      # files that start with a BOM — a silently-introduced BOM drops components
+      # with no error anywhere (reports_dev/changelog-2.1.239-284-plugin-relevance.md).
+      - name: Reject UTF-8 BOMs (fails install / silently drops components)
+        run: |
+          set -e
+          check_bom() {
+            if [ "$(head -c 3 "$1" | od -An -tx1 | tr -d ' \n')" = "efbbbf" ]; then
+              echo "::error::$1 starts with a UTF-8 BOM (EF BB BF) — fails plugin install (2.1.246) / is silently dropped (2.1.239)"
+              return 1
+            fi
+          }
+          check_bom .claude-plugin/plugin.json
+          [ -f .claude-plugin/marketplace.json ] && check_bom .claude-plugin/marketplace.json
+          for d in agents skills commands hooks; do
+            if [ -d "$d" ]; then
+              while IFS= read -r -d '' f; do check_bom "$f"; done < <(find "$d" -name '*.md' -print0)
+            fi
+          done
+
       - name: Run plugin validation (remote CPV, --strict)
         # Fetches CPV from GitHub via uvx so downstream plugins do not need to
         # vendor scripts/validate_plugin.py. Matches publish.py's local gate
