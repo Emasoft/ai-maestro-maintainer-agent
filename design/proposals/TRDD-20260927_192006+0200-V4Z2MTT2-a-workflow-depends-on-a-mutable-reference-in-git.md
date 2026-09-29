@@ -1,9 +1,9 @@
 ---
 trdd-id: V4Z2MTT2
 title: a workflow depends on a MUTABLE reference in .github/workflows
-column: proposal
+column: refused
 created: 2026-09-27T19:20:06+0200
-updated: 2026-09-29T13:14:59+0200
+updated: 2026-09-29T13:56:32+0200
 current-owner: janitor
 task-type: security
 severity: medium
@@ -18,7 +18,9 @@ ticket-origin: workflow-security
 
 ## ⏵ STATE — READ THIS FIRST ON RESUME (authoritative; supersedes the body) — 2026-09-27
 
-**PROPOSED BY THE JANITOR — awaiting approval. NOT authorized to execute.**
+**WITHDRAWN BY THE JANITOR — the finding is GONE. No human declined this.**
+
+The condition this proposal described is no longer detectable as of 2026-09-29 (fixed by hand, or it was transient). It is kept as a record, never deleted. If the same condition reappears, the janitor proposes it again with a NEW id — this one is closed.
 
 The janitor detected this in code the **USER owns**, so it may only propose. It has NOT touched
 anything and will not, until a human or the main Claude approves by running:
@@ -54,5 +56,6 @@ The dispatched agent is fail-safe: it fixes what is safe and FLAGS what needs a 
 rotates credentials, never force-pushes, never pushes to `main`). It returns one line plus a report
 path, and closes the ticket with an explicit status.
 MAINTAINER analysis 2026-09-29: all third-party actions across ci/release/notify-marketplace are SHA-pinned (zero unpinned uses refs), so the live WFSEC-004 hit is exactly one: the ci.yml:150 installer curl-pipe (curl -fsSL https://claude.ai/install.sh pipe bash -s stable). That line is a DOCUMENTED DELIBERATE choice (comment block ci.yml:129-148): pinning the installer freezes the native validator strictness at a stale CLI, defeating the check; warning-class drift is visible in logs, not gated. Residual risk is the Anthropic installer supply chain, shared by every CLI consumer, not a repo-mutable ref. Recommendation: documented exception, no repair apply; owner may override via /janitor-support-open-ticket.
+SUPERSEDED 2026-09-29 by c3c57f1+ccb425a: the one-step installer execution WAS repaired this release (download-then-run split via RUNNER_TEMP env) because the CPV --strict gate blocked it as CMD_INJECTION CRITICAL. Review-fork correction on naming: the split is DE-DETECTION, not devitalization - the unverified-bytes-executed property is unchanged; checksum verification is structurally unavailable for a moving stable installer, so the split rather than a hash step is the honest floor HERE (it would not be for a pinned artifact). Residual risk (vendor-channel integrity) unchanged and accepted. The recommendation above (documented exception, no repair apply) no longer describes the code. NOTE: this card was found parked in design/refused/ (a folder the owner abolished 2026-09-24, janitor#309 - refused is a COLUMN in proposals/); moved back to proposals/ with column refused intact.
 
 ## Notes and lessons learned
