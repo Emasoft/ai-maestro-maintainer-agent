@@ -136,7 +136,7 @@ Auth column: **RO** = read-only, no credentials · **STRICT** = `AID_AUTH` requi
 | `verify <id>` | ✅ *(2026-08-21; ABSENT on 2026-07-16 — probe anyway)* | RO | exit `0` verified · **`2` NOT verified** · `1` error. **Flags UNSETTLED** — see below |
 | `edit <id>` | ✅ | STRICT | `--set k=v` (repeatable) — frontmatter in place, no folder move |
 | `approve <id>` | ✅ | STRICT | `--approver W` `--tier N` `--rationale R` — proposal → planned, `git mv` |
-| `refuse <id>` | ✅ | STRICT | `--approver W` `--tier N` `--reason R` — → `refused/` |
+| `refuse <id>` | ✅ | STRICT | `--approver W` `--tier N` `--reason R` — sets `column: refused` (no refused/ folder since 2026-09-24, janitor#309: refused is a COLUMN in proposals/, not a zone — the file stays there) |
 | `promote <id> --column C` | ✅ | STRICT | `--note N` `--approver W` — advance in place |
 | `archive <id> --state S` | ✅ | STRICT | `--reason R` `--superseded-by ID` `--approver W` |
 

@@ -3,7 +3,7 @@ trdd-id: V4Z2MTT2
 title: a workflow depends on a MUTABLE reference in .github/workflows
 column: refused
 created: 2026-09-27T19:20:06+0200
-updated: 2026-09-29T14:29:37+0200
+updated: 2026-09-29T15:10:09+0200
 current-owner: janitor
 task-type: security
 severity: medium
@@ -59,3 +59,4 @@ MAINTAINER analysis 2026-09-29: all third-party actions across ci/release/notify
 SUPERSEDED 2026-09-29 by c3c57f1+ccb425a: the one-step installer execution WAS repaired this release (download-then-run split via RUNNER_TEMP env) because the CPV --strict gate blocked it as CMD_INJECTION CRITICAL. Review-fork correction on naming: the split is DE-DETECTION, not devitalization - the unverified-bytes-executed property is unchanged; checksum verification is structurally unavailable for a moving stable installer, so the split rather than a hash step is the honest floor HERE (it would not be for a pinned artifact). Residual risk (vendor-channel integrity) unchanged and accepted. The recommendation above (documented exception, no repair apply) no longer describes the code. NOTE: this card was found parked in design/refused/ (a folder the owner abolished 2026-09-24, janitor#309 - refused is a COLUMN in proposals/); moved back to proposals/ with column refused intact.
 
 ## Notes and lessons learned
+ZONE FIX 2026-09-29T15:09:53+0200: the refused/ ZONE is abolished (owner ruling 2026-09-24, janitor#309 — refused is a COLUMN in proposals/, not a zone); all three cards parked there were git mv-ed back to design/proposals/ with column: refused intact, the folder README was folded into the proposals/archived/tasks READMEs, and the empty folder was removed. This card now lives at design/proposals/TRDD-20260927_192006+0200-V4Z2MTT2-a-workflow-depends-on-a-mutable-reference-in-git.md.

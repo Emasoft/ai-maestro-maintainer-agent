@@ -75,8 +75,9 @@ grandfathered (3P-KAN-21): per-card judgment on next touch, never a sweep.
 **Approval overlay (location = authorization):** `design/proposals/`
 (`column: proposal`, awaiting approval) → `design/tasks/` (`column: planned`,
 authorized) → terminal-DONE TRDDs `git mv` to `design/archived/`
-(`completed`/`cancelled`/`superseded`); refused proposals `git mv` to
-`design/refused/` (`column: refused`). Tier-0 work authors directly in
+(`completed`/`cancelled`/`superseded`); refused proposals STAY in
+`design/proposals/` with `column: refused` — no refused/ folder (owner ruling
+2026-09-24, janitor#309). Tier-0 work authors directly in
 `design/tasks/` as `planned`. Full model:
 `~/.claude/rules/trdd-approval-tiers.md` (still teaches the RETIRED numeric
 `approval-tier:` scheme, janitor#286 — read it only for the folder model,

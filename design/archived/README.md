@@ -9,9 +9,10 @@ A TRDD is `git mv`-ed here (never deleted — RULE 0) when it was **approved**
 | **cancelled** | `cancelled` | withdrawn — the work is no longer wanted |
 | **superseded** | `superseded` | replaced by other TRDD(s) (recorded in `superseded-by:`) |
 
-The dividing line vs `design/refused/` is *was it ever approved?* — a proposal
-the approver **declined** never entered the pipeline and goes to
-`design/refused/`; only once-approved TRDDs land here.
+The dividing line vs a **declined proposal** is *was it ever approved?* — a
+proposal the approver **declined** never entered the pipeline and stays in
+`design/proposals/` with `column: refused` (there is no refused/ folder —
+owner ruling 2026-09-24, janitor#309); only once-approved TRDDs land here.
 
 **`failed` is NOT archived.** `failed` is a *retryable* in-progress state that
 stays in `design/tasks/`; giving up on it is an explicit `cancelled`

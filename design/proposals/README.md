@@ -11,7 +11,10 @@ while it sits in this folder.
 On approval the approver sets `column: planned`, records the decision in the
 TRDD body `## Approval log`, and `git mv`s the file into `design/tasks/`
 (preserving history). On refusal the approver sets `column: refused` and
-`git mv`s it into `design/refused/`.
+**leaves the file here** — there is no refused/ folder (owner ruling
+2026-09-24, janitor#309: refused is a COLUMN in this folder, not a zone).
+Lineage test for `design/archived/`: *was it ever approved?* — no → it stays
+here with `column: refused`; yes → `design/archived/`.
 
 **The MAINTAINER is a governance-layer peer (R19) — it has NO CHIEF-OF-STAFF
 and files manager-floor proposals (`min-approval-requirement: manager`)
