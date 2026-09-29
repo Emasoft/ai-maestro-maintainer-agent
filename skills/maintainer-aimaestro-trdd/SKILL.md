@@ -131,7 +131,7 @@ Auth column: **RO** = read-only, no credentials · **STRICT** = `AID_AUTH` requi
 | Subcommand | Deployed? | Auth | Flags |
 |---|---|---|---|
 | `create` | ✅ | STRICT | *Out of scope here* — authoring is `maintainer-trdd-adr`. Listed so its presence is not mistaken for a gap. |
-| `search` | ✅ | RO | `--column C` `--id I` `--keyword K` `--zone proposals\|tasks\|archived\|refused` |
+| `search` | ✅ | RO | `--column C` `--id I` `--keyword K` `--zone proposals\|tasks\|archived` (no refused zone — refused cards are found by `--column refused` in proposals/) |
 | `read <id>` | ✅ | RO | — |
 | `verify <id>` | ✅ *(2026-08-21; ABSENT on 2026-07-16 — probe anyway)* | RO | exit `0` verified · **`2` NOT verified** · `1` error. **Flags UNSETTLED** — see below |
 | `edit <id>` | ✅ | STRICT | `--set k=v` (repeatable) — frontmatter in place, no folder move |
