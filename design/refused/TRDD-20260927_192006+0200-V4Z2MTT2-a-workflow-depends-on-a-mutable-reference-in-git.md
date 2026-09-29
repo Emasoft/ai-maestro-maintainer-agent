@@ -3,7 +3,7 @@ trdd-id: V4Z2MTT2
 title: a workflow depends on a MUTABLE reference in .github/workflows
 column: refused
 created: 2026-09-27T19:20:06+0200
-updated: 2026-09-29T13:56:32+0200
+updated: 2026-09-29T14:29:37+0200
 current-owner: janitor
 task-type: security
 severity: medium
