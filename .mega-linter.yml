@@ -20,11 +20,13 @@ ENABLE_LINTERS:
   - REPOSITORY_CHECKOV
   - REPOSITORY_TRIVY
 
-# Issue #138: REPOSITORY_GITLEAKS is intentionally NOT enabled. MegaLinter runs
-# gitleaks in repository mode (full git HISTORY), so a security-teaching plugin
-# with example secrets in docs — even in deleted/renamed/old commits — fails the
-# Lint job on FPs that are unfixable in the working tree. Secrets are already
-# covered by publish.py's TruffleHog gate (with a public-info allowlist).
+# No repository secret linter is enabled here. Secrets are covered by the CPV
+# validator (`cpv-remote-validate plugin . --strict`, publish.py gate G3 and the
+# CI Validate job), which runs TruffleHog among its scanners with a public-info
+# allowlist. (Issue #138 history: MegaLinter's repository-mode secret scan reads
+# full git HISTORY, so a security-teaching plugin with example secrets in docs —
+# even in deleted/renamed/old commits — fails the Lint job on FPs unfixable in
+# the working tree.)
 
 # Exclude paths — single-quoted YAML scalar so regex \. is read literally
 # (double-quoted YAML treats \. as an invalid escape and yamllint rejects it).

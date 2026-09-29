@@ -28,7 +28,11 @@ user to approve on the issue; VERIFY confirms the approval landed.
 - `$AUTHORIZED_USER` env var set (from `gh api user --jq .login`).
 - The issue number that triggered the fix is known to the caller.
 - **Frozen CLI only (IRON RULE).** Every ai-maestro interaction goes through the
-  frozen scripts — here, `amp-send`. NEVER call the ai-maestro server `/api/*`
+  frozen scripts — here, `aimaestro-message.sh send`, with `amp-send` as the
+  explicit degrade path where the CLI is absent; the exit codes and the
+  recipient-resolve recipe are owned by
+  [approval-request.md](references/approval-request.md).
+  NEVER call the ai-maestro server `/api/*`
   directly, not even as a fallback when a script is missing: degrade explicitly
   instead. (`gh` and package-registry APIs are NOT covered — keep them.)
 

@@ -1,10 +1,4 @@
-# Guardian threat classes — T1 through T6
-
-The Guardian skill detects 6 classes of supply-chain threat. Each
-class has a detector (read-only), a delta-vs-baseline check, and a
-route (what the Guardian does when a delta is positive). T3
-additionally carries an absolute baseline-compliance check that fires
-independent of any delta (see T3).
+# Guardian threat classes — T1 through T7
 
 ## Table of Contents
 
@@ -14,8 +8,15 @@ independent of any delta (see T3).
 - [T4 — Protected-path activity](#t4--protected-path-activity)
 - [T5 — Secret-leak markers](#t5--secret-leak-markers)
 - [T6 — Package-manager safety-config drift](#t6--package-manager-safety-config-drift)
+- [T7 — Hook liveness](#t7--hook-liveness)
 - [Routing table](#routing-table)
 - [Atomic write pattern](#atomic-write-pattern)
+
+The Guardian skill detects 7 classes of supply-chain threat. Each
+class has a detector (read-only), a delta-vs-baseline check, and a
+route (what the Guardian does when a delta is positive). T3
+additionally carries an absolute baseline-compliance check that fires
+independent of any delta (see T3).
 
 ---
 
@@ -297,7 +298,11 @@ history are CRITICAL by definition; baseline is always 0.
 
 1. **AMP → MANAGER** (governance escalation, not GitHub-only): send an
    URGENT message to the host MANAGER —
-   `amp-send "$MANAGER" "T5 secret-leak on <repo>" "<body — begins with the self-id line>" --type alert --priority urgent`.
+   `aimaestro-message.sh send "$MANAGER" --subject "T5 secret-leak on <repo>"
+   --body - --type alert --priority urgent` with the body on stdin, beginning
+   with the self-id line. Where the CLI is absent, the degrade path is the
+   legacy `amp-send "$MANAGER" "T5 secret-leak on <repo>" "<body — begins with
+   the self-id line>" --type alert --priority urgent`.
    `$MANAGER` is a **registered agent name**, resolved from the agents index —
    `manager-<host>` is a placeholder and fails to resolve at the exact moment
    this escalation matters. Resolve it (or fall back to `--id <uuid>`) with the
@@ -312,9 +317,10 @@ history are CRITICAL by definition; baseline is always 0.
    commit SHA + the suspected secret kind.
 
 Do NOT echo the secret value back in either message. Do NOT proceed with any
-other patrol task until the user (or MANAGER) acknowledges. If `amp-send` is
-unavailable (AMP server offline), fall back to the GitHub alert alone and note
-the AMP-unreachable condition in it.
+other patrol task until the user (or MANAGER) acknowledges. If NEITHER
+`aimaestro-message.sh` (exit 3 = transport unavailable) nor the legacy
+`amp-send` can deliver, fall back to the GitHub alert alone and note the
+AMP-unreachable condition in it.
 
 ---
 
@@ -414,6 +420,58 @@ repo (no source file SHAs captured, no delta possible).
 
 ---
 
+## T7 — Hook liveness
+
+**Why this class exists.** A gate can be enabled and check nothing: git
+resolves exactly ONE hooks directory (`core.hooksPath`, else `.git/hooks`),
+so a shipped hook git never resolves is present, reviewed, committed — and
+inert. Nothing is red, because nothing ran. Same silent-failure family as a
+required status check whose context name never reports, or a linter whose
+glob matches no files (TRDD-G88RIN1C). The canonical in-scope case: a repo
+ships `.githooks/pre-push` while `core.hooksPath` names `git-hooks` — one
+character apart, two directories, the reviewed file is not the executed file.
+
+**States — per ARTIFACT and per HOOK TYPE, never one state per repo** (a repo
+can be LIVE and SHADOWED at once):
+
+| State | Meaning |
+|---|---|
+| LIVE | the shipped file IS the file git resolves |
+| DECORATIVE | a shipped hook git will never run (`core.hooksPath` resolves elsewhere) |
+| SHADOWED | a leftover `.git/hooks/<name>` git ignores because `core.hooksPath` is set — misleads inspection, does not misbehave |
+| DEPRIVED (observation) | a hook the GLOBAL hooks dir provides that a local `core.hooksPath` override removed (it REPLACES, it does not fall back) — a LOSS only beside a usage signal (LFS hooks vs tracked `filter=lfs` patterns + `git lfs ls-files`); a benign absence otherwise |
+
+**Detection.**
+
+```bash
+uv run scripts/hook_liveness.py "$REPO"   # JSON on stdout; exit 2 = not a git repo
+```
+
+Non-negotiables baked into the script — each one is a measured failure from
+the retracted 2026-08-22 census (see the TRDD):
+
+- the resolved dir comes from `git rev-parse --path-format=absolute
+  --git-path hooks` and is NEVER string-concatenated with the repo root
+  (`core.hooksPath` is frequently absolute; concatenation yields a path that
+  cannot exist, and every branch then reports "not live" for any input);
+- shipped hooks are DISCOVERED via `git ls-files` by basename, never assumed
+  to live in a known directory;
+- the resolved dir is ENUMERATED (executable, non-`.sample`) — a name list
+  misses hooks outside it, an unfiltered count over-reports by 14 samples;
+- SIZE never classifies a file — it is at most a reason to OPEN one (384 B
+  hooks have been real guards; a 388 B one was the stock LFS shim).
+
+**Scope.** ONE repo per invocation — the entrusted repo the guardian runs on.
+Fleet iteration is the CALLER's job and MUST resolve entrusted repos BY NAME
+from the ecosystem SSOT, never `~/Code/*` or any directory glob (owner
+directive 2026-08-22: a glob is too wide — the owner's private projects —
+and too narrow — in-scope repos nest below depth 1).
+
+**Report-only.** Repairing another repo's git config is a mutation on a tree
+this agent does not own — route through an issue or a PR, never a direct
+edit. The fix is a per-repo LOCAL `core.hooksPath`; NEVER edit the global
+hooks file (shared machine-wide; changing it alters LFS behaviour everywhere).
+
 ## Routing table
 
 | Class | Delta | Route |
@@ -427,6 +485,8 @@ repo (no source file SHAs captured, no delta possible).
 | T5 | +N | STOP CYCLE + alert (secret in history is critical) |
 | T6 weakening / strip | any | alert authorized user; refuse to push |
 | T6 missing-on-Node-repo | standing | file tracking issue with template paste |
+| T7 DECORATIVE | standing | file tracking issue on the entrusted repo (report-only — never write its git config) |
+| T7 SHADOWED / DEPRIVED-with-loss | standing | note in patrol report; tracking issue when the repo ships its own guard |
 
 ## Atomic write pattern
 

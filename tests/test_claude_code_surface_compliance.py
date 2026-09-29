@@ -1,8 +1,31 @@
 """This plugin must not use Claude Code surfaces that upstream removed or changed.
 
 Every check here corresponds to a dated CHANGELOG entry, and every one was
-measured absent from this tree on 2026-08-07 against Claude Code 2.1.224. The
-file exists so that stays true without anyone re-reading a changelog.
+measured absent from this tree on 2026-08-07 against Claude Code 2.1.224, then
+re-measured on 2026-08-15 against Claude Code 2.1.233 (auditing the 2.1.225 →
+2.1.232 changelog; the CLI claims below were re-run against the live binary,
+not re-dated), then again on 2026-08-22 against 2.1.240 (auditing the 2.1.233 →
+2.1.240 changelog). The file exists so that stays true without anyone re-reading
+a changelog.
+
+The 2026-08-22 pass added ONE detector (the Todo/Task tool family, removed on
+modern models in 2.1.233) and confirmed the rest of that changelog needed no
+edit here: the persona's session-channel bullet already carried 2.1.232's
+bare-name `SendMessage` delivery, and a whole-tree grep found no model id, no
+`extraKnownMarketplaces`/`strictKnownMarketplaces` setting, and no
+`allowed-tools` frontmatter for the renamed/aliased surfaces to invalidate. That
+"nothing to change" is recorded deliberately — an audit that finds nothing looks
+identical to an audit nobody ran.
+
+MIND THE GAP BETWEEN THAT SWEEP AND THESE GUARDS. The 2026-08-22 sweep was
+whole-tree; `_shipped_files()` below is NOT. It covers `.md`/`.json` under
+agents/skills/commands/hooks plus README — so `scripts/` (144 files) and every
+`.sh`/`.py`/`.yaml` anywhere are OUTSIDE these detectors. "This tree is clean
+today" is a stronger statement than "a future violation will be caught here",
+and only the first was measured tree-wide. The narrower guard is deliberate —
+these check what an agent LOADS AS INSTRUCTIONS, and a Python script naming a
+tool identifier is a different concern with a different owner — but do not read
+a green suite as tree-wide coverage. It is not.
 
 WHY A TEST RATHER THAN A NOTE. A fact verified in ANOTHER repo keeps living
 there: the check's scope stops at this tree while the surface keeps changing
@@ -77,10 +100,99 @@ def test_the_ultraplan_detector_bites() -> None:
     assert not ULTRAPLAN.search("run /plan first")
 
 
+# Removed in 2.1.233 on Opus 4.8, Sonnet 5, Fable 5, Mythos 5 "and newer models"
+# — i.e. on every model this plugin actually runs under. A shipped instruction
+# naming one sends an agent to a tool that is not in its tool list, and the
+# failure is silent in the worst way: the agent reads "record it with TaskCreate",
+# cannot, and either invents a substitute or drops the bookkeeping. The global
+# TRDD rule still teaches this idiom (`a TaskCreate entry naming the id`), so the
+# likely path into this tree is an author copying that sentence into a skill.
+# `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` restores them, but a shipped instruction
+# cannot assume a host set it.
+#
+# CASE-SENSITIVE, and that is load-bearing. This repo's kanban has a `todo`
+# COLUMN, `task-type:` is a TRDD frontmatter field, and "task" is ordinary
+# English throughout. A case-insensitive match would redden on correct writing on
+# nearly every file — and a guard that reddens on correct writing gets deleted,
+# which is how a repo loses a detector it still needs. Only the exact tool
+# identifiers match.
+TODO_TASK_TOOLS = re.compile(r"\b(?:TaskCreate|TaskUpdate|TaskGet|TaskList|TodoWrite)\b")
+
+
+def test_no_reference_to_the_removed_todo_task_tools() -> None:
+    """TaskCreate/Update/Get/List and TodoWrite are gone on modern models (2.1.233)."""
+    offenders = [f"{p.relative_to(REPO)}" for p, t in _text(_shipped_files()) if TODO_TASK_TOOLS.search(t)]
+    assert not offenders, f"names a Todo/Task tool removed on modern models (2.1.233) — track work in a TRDD card instead: {offenders}"
+
+
+def test_the_todo_task_tool_detector_bites() -> None:
+    """Positive control, both directions — the repo's own `todo`/`task` prose must NOT match."""
+    assert TODO_TASK_TOOLS.search("record it with TaskCreate naming the id")
+    assert TODO_TASK_TOOLS.search("call TodoWrite to update the list")
+    assert TODO_TASK_TOOLS.search("TaskUpdate, TaskGet and TaskList are gone too")
+    # The writing this guard must stay quiet on — all of it is live in this tree.
+    assert not TODO_TASK_TOOLS.search("column: todo")
+    assert not TODO_TASK_TOOLS.search("task-type: feature")
+    assert not TODO_TASK_TOOLS.search("move the card to todo and pull the next task")
+    assert not TODO_TASK_TOOLS.search("the session todo list is ephemeral")
+
+
+# Deprecated in 2.1.222 when `/review` folded into `/code-review`; `/code-review
+# ultra` is the surface now and `/ultrareview` is a legacy alias. Matched as the
+# WHOLE word `ultrareview` only — never bare `review`, which legitimately appears
+# in paths like `references/review-checklist.md` (a guard that reddens on correct
+# writing gets deleted).
+ULTRAREVIEW = re.compile(r"\bultrareview\b", re.IGNORECASE)
+
+
+def test_no_reference_to_the_deprecated_ultrareview_alias() -> None:
+    """`/ultrareview` is a deprecated alias (2.1.222) — name `/code-review ultra`."""
+    offenders = [f"{p.relative_to(REPO)}" for p, t in _text(_shipped_files()) if ULTRAREVIEW.search(t)]
+    assert not offenders, f"references the deprecated /ultrareview alias (2.1.222 — use /code-review ultra): {offenders}"
+
+
+def test_the_ultrareview_detector_bites() -> None:
+    """Positive control, both directions — bare `/review` must NOT match."""
+    assert ULTRAREVIEW.search("run /ultrareview on the branch")
+    assert not ULTRAREVIEW.search("run /code-review ultra on the branch")
+    assert not ULTRAREVIEW.search("see references/review-checklist.md")
+
+
+# ── gitleaks is banned (USER directive 2026-08-14) ───────────────────────────
+
+# Single-threaded, single-process, and capped on file count — too slow to be
+# useful at repo scale, so the USER banned it outright: no shipped instruction
+# may send an agent to it (TruffleHog and the bundled fast_security_scan.py
+# cover detection). Scope is wider than the other detectors because the ban
+# also covers root config/docs that reference scanners.
+GITLEAKS = re.compile(r"\bgitleaks\b", re.IGNORECASE)
+
+
+def _gitleaks_scope() -> list[Path]:
+    extra = [REPO / n for n in (".mega-linter.yml", "CONTRIBUTING.md", "SECURITY.md", "ACKNOWLEDGMENTS.md")]
+    return _shipped_files() + [p for p in extra if p.is_file()]
+
+
+def test_no_reference_to_the_banned_gitleaks_scanner() -> None:
+    """gitleaks is banned (USER, 2026-08-14) — no shipped file may name it."""
+    offenders = [f"{p.relative_to(REPO)}" for p, t in _text(_gitleaks_scope()) if GITLEAKS.search(t)]
+    assert not offenders, f"references the banned gitleaks scanner (USER directive 2026-08-14 — use trufflehog or the bundled scanner): {offenders}"
+
+
+def test_the_gitleaks_detector_bites() -> None:
+    """Positive control — and the replacement scanners must not trip it."""
+    assert GITLEAKS.search("fall back to gitleaks detect")
+    assert GITLEAKS.search("write a .gitleaks.toml allowlist")
+    assert not GITLEAKS.search("fall back to trufflehog filesystem")
+    assert not GITLEAKS.search("run fast_security_scan.py --workflows")
+
+
 # ── `claude plugin` takes ONE positional ─────────────────────────────────────
 
 # Reported on ai-maestro-maintainer-agent#35 and confirmed against the CLI's own
-# usage line on 2.1.224: `Usage: claude plugin install|i [options] <plugin>` —
+# usage line on 2.1.224, re-confirmed on 2.1.233 (the new `-y/--yes` flag is
+# boolean, which the counter already treats safely):
+# `Usage: claude plugin install|i [options] <plugin>` —
 # ONE positional (`plugin@marketplace`). Commander SILENTLY DROPS a second one, so
 # `install foo bar` resolves `foo` and ignores the marketplace. It works by luck
 # until a plugin name is ambiguous, and then installs the wrong thing.

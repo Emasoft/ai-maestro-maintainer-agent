@@ -13,6 +13,7 @@ import argparse
 import json
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -232,8 +233,65 @@ def test_run_leaves_no_orphans(tmp_path: Path):
         network="none",
         time_budget=30,
     )
-    # the harness reaps by session label in a finally; total count is stable.
-    assert _count_sandbox_containers() == before
+    # The harness reaps by session label in a finally, and `docker run --rm`
+    # teardown is ASYNCHRONOUS on top of that — the client can exit while the
+    # daemon is still unlinking the container, so a bare post-run count is a
+    # race. Poll to a deadline instead: an in-flight removal clears in well
+    # under a second, and the leak this test exists for does NOT clear at all
+    # (a container stuck in `created` was never started, so `--rm` never fires
+    # and no amount of waiting removes it — observed 2026-08-11).
+    deadline = time.monotonic() + 15
+    while _count_sandbox_containers() != before and time.monotonic() < deadline:
+        time.sleep(0.25)
+    survivors = subprocess.run(
+        ["docker", "ps", "-a", "--filter", "label=aimm-sandbox=true", "--format", "{{.ID}} {{.Status}}"],
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.strip()
+    assert _count_sandbox_containers() == before, (
+        f"sandbox containers leaked: expected {before}, found {_count_sandbox_containers()} "
+        f"after a 15s settle. Survivors (id status):\n{survivors}\n"
+        "A `created` status means the container was never started, so --rm could not fire; "
+        "that is a real leak, not a slow teardown."
+    )
+
+
+@needs_node_baseline
+def test_the_orphan_guard_fails_on_a_container_created_after_the_baseline():
+    """🐌 Positive control — the leak guard above must still be able to fail.
+
+    It polls to a deadline now, and a poll loop is exactly the shape that turns
+    into a guard that waits and then passes regardless. So: take the baseline,
+    plant a container in `created` state (never started, so `--rm` can never
+    remove it — the real leak observed on 2026-08-11), and assert the guard's
+    own condition never settles.
+
+    Planting AFTER the baseline is the load-bearing detail. A container that
+    already existed is absorbed into `before` and SHOULD be ignored — the guard
+    asks "did this run leak", not "is the machine clean" — so a control that
+    plants one first proves nothing. That mistake was made once while writing
+    this; it passed, and looked like the guard was blind.
+    """
+    before = _count_sandbox_containers()
+    planted = subprocess.run(
+        ["docker", "create", "--label", "aimm-sandbox=true", "--label", "aimm-sandbox-session=orphan-guard-control", "aimm-sandbox:node-baseline", "true"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    try:
+        assert _count_sandbox_containers() == before + 1, "the planted container is invisible to the counter"
+        deadline = time.monotonic() + 3
+        while _count_sandbox_containers() != before and time.monotonic() < deadline:
+            time.sleep(0.25)
+        assert _count_sandbox_containers() != before, (
+            "the guard's settle loop cleared a container that was never started — "
+            "it would now pass through a real leak"
+        )
+    finally:
+        subprocess.run(["docker", "rm", "-f", planted], capture_output=True, check=False)
+    assert _count_sandbox_containers() == before, "the control leaked its own planted container"
 
 
 @needs_node_baseline

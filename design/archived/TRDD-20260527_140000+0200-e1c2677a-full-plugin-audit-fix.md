@@ -3,6 +3,8 @@ trdd-id: e1c2677a-3ac2-4f0c-8958-1e8d0eb663e4
 title: Full plugin audit + remediation pass (single sweep)
 column: completed
 created: 2026-05-27T14:00:00+0200
+current-owner: maintainer-agent-session
+task-type: audit
 updated: 2026-08-07T12:08:37+0200
 ---
 

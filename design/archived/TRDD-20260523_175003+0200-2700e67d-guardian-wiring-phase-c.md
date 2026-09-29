@@ -3,6 +3,8 @@ trdd-id: 2700e67d-de93-43bf-ad88-06340c79d4f1
 title: Guardian wiring + adversarial-content triage path (Phase C)
 column: completed
 created: 2026-05-23T17:50:03+0200
+current-owner: maintainer-agent-session
+task-type: feature
 updated: 2026-08-07T12:08:37+0200
 ---
 

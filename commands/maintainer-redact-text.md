@@ -34,6 +34,7 @@ patterns and replacement strings):
 - absolute path to the maintained repo  -> `$PROJECT_DIR/<rest>`
 - absolute path to the plugin repo      -> `$AGENT_DIR/<rest>`
 - GitHub PAT prefixes (`ghp_...`)       -> `ghp_<REDACTED>`
+- GitLab routable tokens (`glpat-...`, `gldt-...`)  -> `<REDACTED>`
 - Anthropic API keys (`sk-ant-...`, `sk-proj-...`)  -> `<REDACTED>`
 - AWS access key IDs (`AKIA...`)        -> `AKIA<REDACTED>`
 - Slack tokens (`xoxb-...`, `xoxp-...`) -> `<REDACTED>`

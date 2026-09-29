@@ -38,9 +38,18 @@ returns exit 0).
 | 12 | `github-server-token` | `\bghs_[A-Za-z0-9]{36}\b` | `ghs_<REDACTED>` |
 | 13 | `github-user-token` | `\bghu_[A-Za-z0-9]{36}\b` | `ghu_<REDACTED>` |
 | 14 | `github-refresh-token` | `\bghr_[A-Za-z0-9]{36}\b` | `ghr_<REDACTED>` |
-| 15 | `slack-bot-token` | `\bxoxb-[0-9-]+-[A-Za-z0-9]+\b` | `xoxb-<REDACTED>` |
-| 16 | `slack-user-token` | `\bxoxp-[0-9-]+-[A-Za-z0-9]+\b` | `xoxp-<REDACTED>` |
-| 17 | `pem-private-key` | `-----BEGIN <KIND> PRIVATE KEY-----...-----END <KIND> PRIVATE KEY-----` (DOTALL) | `-----BEGIN <KIND> PRIVATE KEY----- <REDACTED> -----END <KIND> PRIVATE KEY-----` |
+| 15 | `gitlab-pat` | `\bglpat-[A-Za-z0-9_-]{20,}\b` | `glpat-<REDACTED>` |
+| 16 | `gitlab-deploy-token` | `\bgldt-[A-Za-z0-9_-]{20,}\b` | `gldt-<REDACTED>` |
+| 17 | `slack-bot-token` | `\bxoxb-[0-9-]+-[A-Za-z0-9]+\b` | `xoxb-<REDACTED>` |
+| 18 | `slack-user-token` | `\bxoxp-[0-9-]+-[A-Za-z0-9]+\b` | `xoxp-<REDACTED>` |
+| 19 | `pem-private-key` | `-----BEGIN <KIND> PRIVATE KEY-----...-----END <KIND> PRIVATE KEY-----` (DOTALL) | `-----BEGIN <KIND> PRIVATE KEY----- <REDACTED> -----END <KIND> PRIVATE KEY-----` |
+
+The two GitLab families are the ROUTABLE ones (a bare `glpat-`/`gldt-` value
+grants API or repo access from anywhere) — mirroring Claude Code 2.1.232's own
+redaction split. The other nine `gl*-` families are detection-only, carried by
+`scripts/security_catalog.json`. The suffix is `{20,}`, not exactly `{20}`:
+newer GitLab tokens append a CRC tail, and an exact-20 rule would leave the
+tail of a longer token visible after redaction.
 
 Get the live list (the order may shift as new patterns land):
 

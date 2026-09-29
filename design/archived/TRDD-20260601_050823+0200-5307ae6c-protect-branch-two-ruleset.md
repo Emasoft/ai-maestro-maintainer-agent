@@ -3,6 +3,8 @@ trdd-id: 5307ae6c-9ef1-4d0e-aeb8-13dbef04cd5e
 title: workflow-protect-branch must emit the two-ruleset split, not one bypass-less required-checks ruleset
 column: completed
 created: 2026-06-01T05:08:23+0200
+current-owner: maintainer-agent-session
+task-type: bugfix
 updated: 2026-08-07T12:08:37+0200
 ---
 

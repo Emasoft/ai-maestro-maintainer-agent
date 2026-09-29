@@ -40,7 +40,8 @@ Body opens with the self-id line, same as every AMP message and every GitHub
 write.
 
 ```bash
-amp-send "$RECIPIENT" "HANDOFF — <repo> patrol state" "$(cat <<'EOF'
+aimaestro-message.sh send "$RECIPIENT" \
+  --subject "HANDOFF — <repo> patrol state" --body - --priority normal <<'EOF'
 This is the Claude responsible for the ai-maestro-maintainer-agent project.
 
 Repo: <owner/repo>
@@ -52,15 +53,18 @@ T5 outstanding: <yes — alert raised <ISO>, unacknowledged | no>
 In flight: <what was mid-fix and where it stopped, or: nothing>
 Next action: <the one concrete step the successor should take first>
 EOF
-)" --priority normal
 ```
+
+Where the CLI is absent, the degrade path is the legacy
+`amp-send "$RECIPIENT" "HANDOFF — <repo> patrol state" "<the same body>" --priority normal`.
 
 `Next action` is one runnable step, not a plan. If you cannot name one, the
 handoff is not ready to send.
 
 ## Degrade
 
-No fleet session, no AMP: `command -v amp-send` fails → write the same content
+No fleet session, no AMP: NEITHER `aimaestro-message.sh` nor `amp-send` on PATH
+(or the CLI exits 3, transport unavailable) → write the same content
 to the patrol report under `$MAIN_ROOT/reports/maintainer-patrol/` and say so.
 The state on disk is what makes the handoff recoverable; the message is only the
 pointer to it.

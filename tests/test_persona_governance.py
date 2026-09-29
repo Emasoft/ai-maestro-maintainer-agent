@@ -27,14 +27,21 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 PERSONA = REPO / "agents" / "ai-maestro-maintainer-agent-main-agent.md"
 
-# The ratified 17-column kanban vocabulary, in pipeline order (14 lifecycle),
-# plus the 3 exception columns. Canonical source: the universal-kanban rule.
-# Written out in full rather than derived, because a test that computes the
-# expected value from the file under test proves nothing.
+# The ratified 22-column kanban vocabulary, in pipeline order (19 lifecycle),
+# plus the 3 exception columns. Canonical source: 3-pillars spec 3.0.0
+# (@spec:kanban-columns v2, Emasoft/ai-maestro design/specs/3-pillars-spec.md,
+# ratified head c8b0e9cb; PRRD G2.1, USER 2026-08-23). Written out in full
+# rather than derived, because a test that computes the expected value from the
+# file under test proves nothing.
 LIFECYCLE_COLUMNS = (
     "backburner",
-    "todo",
+    "approval",
     "design",
+    "design_ai_review",
+    "design_human_review",
+    "todo",
+    "verify_assumptions",
+    "plan",
     "dispatch",
     "dev",
     "testing",
@@ -63,17 +70,20 @@ def persona() -> str:
 # ───────────────────────── the board (#29 Q4, bullet 2) ─────────────────────────
 
 
-def test_persona_states_the_kanban_has_exactly_17_columns(persona: str) -> None:
-    """The persona names the board's size as exactly 17 — the ratified count."""
-    assert re.search(r"\b17\b", persona), "the persona never states the column count"
-    assert re.search(r"(?i)17[- ]column|exactly\s+\*{0,2}17\*{0,2}\s+column", persona), "the persona mentions 17 but not as the column count — a bare number is not a contract a reader can act on"
+def test_persona_states_the_kanban_has_exactly_22_columns(persona: str) -> None:
+    """The persona names the board's size as exactly 22 — the ratified count (3.0.0)."""
+    assert re.search(r"\b22\b", persona), "the persona never states the column count"
+    assert re.search(r"(?i)22[- ]column|exactly\s+\*{0,2}22\*{0,2}\*?\s+column", persona), "the persona mentions 22 but not as the column count — a bare number is not a contract a reader can act on"
+    # Two-way: the pre-3.0.0 count must be GONE, not merely supplemented — a
+    # persona stating both counts teaches whichever one the reader lands on.
+    assert not re.search(r"(?i)17[- ]column|exactly\s+\*{0,2}17\*{0,2}\*?\s+column", persona), "the retired 17-column claim is still in the persona alongside 22"
 
 
 @pytest.mark.parametrize("column", LIFECYCLE_COLUMNS + EXCEPTION_COLUMNS)
-def test_persona_names_every_one_of_the_17_columns(persona: str, column: str) -> None:
-    """Each of the 17 column names appears verbatim.
+def test_persona_names_every_one_of_the_22_columns(persona: str, column: str) -> None:
+    """Each of the 22 column names appears verbatim.
 
-    Parametrized one-per-column on purpose: a single test asserting "all 17"
+    Parametrized one-per-column on purpose: a single test asserting "all 22"
     reports one failure no matter how many are missing, which is exactly the
     information you need and do not get.
     """
@@ -88,7 +98,7 @@ def test_persona_states_the_board_must_drain(persona: str) -> None:
     from accumulates stalled cards whose column lies about them.
     """
     assert "blocked-by:" in persona, "the blocked-licence field is never named"
-    assert re.search(r"(?i)\bdrain\b", persona), "the persona never says the pipeline must drain — without it the 17 columns are a filing cabinet"
+    assert re.search(r"(?i)\bdrain\b", persona), "the persona never says the pipeline must drain — without it the 22 columns are a filing cabinet"
 
 
 def test_persona_does_not_invent_columns_outside_the_ratified_set(persona: str) -> None:
@@ -101,18 +111,38 @@ def test_persona_does_not_invent_columns_outside_the_ratified_set(persona: str) 
         set(LIFECYCLE_COLUMNS)
         | set(EXCEPTION_COLUMNS)
         | {
-            # The folder-lifecycle values BRACKET the pipeline; they are legal values
-            # of the same field, documented in the TRDD rules.
+            # The five BRACKET values sit outside the board but are legal values
+            # of the same field (3P-KAN-20: board = 22, legal column: set = 27).
             "proposal",
             "planned",
             "refused",
             "cancelled",
             "completed",
-            "superseded",
         }
     )
     used = set(re.findall(r"^column:\s*([a-z_]+)\s*$", persona, re.MULTILINE))
     assert used <= known, f"persona uses non-vocabulary column(s): {sorted(used - known)}"
+
+
+def test_persona_does_not_instruct_writing_the_v1_status_field(persona: str) -> None:
+    """PRRD S8.1: TRDDs use the v2 `column:` schema — no v1 `status:` field.
+
+    The violation this pins (TRDD-3EI7X5DT): the two-folder table was headed
+    `| Folder | `status:` |` and its prose read "the approver sets
+    `status: planned`" — an imperative instruction to write the banned field, in
+    the persona every session loads, while this whole suite stayed 36/36 green.
+    A strong gate only guards what it was pointed at; this points one at S8.1.
+
+    `gh auth status` and `required_status_checks` are unrelated and must stay
+    legal, so the assertions target the FIELD-NAME shapes (backticked
+    `status:...` and a line-anchored frontmatter field), never the bare word.
+    """
+    hits = re.findall(r"`status:[^`]*`", persona)
+    assert not hits, f"the persona writes the v1 `status:` field S8.1 bans: {hits}"
+    assert not re.search(r"(?m)^status:\s*\S", persona), "a bare `status:` frontmatter-style line appears in the persona"
+    # Two-way: the corrected teaching must be present, not merely the old one absent.
+    assert re.search(r"\|\s*Folder\s*\|\s*`column:`", persona), "the two-folder table no longer teaches the v2 `column:` field"
+    assert "`column: planned`" in persona, "the approval instruction must set `column: planned` (v2), not the banned v1 field"
 
 
 # ─────────────────── seeded read-only overlays (#29 Q4, bullet 3) ───────────────────
@@ -192,6 +222,60 @@ def test_persona_requires_draining_the_amp_inbox_on_every_wake(persona: str) -> 
     assert "amp-inbox" in persona, "no concrete inbox command — prose without a mechanism"
 
 
+def _inbound_bullet(persona: str) -> str:
+    """The single "Inbound discipline" bullet, sliced at the next section heading.
+
+    Scoped deliberately rather than searched whole-persona: `SendMessage` already
+    appears further up, in the Communication-Permissions transport note. A
+    whole-persona search would therefore pass against the pre-fix, AMP-only
+    bullet and assert nothing — the decorative-guard failure this file exists to
+    avoid.
+    """
+    start = persona.index("**Inbound discipline")
+    rest = persona[start:]
+    nxt = re.search(r"\n#{1,3} ", rest)
+    return rest[: nxt.start()] if nxt else rest
+
+
+def test_persona_enumerates_every_inbound_channel_not_just_amp(persona: str) -> None:
+    """A wake-up rule is only as complete as the channel list it enumerates.
+
+    The bullet's duty — "a delivered mandate is a work ORDER; an agent that wakes
+    and does nothing has silently dropped it" — was correct while its channel list
+    named exactly one inbox, `amp-inbox`. Two others carry mandates today:
+
+      2. the direct session channel (Claude Code 2.1.224+), whose messages arrive
+         mid-turn and are NEVER in `amp-inbox` because they never reach the
+         ai-maestro server — the same asymmetry that makes a 403 impossible there
+         (ai-maestro#131), one layer down;
+      3. GitHub issue and PR threads, which the USER named explicitly ("not all
+         communications are made via sendMessage") and which notify nobody, so a
+         thread waiting on a reply is invisible until someone looks.
+
+    The failure this pins is not a wrong instruction but a complete-sounding one:
+    an agent drains AMP, finds it empty, reports the inbox clear, and two live
+    directives keep waiting. Silence on those channels is indistinguishable from
+    absence, which is why the enumeration — not the duty — is what a test has to
+    hold in place.
+    """
+    bullet = _inbound_bullet(persona)
+    assert "amp-inbox" in bullet, "channel 1 (AMP) lost its concrete command"
+    assert "SendMessage" in bullet, "channel 2 is unnamed: an agent draining only amp-inbox never learns that peer-session messages exist elsewhere"
+    assert re.search(r"(?i)never\b[^.]{0,40}in\s+`?amp-inbox", bullet), "the bullet does not say peer-session messages are ABSENT from amp-inbox, so a reader assumes one drain covers both"
+    # 2.1.225 extended the direct channel past this machine (Remote Control on
+    # other machines, cloud sessions). A bullet that still says "this machine"
+    # under-states the reach, and a reader treats a cross-machine directive as
+    # impossible rather than pending.
+    assert re.search(r"(?i)other machines", bullet), "channel 2's reach is under-stated: since 2.1.225 SendMessage arrives from Remote Control sessions on OTHER machines and cloud sessions, not just this one"
+    # 2.1.224 lets the receiver's crossSessionInbound setting PARK a message.
+    # The old bullet said "nothing queues them for later" — now false, and the
+    # dangerous reading is that a quiet channel proves nothing was sent.
+    assert re.search(r"(?i)parked|held", bullet) and "crossSessionInbound" in bullet, "the bullet must say a message MAY be parked by crossSessionInbound — 'nothing queues them' is false since 2.1.224, and silence is not proof of no mandate"
+    assert re.search(r"(?i)gh issue list", bullet), "channel 3 has no concrete command — prose without a mechanism"
+    assert re.search(r"(?i)github cannot notify you|nothing arrives unless you look", bullet), "the bullet omits WHY GitHub must be polled; without it, an agent waits for a notification that never comes"
+    assert re.search(r"(?i)never call the inbox clear on the strength of one channel", bullet), "no guard against reporting a one-channel drain as a clear inbox — the specific way this failure gets reported as success"
+
+
 def test_persona_forbids_direct_api_calls_with_no_escape_hatch(persona: str) -> None:
     """The frozen-CLI rule is an IRON RULE: no fallback, no tagged exception.
 
@@ -209,7 +293,7 @@ def test_persona_mandates_the_self_id_line_verbatim(persona: str) -> None:
 
 
 def test_persona_does_not_claim_403_covers_every_transport(persona: str) -> None:
-    """R6's 403 is AMP-only — the direct session channel has no enforcement point.
+    """R6's 403 is AMP-only — the direct session channel has no R6 enforcement point.
 
     Claude Code 2.1.224 added session-to-session `SendMessage`/`ListAgents`, which
     does not traverse the ai-maestro server. Every role-plugin persona in the fleet
@@ -217,13 +301,46 @@ def test_persona_does_not_claim_403_covers_every_transport(persona: str) -> None
     violations return 403" — true of AMP, and a complete-sounding account of a
     surface that is now half unpoliced.
 
-    The danger is not a weakened rule, it is a persona that reads as though every
-    send is checked: an agent then routes around its own comm graph believing the
-    server has it covered, and a send that SUCCEEDS is mistaken for a send that was
-    PERMITTED. This asserts the persona keeps both halves — the 403 claim scoped to
-    the transport that can produce one, and the unpoliced channel named.
+    Since then upstream grew gates on that channel — the auto-mode permission
+    classifier on outbound SendMessage (2.1.222) and the crossSessionInbound
+    accept/hold/refuse setting (2.1.224; /config row in 2.1.232). None of them
+    checks the R6 comm graph: they gate USER CONSENT, and in a fleet where every
+    session runs as the same user that consent is open. So the OLD absolute claim
+    ("nothing polices it") became false while the danger it warned about stayed
+    exactly as real — the persona must now state BOTH: gates exist, and no gate
+    checks the graph. This test pins the scoped claim; asserting the old regex
+    (`no enforcement point|nothing polices`) would hold a false absolute in place,
+    and merely relaxing it would pass against an unedited persona and assert
+    nothing.
     """
-    para = persona[persona.index("Communication Permissions") :][:2500]
+    para = persona[persona.index("Communication Permissions") :][:3500]
     assert "403" in para, "the AMP 403 claim vanished — it is still true on that transport"
     assert re.search(r"(?i)AMP transport only|on the AMP transport", para), "the 403 claim is unscoped, so it reads as covering every transport"
-    assert re.search(r"(?i)SendMessage", para) and re.search(r"(?i)no enforcement point|nothing polices", para), "the persona does not name the direct session channel as unpoliced, so an agent reading only this section believes every send is server-checked"
+    assert re.search(r"(?i)no R6 enforcement point", para), "the persona no longer names the direct session channel as unpoliced BY R6 — the claim must be scoped to R6, not absolute (upstream consent gates exist since 2.1.222/2.1.224)"
+    assert re.search(r"(?i)user consent,? never the R6 comm graph", para), "the persona must state the consent-vs-graph distinction: upstream's gates (auto-mode classifier, crossSessionInbound) check user consent, never the R6 comm graph — without it a reader mistakes a consent gate for graph enforcement"
+    # The note is a `> ` blockquote, so any phrase can wrap across a "\n> "
+    # boundary; flatten before matching multi-word phrases or the assertion
+    # depends on where a rewording happens to break its lines.
+    flat = re.sub(r"\s*\n>?\s*", " ", para)
+    assert re.search(r"(?i)send that succeeds there is not a send that was permitted", flat), "the success≠permission warning is the load-bearing sentence and must survive every rewording"
+    # Two-way self-check: the OLD absolute wording must now FAIL this test —
+    # if it passes, the test never forced the correction it exists to hold.
+    old = "no 403 is possible on that path — not because the rule was relaxed, but because there is no enforcement point"
+    assert old not in flat, "the pre-2.1.232 absolute wording is back — 'there is no enforcement point' is false (consent gates exist); scope the claim to R6"
+
+
+def test_persona_scopes_the_subagent_inheritance_claim_to_fresh_spawns(persona: str) -> None:
+    """"Sub-agents inherit nothing" became half-false in Claude Code 2.1.232.
+
+    A `subagent_type: "fork"` inherits the FULL conversation (and forking is now
+    the default for it), so the unqualified claim sends an agent re-stating a
+    contract a fork already carries — wasted tokens — while a reader who learns
+    forks exist concludes the persona is wrong about spawns generally and stops
+    trusting the propagation duty, which fresh spawns still need. The fix keeps
+    the duty and scopes the premise: FRESH sub-agents inherit nothing; forks
+    inherit everything. This pins the scoped form and rejects the absolute one.
+    """
+    assert re.search(r"(?i)fresh sub-agent inherits\s+nothing", persona), "the inheritance claim lost its 'fresh' qualifier — unqualified, it is false for forks (2.1.232)"
+    assert 'subagent_type: "fork"' in persona, "the fork exception is unnamed — a reader cannot know which spawns already carry the contract"
+    # Two-way: the old absolute sentence must be gone, not merely supplemented.
+    assert not re.search(r"sub-agents inherit nothing", persona), "the unqualified 'sub-agents inherit nothing' claim is back — false since 2.1.232 for subagent_type: \"fork\""
