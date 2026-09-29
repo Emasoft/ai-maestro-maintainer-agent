@@ -130,7 +130,7 @@ the workflow is:
 ## Tool-specific propagation
 
 Each underlying scanner has its own native suppression file
-format (`.trufflehog-ignore`, `.gitleaks.toml`, etc.). The
+format (`.trufflehog-ignore`, etc.). The
 maintainer-secrets-scan skill does NOT translate
 `.maintainer-secrets-ignore` into per-tool formats — it instead
 applies the suppression filter ONCE, AFTER the scanner returns,
@@ -155,7 +155,6 @@ file — it only reads.
 | Tool | Native ignore file | Read? |
 |---|---|---|
 | trufflehog | `--exclude-paths trufflehog-excludes.txt` | yes (passed to the invocation) |
-| gitleaks | `.gitleaks.toml` `[allowlist]` block | yes (gitleaks itself applies) |
 | fast_security_scan | (none) | n/a (only `.maintainer-secrets-ignore` applies) |
 
 If the maintainer-secrets-scan filter suppresses N findings but

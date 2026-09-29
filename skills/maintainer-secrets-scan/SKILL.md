@@ -3,10 +3,10 @@ description: |
   Use when the maintainer agent needs to run secret-scanning on
   the entrusted repo's working tree + recent commit history.
   Three modes: SCAN (audit), PRE-PUBLISH (block if HIGH/CRITICAL),
-  AUDIT (diagnose which tools are installed). Closes audit MAJOR-1:
-  Mega-Linter's REPOSITORY_GITLEAKS config exists but no caller
-  ever invokes Mega-Linter. Tool fallback chain: trufflehog →
-  gitleaks → bundled fast_security_scan.py.
+  AUDIT (diagnose which tools are installed). Closes audit MAJOR-1
+  (a configured-but-dormant repository secret gate that no caller
+  ever invoked). Tool fallback chain: trufflehog → bundled
+  fast_security_scan.py.
   Trigger with phrases like "scan for secrets", "secret-scan
   pre-publish", "check for committed credentials", or "audit
   secret-scan tools".
@@ -16,21 +16,21 @@ description: |
 
 ## Overview
 
-The audit found `REPOSITORY_GITLEAKS: true` in `.mega-linter.yml`
-but no workflow ever calls Mega-Linter, so the gate is dormant.
-This skill wakes it up: every entrusted repo gets actively scanned
-on every patrol cycle AND blocked from publish if a HIGH/CRITICAL
-finding is in the working tree or the last 50 commits. The skill
-prefers `trufflehog` (most authoritative), falls back to `gitleaks`
-(faster, smaller pattern set), and finally to the bundled
-`scripts/fast_security_scan.py` (no install needed — always works).
+The audit found a repository secret gate configured in
+`.mega-linter.yml` that no workflow ever invoked, so the gate was
+dormant. This skill wakes it up: every entrusted repo gets actively
+scanned on every patrol cycle AND blocked from publish if a
+HIGH/CRITICAL finding is in the working tree or the last 50
+commits. The skill prefers `trufflehog` (most authoritative) and
+falls back to the bundled `scripts/fast_security_scan.py` (no
+install needed — always works).
 
 ## Prerequisites
 
 - `git` on PATH; the entrusted repo is checked out (working tree
   may be dirty).
 - `uv` on PATH (for the bundled scanner's PEP 723 inline deps).
-- At least one of: `trufflehog`, `gitleaks`, or the bundled
+- At least one of: `trufflehog`, or the bundled
   `scripts/fast_security_scan.py` (which ships with this plugin
   and is always available — the chain never bottoms out).
 - `gh auth token` returns a value (only required if the scan
@@ -69,17 +69,14 @@ Pick the mode that matches the caller:
 
 ### Mode: `audit` (diagnose which tools are installed)
 
-1. Probe each scanner in the chain: `trufflehog --version`,
-   `gitleaks version`, then check for the bundled
-   `scripts/fast_security_scan.py`.
+1. Probe each scanner in the chain: `trufflehog --version`, then
+   check for the bundled `scripts/fast_security_scan.py`.
 2. Print a Markdown table on stdout — see
    [references/protocols.md](references/protocols.md): [Audit-mode
    output](references/protocols.md#audit-mode-output).
 3. Print install hints for the missing optional tools:
    - `brew install trufflehog` (or the official upstream installer
      documented in the [TruffleHog README](https://github.com/trufflesecurity/trufflehog#installation))
-   - `brew install gitleaks` (or
-     `go install github.com/gitleaks/gitleaks/v8@latest`)
 
 Per-tool invocation, JSON output schema, severity mapping, and
 the full tool detection algorithm are in
@@ -87,7 +84,6 @@ the full tool detection algorithm are in
 
 - [Tool detection chain](references/protocols.md#tool-detection-chain)
 - [trufflehog invocation](references/protocols.md#trufflehog-invocation)
-- [gitleaks invocation](references/protocols.md#gitleaks-invocation)
 - [fast_security_scan.py invocation](references/protocols.md#fast_security_scanpy-invocation)
 - [Severity mapping](references/protocols.md#severity-mapping)
 - [Output schema](references/protocols.md#output-schema)
@@ -115,8 +111,8 @@ Report files (always):
 
 | Error | Action |
 |-------|--------|
-| All three scanners unavailable | Exit 2 with "plugin self-test failed — bundled fast_security_scan.py missing" — this is a packaging bug, not a runtime error |
-| trufflehog/gitleaks exits non-zero with no JSON output | Fall through to the next scanner in the chain; surface the failure in the report |
+| Every scanner unavailable | Exit 2 with "plugin self-test failed — bundled fast_security_scan.py missing" — this is a packaging bug, not a runtime error |
+| trufflehog exits non-zero with no JSON output | Fall through to the bundled scanner; surface the failure in the report |
 | The repo has > 50 commits but the user only wants HEAD | Pass `--commits-depth 1`; default is 50, configurable per call |
 | `.maintainer-secrets-ignore` malformed | Stop, surface — never silently ignore a malformed suppression file (could be an attacker-authored override) |
 | Working tree contains uncommitted binary blobs >10 MiB | Skip those files (every tool has its own large-file skip), log to report |
@@ -134,7 +130,7 @@ Patrol cycle pre-step → maintainer-secrets-scan scan
 
 ```
 publish.py wrapper → maintainer-secrets-scan pre-publish
-→ tool_used=gitleaks (trufflehog not installed)
+→ tool_used=fast_security_scan (trufflehog not installed)
 → findings: {critical: 1, high: 0, medium: 0, low: 0}
 → exit 1 → publish.py refuses to push → operator sees report
 ```
@@ -146,7 +142,6 @@ Developer asks "do we have a secret-scanner installed?":
    | Tool        | Installed | Version |
    |---|---|---|
    | trufflehog  | no        | (brew install trufflehog) |
-   | gitleaks    | yes       | 8.18.4                    |
    | bundled     | yes       | always                    |
 → exit 0
 ```
@@ -172,7 +167,6 @@ commit, push, or modify any file outside `$MAIN_ROOT/reports/`.
 - [Per-tool invocation + JSON schema + severity mapping](references/protocols.md):
   - Tool detection chain
   - trufflehog invocation
-  - gitleaks invocation
   - fast_security_scan.py invocation
   - Severity mapping
   - Output schema
@@ -187,5 +181,5 @@ commit, push, or modify any file outside `$MAIN_ROOT/reports/`.
 - Companion skills: `maintainer-redact` (prose-level scrub),
   `maintainer-guardian` T5 (continuous secret-leak detector),
   `maintainer-approval-gate` (protected-paths gate).
-- Audit finding: MAJOR-1, audit E (dormant gitleaks gate —
-  REPOSITORY_GITLEAKS configured but Mega-Linter never called).
+- Audit finding: MAJOR-1, audit E (a dormant repository secret
+  gate — configured in `.mega-linter.yml` but never invoked).

@@ -19,25 +19,38 @@ prohibition has to be at the surface where the decision is actually made, not on
 away in a skill nobody consulted. (`gh` and package-registry APIs are NOT covered.)
 
 **Probe first — and probe the VERB, not just the script.** The CLI may be absent, and
-even when present it may lack the verb: verified 2026-07-16, the deployed copy is 330
-lines / 7 verbs while `governance-rules` is 387 / 8 — the missing one is **`verify`**
-(ai-maestro#69). So `command -v aimaestro-trdd.sh` for the script, then
+even when present its verb table MOVES: measured 2026-07-16 the deployed copy was 330
+lines / 7 verbs with **`verify` missing** (ai-maestro#69); measured 2026-08-21 the same
+path is **627 lines / 9 verbs and `verify` IS dispatched**. No version bump announced
+either change. So `command -v aimaestro-trdd.sh` for the script, then
 `aimaestro-trdd.sh --help | grep -qE "^[[:space:]]+<verb>\b"` for the verb; on either
 miss, print the degrade and exit `3`. Never gate on a version string; never infer a
-verb from `docs/SCRIPT-MANIFEST.md` (it documents `verify`, which the deployed script
-lacks); never treat `~/.local/bin` as truth (the installer copies and never prunes, so
-it is residue). **A skill teaching a verb the shipped CLI lacks is as broken as a
-manifest promising one `main` doesn't ship.**
+verb from `docs/SCRIPT-MANIFEST.md` (it is a contract, not a presence guarantee); never
+treat `~/.local/bin` as truth (the installer copies and never prunes, so it is
+residue). **A skill teaching a verb the shipped CLI lacks is as broken as a manifest
+promising one `main` doesn't ship — and a skill still denying a verb the CLI has since
+gained is that same defect wearing the other face.**
 
-Eight verbs:
+**AUTH — the mutating verbs are strict routes.** `create`, `edit`, `approve`, `refuse`,
+`promote`, `archive` 401/403 without credentials; `search`, `read`, `verify` need none.
+This plugin is an AGENT caller: `export AID_AUTH="$(aid-auth.sh)"` before any write
+verb (the script's own `--help` calls it "REQUIRED — no localhost exemption"; a USER
+caller supplies `AIMAESTRO_SUDO_TOKEN` instead). A 401/403 is a terminal authority
+answer — report it, never retry it, never read it as "the CLI is broken".
+
+Nine verbs (`create` is out of scope here — authoring is `maintainer-trdd-adr`):
 
 - `search` — `--column C` `--id I` `--keyword K` `--zone proposals|tasks|archived|refused`
 - `read <id>` — the card
-- `verify <id>` — **is this approval REAL?** `--json`; exit `0` verified · **`2` NOT
-  verified** · `1` error. Exit `2` is an answer — a finding to report, not to retry.
-  ⚠️ **Not on the deployed script — probe before calling** (ai-maestro#69). Where it is
-  absent, approval authenticity CANNOT be checked: say so, and never substitute the
-  card's `approval-judge:`/`## Approval log` prose for a real check.
+- `verify <id>` — **is this approval REAL?** Exit `0` verified · **`2` NOT verified** ·
+  `1` error. Exit `2` is an answer — a finding to report, not to retry. Read the flags
+  from the host's own `--help` at call time; do **not** hardcode `--json`, whose
+  survival is still unsettled (ai-maestro-plugin#29) — teaching an unsettled flag is
+  the same error as teaching an undeployed verb.
+  ⚠️ **Probe before calling — available only where the probe says so, on the day you
+  ask** (ai-maestro#69; absent 2026-07-16, dispatched 2026-08-21). Where it is absent,
+  approval authenticity CANNOT be checked: say so, and never substitute the card's
+  `approval-judge:`/`## Approval log` prose for a real check.
   `--tier` is a CLAIM the server must validate against the caller's real title by AID —
   never a grant to trust (ai-maestro#69 §2).
 - `edit <id>` — `--set k=v` (repeatable); frontmatter in place, no folder move

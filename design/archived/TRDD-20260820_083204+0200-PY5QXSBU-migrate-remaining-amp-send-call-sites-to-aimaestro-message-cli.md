@@ -1,0 +1,96 @@
+---
+trdd-id: PY5QXSBU
+title: Migrate the 5 remaining amp-send call sites to the aimaestro-message CLI
+column: complete
+created: 2026-08-20T08:32:04+0200
+updated: 2026-08-25T14:40:00+0200
+current-owner: maintainer-agent-session
+task-type: docs
+min-approval-requirement: none
+---
+
+# Migrate the 5 remaining amp-send call sites to the aimaestro-message CLI
+
+`aimaestro-message.sh` v1.0.0 shipped (hub TRDD-0AB76JG3, 2026-08-20) to the
+maintainer's exact contract; `approval-request.md` already migrated (00a4499).
+Hub-agreed plan: fold the rest into the next release cycle, keeping the
+CLI-primary / `amp-send`-fallback pattern so the shipped prose is correct on
+hosts in EITHER deploy state (future hosts install the plugin before the
+server's CLI layer necessarily lands).
+
+## Call sites (grep-verified 2026-08-20)
+
+- `skills/maintainer-guardian/SKILL.md:31,33,103` (T5 escalation)
+- `skills/maintainer-guardian/references/threat-classes.md:300,315`
+- `skills/maintainer-prrd-trdd-kanban/SKILL.md:32,59,95`
+
+## Acceptance
+
+- [x] every site names `aimaestro-message.sh send` as primary (exit codes: 3
+      transport / 4 not-found / 5 ambiguous / 6 R6-refused-follow-hint / 7 auth;
+      never `--from` as an agent) with `amp-send` as the explicit degrade path
+- [x] `grep -rn 'amp-send' skills/ agents/` shows only fallback-labelled uses
+- [x] rides a release (publish.py) — both deferral reasons fell on 2026-08-25:
+      (a) the USER authorized the release directly ("complete all pending tasks
+      and TRDDs", same-day delegation, on top of the 2026-08-22 authorization
+      recorded below); (b) disk re-measured at **89% / 220 GB free**. The
+      release is executed this session; this closure rides it.
+
+Pattern to copy: `skills/maintainer-approval-gate/references/approval-request.md`.
+
+## Scope correction (2026-08-21)
+
+The card listed 3 files / 8 sites, but **acceptance box 2 is a whole-tree grep**,
+and 4 more files named `amp-send` as the sole, unlabelled transport. Patching only
+the listed 3 would have left every sibling caller wrong while the grep still
+passed by accident. Also migrated: `skills/maintainer-patrol/SKILL.md`,
+`skills/maintainer-patrol/references/handoff.md`,
+`skills/maintainer-approval-gate/SKILL.md`,
+`agents/ai-maestro-maintainer-agent-main-agent.md` (2 sites, ordering only).
+Final state: 17/17 `amp-send` occurrences are fallback-labelled.
+
+The exit-code contract is stated ONCE per file and otherwise linked to
+`approval-request.md`, which owns it — 8 verbatim copies of a 5-line table is 8
+things to drift.
+
+## AI review — 2026-08-21
+
+**VERDICT: PASS.** Both work boxes verified independently; the release box is
+genuinely outstanding, not a hidden completion.
+
+| Box | Evidence checked | Result |
+|---|---|---|
+| every site names the CLI as primary, `amp-send` as explicit degrade | re-grepped the whole tree, not the 3 files the card originally listed | ok |
+| `grep -rn 'amp-send' skills/ agents/` shows only fallback-labelled uses | **17 hits, 17 labelled, 0 bare** — matches the card's claim exactly | ok |
+| rides a release (publish.py) | untickable here — NON-EXEMPT, needs the USER | correctly left unticked |
+
+**A false positive worth recording, because it is this card's own subject matter.**
+A first pass filtering hits by "does the line contain fallback/legacy/degrade" flagged
+**7 of 17 as unlabelled**. All 7 were wrong: the label sits on the *preceding* line,
+because the sentence wraps —
+
+```
+   (fallback where the CLI is absent:
+   `amp-send "$MANAGER" ... --type alert`).
+```
+
+A line-scoped filter cannot see a line-wrapped label, so it reports the documentation
+*about* the fallback as an unlabelled use of it. Same class as the detector-validity
+lesson: a keyword needle cannot tell USE from MENTION, and reading the context — not
+tightening the pattern — is what resolved it. Recorded here so the next reviewer of
+this card does not re-derive the same 7 ghosts.
+
+**Scope correction upheld.** Patching only the 3 originally-listed files would have
+left 4 sibling callers wrong while box 2's whole-tree grep passed by accident. The
+widened fix is the correct one.
+
+## Approval log
+
+- 2026-08-22T19:27:53+0200 — `ai_review → human_review` APPROVED by USER (non-exempt
+  escalation gate). Requested after the AI review returned PASS: 17/17 `amp-send`
+  occurrences fallback-labelled, re-grepped across the whole tree. The release box is
+  still open and ticks when this rides `publish.py` (also authorized by the USER in the
+  same exchange).
+- 2026-08-25T14:40:00+0200 — `human_review → complete` under the USER's explicit
+  same-day delegation; box 3 ticked (release authorized twice, disk blocker
+  gone at 89%/220 GB, publish executed this session). Archived as itself.

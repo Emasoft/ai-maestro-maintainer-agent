@@ -59,7 +59,7 @@ is exactly the cost this catalog exists to avoid.
 | 14 | `maintainer-patrol` | Polls the entrusted repo for new issues and dispatches `maintainer-triage` per issue |
 | 15 | `maintainer-pr-review` | Deep review of a pull request once triage has cleared it |
 | 16 | `maintainer-pr-triage` | Triages an incoming pull request and decides its disposition |
-| 17 | `maintainer-prrd-trdd-kanban` | The MAINTAINER's role in the PRRD / TRDD / 17-column kanban workflow |
+| 17 | `maintainer-prrd-trdd-kanban` | The MAINTAINER's role in the PRRD / TRDD / 22-column kanban workflow |
 | 18 | `maintainer-redact` | Redacts private data before any public GitHub content is authored |
 | 19 | `maintainer-sandbox` | Runs untrusted tools or packages in a throwaway container instead of on the host |
 | 20 | `maintainer-secrets-scan` | Secret-scans the working tree and recent commits |

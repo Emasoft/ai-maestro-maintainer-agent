@@ -154,6 +154,7 @@ def cprint(msg: str) -> None:
 
 def run(
     cmd: list[str], cwd: Path | None = None, *, check: bool = True, capture: bool = False,
+    timeout: int = 300,
 ) -> subprocess.CompletedProcess[str]:
     """Run a command, stream output, fail-fast on error."""
     cprint(f"  {BLUE}$ {' '.join(cmd)}{NC}")
@@ -162,9 +163,9 @@ def run(
     # every other failure path uses. Catch it and exit 1.
     try:
         result = subprocess.run(cmd, cwd=str(cwd) if cwd else None, text=True,
-                                capture_output=capture, timeout=300)
+                                capture_output=capture, timeout=timeout)
     except subprocess.TimeoutExpired:
-        cprint(f"  {RED}Command timed out after 300s: {' '.join(cmd)}{NC}")
+        cprint(f"  {RED}Command timed out after {timeout}s: {' '.join(cmd)}{NC}")
         sys.exit(1)
     if check and result.returncode != 0:
         cprint(f"  {RED}Command failed (exit {result.returncode}){NC}")
@@ -1058,7 +1059,12 @@ def stage_tests(root: Path) -> None:
         sys.exit(1)
     baseline_browser_pids = _snapshot_browser_pids()
     try:
-        r = run(["uv", "run", "pytest", "tests/", "-x", "-q", "--tb=short"], cwd=root, check=False)
+        # TRDD-2O3VYG1D: the full suite honestly measures 375s (971s under
+        # contention), so the default 300s cap killed a PASSING suite. 1200s
+        # fits even a contended run while still bounding a real hang, and
+        # stays under CI's 25-minute ceiling (ci.yml timeout-minutes: 25).
+        r = run(["uv", "run", "pytest", "tests/", "-x", "-q", "--tb=short"], cwd=root,
+                check=False, timeout=1200)
     finally:
         killed = _cleanup_browser_orphans(baseline_browser_pids)
         if killed:
@@ -1231,7 +1237,16 @@ def _remote_has_receiver_workflow(owner: str, repo: str) -> bool:
 
 
 def _plugin_in_remote_marketplace(mkt_json: dict, plugin_name: str, expected_repo: str | None) -> bool:
-    """Accept github/url/git source forms; match URL slug for url|git (issue #25 Defect A)."""
+    """Accept github/url/git/archive source forms; match URL slug where one exists (issue #25 Defect A).
+
+    Claude Code has grown marketplace source types since this gate was written:
+    `archive` (zip over HTTPS, 2.1.224) and `command` (2.1.229), alongside the
+    pre-existing `npm`. This gate exists to catch "the plugin is ABSENT from the
+    marketplace" — so a recognised-but-unverifiable source form (`npm`,
+    `command`: neither carries a repo slug to compare) counts as registered
+    rather than blocking the release with a false "not registered". Refusing on
+    an unfamiliar source type is the wrong failure direction.
+    """
     plugins = mkt_json.get("plugins")
     if not isinstance(plugins, list):
         return False
@@ -1247,7 +1262,9 @@ def _plugin_in_remote_marketplace(mkt_json: dict, plugin_name: str, expected_rep
         if stype == "github":
             if expected_repo is None or source.get("repo") == expected_repo:
                 return True
-        elif stype in ("url", "git"):
+        elif stype in ("url", "git", "archive"):
+            # An archive URL hosted on the repo (e.g. a release asset) still
+            # carries the owner/name slug, so the same match applies.
             url = source.get("url")
             if expected_repo is None:
                 return True
@@ -1255,6 +1272,12 @@ def _plugin_in_remote_marketplace(mkt_json: dict, plugin_name: str, expected_rep
                 norm = url.removesuffix(".git").rstrip("/")
                 if norm.endswith("/" + expected_repo) or norm.endswith(":" + expected_repo):
                     return True
+                if stype == "archive" and expected_repo in norm:
+                    return True
+        elif stype in ("npm", "command"):
+            # No repo slug to verify against — the entry NAMES this plugin,
+            # which is what the registration gate is checking.
+            return True
     return False
 
 

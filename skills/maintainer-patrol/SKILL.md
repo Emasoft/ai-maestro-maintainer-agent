@@ -28,7 +28,11 @@ repeats. The ledger persists across hibernation.
   `$AGENT_DIR/.aimaestro/state/` (auto-created on first
   run).
 - **Frozen CLI only (IRON RULE).** Every ai-maestro interaction goes through the
-  frozen scripts — here, `amp-send`. NEVER call the ai-maestro server `/api/*`
+  frozen scripts — here, `aimaestro-message.sh send`, with `amp-send` as the
+  explicit degrade path where the CLI is absent. Exit codes and the
+  recipient-resolve recipe are owned by
+  [approval-request.md](../maintainer-approval-gate/references/approval-request.md).
+  NEVER call the ai-maestro server `/api/*`
   directly, not even as a fallback when a script is missing: degrade explicitly
   instead (see Error Handling). (`gh` APIs are NOT covered — keep them.)
 
@@ -47,8 +51,9 @@ Copy this checklist and track your progress (pre-flight):
    if missing. If
    `$AGENT_DIR/.aimaestro/state/guardian-baseline.json`
    is also missing, invoke **maintainer-guardian** in baseline
-   mode first (the SessionStart hook normally does this, but
-   patrol is the backstop).
+   mode first (the SessionStart hook only prints a nudge — a
+   command hook cannot invoke a skill — so patrol IS the
+   mechanism that baselines).
 3. Compute `$POLL_SECONDS` from `MAINTAINER_POLL_INTERVAL_MS`
    (default 300, floor 10, ceiling 3600).
 4. **Pre-cycle Guardian scan** — invoke **maintainer-guardian**
@@ -108,8 +113,9 @@ Resume after hibernation:
 
 ```
 → Wake from hibernation
-→ Drain the AMP inbox FIRST — a mandate may have landed while asleep,
-  and it outranks the issue list (persona: AMP discipline)
+→ Drain ALL THREE inbounds FIRST — AMP, direct session messages, and
+  GitHub threads awaiting a reply. A mandate may have landed while asleep
+  on any of them, and it outranks the issue list (persona: Inbound discipline)
 → Load ledger (last entry: issue 42)
 → gh issue list returns 43, 44 (new while hibernated)
 → Triage 43 and 44
@@ -145,6 +151,14 @@ boundaries and only NEW issues are re-triaged on resume.
   - What the successor actually needs
   - The message
   - Degrade
+- [AMP approval-request template](../maintainer-approval-gate/references/approval-request.md)
+  — owns the exit codes and the recipient-resolve recipe this skill defers to:
+  - When you send this
+  - Resolve the recipient BEFORE composing
+  - The message
+  - Recording the answer
+  - When the answer is "no"
+  - The protected-edit variant (human, not AMP)
 
   The R15.7 message shape for passing patrol state to a successor session
   (hibernation, host migration), including the three things a successor

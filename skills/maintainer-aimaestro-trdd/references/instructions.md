@@ -35,17 +35,22 @@ aimaestro_trdd_has () {   # $1 = verb
 }
 ```
 
-**Why the second probe is not paranoia — it is a live defect.** Verified 2026-07-16:
+**Why the second probe is not paranoia — the deployed copy MOVES, silently, in both
+directions.** Two measurements of the same path, five weeks apart:
 
-| | lines | verbs dispatched |
-|---|---|---|
-| `~/.local/bin/aimaestro-trdd.sh` (deployed) | 330 | search read edit approve refuse promote archive — **7** |
-| `scripts/aimaestro-trdd.sh` @ `governance-rules` | 387 | the same **+ `verify`** — **8** |
+| measured | `~/.local/bin/aimaestro-trdd.sh` | lines | verbs dispatched |
+|---|---|---|---|
+| 2026-07-16 | deployed | 330 | search read edit approve refuse promote archive — **7** (no `verify`) |
+| 2026-07-16 | `scripts/…` @ `governance-rules` | 387 | the same **+ `verify`** — **8** |
+| **2026-08-21** | **deployed** | **627** | **+ `create` and `verify`** — **9** |
 
-`command -v` passes on that host. `verify` still fails. The manifest documents
-`verify`; the deployed script does not have it (ai-maestro#69). **A skill teaching a
-verb the shipped CLI lacks is exactly as broken as a manifest promising one `main`
-does not ship** — so probe the verb, then degrade explicitly:
+On 2026-07-16 `command -v` passed and `verify` still failed (ai-maestro#69). By
+2026-08-21 the deployed copy had gained it — no announcement, no version bump, and
+nothing in the repo said so. **A skill teaching a verb the shipped CLI lacks is exactly
+as broken as a manifest promising one `main` does not ship — and a skill still denying
+a verb the CLI has since gained is that same defect wearing the other face.** Neither
+row above is the answer; the host you are on is. So probe the verb at call time, and
+degrade explicitly when it is absent:
 
 ```bash
 if aimaestro_trdd_has verify; then
@@ -121,6 +126,22 @@ Consequences worth internalising: a COS-issued token cannot satisfy a manager-fl
 card, and no agent token can ever satisfy a `user`-floor one.
 
 ## Step 4: Edit, promote, approve, refuse
+
+**Every verb in this step is a STRICT route — mint `AID_AUTH` first.** They 401/403
+without it; `search`/`read`/`verify` do not. This plugin is an AGENT caller, so the
+agent half of the R32 dual path applies (a USER caller would use `AIMAESTRO_SUDO_TOKEN`
+instead). The script's own `--help` calls `AID_AUTH` **"REQUIRED — no localhost
+exemption"**:
+
+```bash
+export AID_AUTH="$(aid-auth.sh)"   # once, before any write verb below
+```
+
+A 401/403 is an authority answer, not a transport error: report it and stop. Do not
+retry it, and do not read it as "the CLI is broken". Note the deployed header still
+opens *"the local owner needs none"* two lines above the strict-route rule that
+contradicts it (ai-maestro#149, fixed upstream, not yet redeployed) — believe `--help`
+and the exit code.
 
 ```bash
 # frontmatter in place, no folder move

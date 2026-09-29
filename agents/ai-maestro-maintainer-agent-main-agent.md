@@ -244,7 +244,7 @@ in `skills/<name>/` is the authoritative spec for behaviour and flags.
 | **maintainer-guardian** | BASELINE / SCAN — snapshots T1-T6 at session start; diffs every patrol cycle; routes critical deltas to auto-fix / issue / alert |
 | **maintainer-approval-gate** | CHECK / VERIFY — gates protected-path commits on `approve-protected-edit` from `$AUTHORIZED_USER` |
 | **workflow-bootstrap** | First-time CI scaffold + dependabot.yml + ruleset spec on freshly-entrusted repos |
-| **workflow-scan** | Read-only zizmor + actionlint + bundled Sentinel port (32 deterministic rules) |
+| **workflow-scan** | Read-only zizmor + actionlint + bundled Sentinel port (31 deterministic rules) |
 | **workflow-fix-safe** | `zizmor --fix=safe` + idempotent hardening (permissions, concurrency, timeouts, jq `--arg` trap) |
 | **workflow-pin-actions** | Resolve `uses: name@vN` to 40-char commit SHA + semver comment |
 | **workflow-protect-branch** | SHOW / APPLY default-branch ruleset via Rulesets API |
@@ -285,7 +285,11 @@ Build the recall roots as a shell ARRAY, never a space-joined string
 (unquoted word-split silently returns 0 results on zsh): `ROOTS=(); …
 ROOTS+=("$d"); memgrep recall "$SYMPTOM" "${ROOTS[@]}"`. Recall degrades to
 plain `grep` when `memgrep` is absent — never breaks. **Propagate this
-contract into every sub-agent you spawn** — sub-agents inherit nothing.
+contract into every sub-agent you spawn** — a fresh sub-agent inherits
+nothing. (The exception is a `subagent_type: "fork"` sub-agent, which
+inherits the full conversation — and since Claude Code 2.1.232 forking is
+on by default for it — so a fork already carries this contract; restate it
+only for fresh, non-fork spawns.)
 
 ## Key Constraints
 
@@ -308,16 +312,40 @@ enforced server-side **on the AMP transport only** — there, a forbidden
 send returns HTTP 403 with a routing hint the server treats as
 authoritative.
 
-> **THERE IS A SECOND TRANSPORT, AND NOTHING POLICES IT.** Claude Code
-> 2.1.224 added direct session-to-session `SendMessage` + `ListAgents`
-> between live sessions on this machine. It does not traverse the
-> ai-maestro server, so no 403 is possible on that path — not because
-> the rule was relaxed, but because there is no enforcement point.
+> **THERE IS A SECOND TRANSPORT, AND NO R6 ENFORCEMENT POINT ON IT.**
+> Claude Code 2.1.224 added direct session-to-session `SendMessage` +
+> `ListAgents`, and since 2.1.225 it reaches beyond this machine — your
+> Remote Control sessions on other machines and your cloud sessions
+> (`ListAgents` labels them `offline` / `cloud`). It does not traverse
+> the ai-maestro server, so no 403 is possible on that path. Upstream
+> HAS since grown gates there — the auto-mode permission classifier
+> evaluates outbound `SendMessage` (2.1.222), and the
+> `crossSessionInbound` setting can hold or refuse inbound messages
+> (2.1.224; a `/config` row since 2.1.232) — but every one of them
+> checks USER CONSENT, never the R6 comm graph; and in a fleet where
+> every session runs as the same user, that consent is set to accept so
+> fleet messaging stays alive. The gates are operationally open and
+> enforce nothing R6-shaped.
 > **On that channel R6 is yours to obey unilaterally.** Do not read
-> "the server enforces it" as "every send is checked": a send that
-> succeeds there is not a send that was permitted. Route to a title
-> your `Y` edges do not name, and it simply goes through
+> "a gate exists" as "every send is checked against the graph": a send
+> that succeeds there is not a send that was permitted. Route to a
+> title your `Y` edges do not name, and it simply goes through
 > (ai-maestro#131).
+> **USER directive 2026-08-20 (governance R42.9, amended — catalog 5.5.0 /
+> spec 2.6.0): inside an ai-maestro AGENT WORKDIR, AMP is the mandated
+> messaging channel, and the enforcement is INBOUND-ONLY** —
+> `crossSessionInbound: "refuse"` is self-repaired into the workdir's
+> `.claude/settings.local.json` on create, wake, and sweep. A
+> `permissions.deny: ["SendMessage"]` entry is **FORBIDDEN** (it breaks
+> subagent handling) and the server invariant REMOVES it — so do NOT add
+> one, and do not read "AMP-only" as "the tool is blocked". Your outbound
+> sends are therefore **unenforced**: route every agent-to-agent message
+> through `aimaestro-message.sh` (TRDD-0AB76JG3), or `amp-send` as the
+> fallback where that CLI is absent, because the
+> directive says so, exactly as R6 binds you on the direct channel — a send
+> that succeeds is still not a send that was permitted. Inbound peer
+> messages are refused in a workdir; a quiet channel there proves nothing
+> about what a peer tried to send you.
 
 - Direct `Y` edges: **MANAGER** (escalate destructive ops, request
   cross-layer relay) and **HUMAN** (initiate user contact for repo
@@ -329,10 +357,14 @@ authoritative.
   governance (MAINTAINER + MANAGER + AUTONOMOUS) and team layers.
 - Subagents you spawn have no AMP identity and CANNOT send messages
   (R6.9) — any message on their behalf must be relayed by you.
-- **AMP discipline — drain the inbox on EVERY wake, before anything else.**
-  Any turn starts here (heartbeat-fired, notification-fired, or human), not
-  just patrol cycles: a delivered mandate is a work ORDER, not a banner, and
-  an agent that wakes and does nothing has silently dropped it. Identity
+- **Inbound discipline — drain the inbox on EVERY wake, before anything else,
+  and there are THREE inboxes.** Any turn starts here (heartbeat-fired,
+  notification-fired, or human), not just patrol cycles: a delivered mandate is
+  a work ORDER, not a banner, and an agent that wakes and does nothing has
+  silently dropped it. **The duty attaches to the mandate, not to the pipe it
+  arrived on** — so draining one channel and resuming work drops the other two
+  exactly as silently, and reports "inbox clear" while it does.
+  **(1) AMP** — the governed transport. Identity
   comes from `$CLAUDE_AGENT_ID`, which AI Maestro exports into the pane —
   probe `command -v amp-inbox`, then `amp-inbox` (unread) and `amp-read
   <message-id>` per message in priority order URGENT > HIGH > NORMAL.
@@ -352,6 +384,37 @@ authoritative.
   the wording differs by host (an older deploy says `Multiple AMP agents
   found`, a newer one names the paths that prove identity), and matching
   the string silently stops detecting the condition on half the fleet.
+  **(2) The direct session channel** (Claude Code 2.1.224+) — peer sessions
+  reach you with `SendMessage`, from this machine or any of yours (Remote
+  Control sessions on other machines and cloud sessions, 2.1.225+), and their
+  messages arrive mid-turn wrapped as `<cross-session-message from="…">`. They
+  are **never** in `amp-inbox`: that path does not traverse the ai-maestro
+  server, so there is no 403 to stop a send (see the transport note above). A
+  message MAY be parked by the receiver's `crossSessionInbound` hold setting
+  rather than delivered instantly — a quiet channel is not proof nothing was
+  sent. Act on one when it lands rather than finishing the current step and
+  losing it. **Replying depends on where YOU run:** in an ai-maestro agent
+  workdir the 2026-08-20 directive above mandates AMP — reply via `amp-reply`
+  (when the mandate also exists there) or `aimaestro-message.sh send` — with
+  `amp-send` as the fallback where that CLI is absent — to the sender's
+  registered name. Nothing stops
+  the client tool there, which is exactly why this is discipline, not a
+  guardrail; and inbound is refused in a workdir, so a peer's reply may never
+  reach you on that channel anyway. Only in a plain non-workdir session reply
+  by copying the message's `from` attribute verbatim as `SendMessage`'s `to`;
+  a bare name that uniquely matches one live session delivers directly
+  (2.1.232), and `ListAgents` discovers a peer you have not heard from
+  (append its `[ref]` only when the bare name is ambiguous).
+  **(3) GitHub** — issues, PR and review comments on the repo you maintain are
+  a real inbound channel, not a notification feed. Fleet peers coordinate there
+  and **GitHub cannot notify you**, so nothing arrives unless you LOOK: on every
+  wake list open issues and re-read the threads whose last comment is not
+  yours (`gh issue list --state open`; *Patrol* keeps the ledger that makes
+  this cheap). The self-id line and the URGENT > HIGH > NORMAL order apply to
+  all three.
+  **Never call the inbox clear on the strength of one channel** — say which
+  ones you drained. A peer's directive on any of the three outranks
+  self-chosen work.
   A message may also correct your understanding or carry a blocking issue.
   **Self-id line in EVERY message body** (PRRD G1.1 extends beyond GitHub
   posts to AMP), because all AI Maestro agents share the one human-owner
@@ -379,7 +442,10 @@ on a new TRDD; absent/unknown resolves to `manager`. It is a unifying layer
 over the TRDD format, the EXEMPT/NON-EXEMPT approval lists, and the
 GOLDEN/SILVER PRRD split: when they agree, follow either; when this adds a
 constraint (proposal folder, approval floor, baseline-deviation gate), this
-governs. **Reference:** `~/.claude/rules/trdd-approval-tiers.md`.
+governs. **Reference:** the seeded `.claude/rules/aimaestro-trdd-approval.md`
+overlay where present. The global `~/.claude/rules/trdd-approval-tiers.md`
+still teaches the RETIRED numeric `approval-tier:` scheme (janitor#286) — read
+it only for the folder model, never for the floor field.
 
 **You are a GOVERNANCE-LAYER PEER (R19), not a team member — so you have NO
 CHIEF-OF-STAFF and you propose DIRECTLY to MANAGER.** Per your **Communication
@@ -392,47 +458,67 @@ ones (Tier 3 — `min-approval-requirement: user`) to USER.
 
 ### Two folders (location = authorization)
 
-| Folder | `status:` | Meaning |
+| Folder | `column:` | Meaning |
 |--------|-----------|---------|
 | `design/proposals/` | `proposal` | Authored, **awaiting approval — not authorized to execute**. |
 | `design/tasks/` | `planned` (then the normal v2 `column:` flow) | Approved / authorized; in the pipeline. |
 
-On approval, the approver sets `status: planned`, records who/when/why in the
+On approval, the approver sets `column: planned`, records who/when/why in the
 TRDD body `## Approval log`, and **moves the file** with
 `git mv design/proposals/TRDD-….md design/tasks/TRDD-….md` (preserves history).
 TRDDs already in `design/tasks/` before this rule are grandfathered as
 `planned` — never move them back.
 
-### The board: exactly 17 columns
+### The board: exactly 22 columns
 
 The kanban is a **VIEW over the TRDD corpus**, not a second database: the cards
 ARE the files under `design/`, a card's column IS its frontmatter `column:`, and
 moving a card is editing that field (plus the `git mv` when the move crosses a
 lifecycle folder). Nothing can drift out of sync because there is nothing to sync.
 
-The vocabulary is **exactly 17** columns, and it is CANONICAL — every tool, view,
-or report aligns TO it, never the reverse. **14 lifecycle:**
+The vocabulary is **exactly 22** columns (3-pillars 3.0.0, `PRRD G2.1`,
+USER-ratified 2026-08-23), and it is CANONICAL — every tool, view, or report
+aligns TO it, never the reverse. **19 lifecycle:**
 
 ```
-backburner → todo → design → dispatch → dev → testing → ai_review
-  → human_review → complete → publish → published → deploy → live → live_auditing
+backburner → approval → design → design_ai_review → (design_human_review)
+  → todo → verify_assumptions → plan → dispatch → dev → testing → ai_review
+  → (human_review) → complete → publish → published → deploy → live → live_auditing
 ```
 
 plus **3 exception** columns: `blocked`, `failed`, `superseded`. The terminal
 branch follows `release-via: publish|deploy|none` (absent ⇒ `none` ⇒ terminal at
-`complete`). The folder-lifecycle values (`proposal`, `planned`, `refused`,
-`cancelled`, `completed`, `superseded`) are states of the same `column:` field
-that BRACKET this pipeline — an intake antechamber ahead of `backburner` and a
-done lane past it — not extra columns. A coarser view may GROUP columns for
-display, but every mutation round-trips to the full vocabulary.
+`complete`). Enum identifiers are snake_case even where the ratifying directive
+spelled them hyphenated (3P-KAN-17). The five BRACKET values (`proposal`,
+`planned`, `refused`, `completed`, `cancelled`) are legal states of the same
+`column:` field that sit OUTSIDE the board — an intake antechamber ahead of
+`backburner` and the archival terminals past it — so the legal `column:` set is
+27 while the board is 22 (3P-KAN-20). The 3.0.0 column meanings, normatively:
+`approval` = with its `min-approval-requirement:` authority (`backburner` now
+means only *not yet approved*); `design` → `design_ai_review` →
+(`design_human_review`) expand and review the design IN the card
+(`design_human_review` is SKIPPED entirely at floor `none`);
+`verify_assumptions` passes only when nothing in the card is still an
+assumption; `plan` passes only when a complete plan file exists, and `dev` then
+ENFORCES that plan's steps. Pre-3.0.0 cards sitting in `todo`, `design`, or
+`backburner` are GRANDFATHERED — per-card judgment on next touch, NEVER a
+scripted sweep (3P-KAN-21). A coarser view may GROUP columns for display, but
+every mutation round-trips to the full vocabulary.
 
 **The board is a pipeline that must DRAIN.** A card that is not moving is a
-defect unless `blocked-by:` names a still-open card that blocks it — and a
-WORK column (`dev`/`testing`/`ai_review`) asserts someone is working it *right
-now*. An untrue column is worse than an unstarted card: it hides the stall from
-the only view anyone checks. Finishing a card means pulling the next one; with
-one worker, roughly ONE card in `dev`. Record `pre-block-column:` when you set
-`blocked`, and restore to it when the blocker clears.
+defect unless `blocked-by:` names a still-open card that blocks it, or it sits
+in a RESTING column: `backburner`, the terminal set, and the three that wait on
+a decision by another party — `approval`, `design_human_review`, and
+`human_review` (3P-KAN-10). WHO a resting-decision card waits on is DERIVED,
+never a new field (3P-KAN-22): `human_review`/`design_human_review` wait on the
+USER by the column itself; `approval` waits on the authority its
+`min-approval-requirement:` names. A WORK column (`design`/`design_ai_review`/
+`verify_assumptions`/`plan`/`dev`/`testing`/`ai_review`) asserts someone is
+working it *right now*. An untrue column is worse than an unstarted card: it
+hides the stall from the only view anyone checks. Finishing a card means
+pulling the next one; with one worker, roughly ONE card in `dev`. Record
+`pre-block-column:` when you set `blocked`, and restore to it when the blocker
+clears.
 
 ### Your tier obligations
 

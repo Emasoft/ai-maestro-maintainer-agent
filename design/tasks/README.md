@@ -50,20 +50,27 @@ updated: <same shape>
 State is the single `column:` field (the v2 kanban schema). There is **no v1
 `status:` field**.
 
-## Column enum (the v2 kanban pipeline + exceptions)
+## Column enum (the v2 kanban pipeline + exceptions — 3-pillars 3.0.0, 22 board columns)
 
-Lifecycle order: `backburner → todo → design → dispatch → dev → testing →
-ai_review → (human_review) → complete`, then tool TRDDs `→ publish → published`
-and service TRDDs `→ deploy → live → (live_auditing)`.
+Lifecycle order: `backburner → approval → design → design_ai_review →
+(design_human_review) → todo → verify_assumptions → plan → dispatch → dev →
+testing → ai_review → (human_review) → complete`, then tool TRDDs
+`→ publish → published` and service TRDDs `→ deploy → live → (live_auditing)`.
 
 | Group | Columns | Terminal? |
 |---|---|---|
-| Entry | `backburner`, `todo`, `live_auditing` (entry) | no |
-| Design | `design`, `dispatch` | no |
-| Work | `dev`, `testing`, `ai_review`, `human_review` | no |
+| Intake | `backburner` (not yet approved), `approval` (awaiting its `min-approval-requirement:` authority), `live_auditing` (entry) | no |
+| Design | `design`, `design_ai_review`, `design_human_review` (skipped at floor `none`) | no |
+| Gates + queue | `todo`, `verify_assumptions` (no unverified claims), `plan` (complete plan file exists), `dispatch` | no |
+| Work | `dev`, `testing`, `ai_review`, `human_review` (resting — waits on the USER) | no |
 | Ready | `complete` | no (internal-done) |
 | Ship | `publish` → `published` / `deploy` → `live` | `published`/`live` terminal |
 | Exceptions | `blocked` 🔴 (add `blocked-by: [...]`), `failed` (retryable), `superseded` (add `superseded-by: [...]`) | only `superseded` terminal |
+
+The five bracket states (`proposal`, `planned`, `refused`, `completed`,
+`cancelled`) are legal `column:` values OUTSIDE the board — board 22, legal set
+27 (3P-KAN-20). Pre-3.0.0 cards in `todo`/`design`/`backburner` are
+grandfathered (3P-KAN-21): per-card judgment on next touch, never a sweep.
 
 **Approval overlay (location = authorization):** `design/proposals/`
 (`column: proposal`, awaiting approval) → `design/tasks/` (`column: planned`,

@@ -179,3 +179,39 @@ def test_the_release_commit_contains_only_managed_files(repo: Path) -> None:
     subprocess.run(["git", "add", "--", *managed], cwd=repo, check=True)
     staged = _git(repo, "diff", "--cached", "--name-only").split()
     assert staged == ["CHANGELOG.md"], f"expected only the changed managed file, got {staged}"
+
+
+# ── marketplace source-form recognition (step [5/11]) ────────────────────────
+#
+# Claude Code grew marketplace source types after this gate shipped: `archive`
+# (2.1.224) and `command` (2.1.229) join github/url/git/npm. The gate exists to
+# catch "the plugin is ABSENT from the marketplace"; blocking a release because
+# the entry uses a source form the gate has not heard of is the wrong failure
+# direction. Pure function, tested directly.
+
+def _mkt(source: dict) -> dict:
+    return {"plugins": [{"name": "my-plugin", "source": source}]}
+
+
+def test_marketplace_check_accepts_every_slugged_source_form() -> None:
+    """github/url/git/archive entries match on the owner/name slug."""
+    assert publish._plugin_in_remote_marketplace(_mkt({"source": "github", "repo": "o/r"}), "my-plugin", "o/r")
+    assert publish._plugin_in_remote_marketplace(_mkt({"source": "url", "url": "https://github.com/o/r.git"}), "my-plugin", "o/r")
+    assert publish._plugin_in_remote_marketplace(_mkt({"source": "git", "url": "git@github.com:o/r"}), "my-plugin", "o/r")
+    assert publish._plugin_in_remote_marketplace(_mkt({"source": "archive", "url": "https://github.com/o/r/releases/download/v1/plugin.zip"}), "my-plugin", "o/r")
+
+
+def test_marketplace_check_treats_unverifiable_forms_as_registered() -> None:
+    """npm/command entries carry no repo slug — the entry naming the plugin IS the registration."""
+    assert publish._plugin_in_remote_marketplace(_mkt({"source": "npm", "package": "my-plugin"}), "my-plugin", "o/r")
+    assert publish._plugin_in_remote_marketplace(_mkt({"source": "command", "command": "my-tool print-dir"}), "my-plugin", "o/r")
+
+
+def test_marketplace_check_still_rejects_absence_and_mismatch() -> None:
+    """The negative half must survive the widening — absence and wrong-repo still fail."""
+    assert not publish._plugin_in_remote_marketplace({"plugins": []}, "my-plugin", "o/r")
+    assert not publish._plugin_in_remote_marketplace(_mkt({"source": "github", "repo": "o/OTHER"}), "my-plugin", "o/r")
+    assert not publish._plugin_in_remote_marketplace(_mkt({"source": "url", "url": "https://github.com/o/OTHER.git"}), "my-plugin", "o/r")
+    # A genuinely unknown future source form is NOT auto-accepted: the safe
+    # direction for the unverifiable carve-out is an explicit allowlist.
+    assert not publish._plugin_in_remote_marketplace(_mkt({"source": "carrier-pigeon", "coop": "o/r"}), "my-plugin", "o/r")

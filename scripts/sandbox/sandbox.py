@@ -303,7 +303,7 @@ def _orphans_for_session(session_id: str) -> list[str]:
     return [line for line in out.stdout.splitlines() if line.strip()]
 
 
-def _kill_orphans(session_id: str) -> None:
+def _session_container_ids(session_id: str) -> list[str]:
     out = _docker(
         [
             "ps",
@@ -314,9 +314,51 @@ def _kill_orphans(session_id: str) -> None:
             f"label={SESSION_LABEL_KEY}={session_id}",
         ]
     )
-    ids = [i for i in out.stdout.split() if i.strip()]
-    if ids:
-        _docker(["rm", "-f", *ids])
+    return [i for i in out.stdout.split() if i.strip()]
+
+
+def _kill_orphans(session_id: str, *, settle_s: float = 3.0) -> list[str]:
+    """Remove this session's containers. Returns the ids that SURVIVED.
+
+    Two reasons this is more than one `rm -f`, both observed rather than
+    imagined (a container in state `created` survived a full test run on
+    2026-08-11, and nothing reported it):
+
+    * `docker rm -f` can legitimately fail while the daemon's own `--rm`
+      teardown is in flight ("removal already in progress"). `_docker` never
+      raises, so a fire-and-forget reap swallowed that and left the caller
+      believing it had cleaned up.
+    * A container that was CREATED but never STARTED is never auto-removed —
+      `--rm` fires on exit, and it never ran. That one does not clear on its
+      own no matter how long you wait, so it must be removed here or reported.
+
+    So: remove, re-list, and give the asynchronous case a bounded moment to
+    settle before deciding anything survived. The return value is what makes a
+    silent leak impossible to keep silent; it is not raised on, because this
+    runs in a `finally` and must never mask the error that got us there.
+    """
+    ids = _session_container_ids(session_id)
+    if not ids:
+        return []
+    _docker(["rm", "-f", *ids])
+
+    deadline = time.monotonic() + settle_s
+    survivors = _session_container_ids(session_id)
+    while survivors and time.monotonic() < deadline:
+        time.sleep(0.25)
+        _docker(["rm", "-f", *survivors])
+        survivors = _session_container_ids(session_id)
+
+    if survivors:
+        detail = _docker(
+            ["ps", "-a", "--filter", f"label={SESSION_LABEL_KEY}={session_id}", "--format", "{{.ID}} {{.Status}}"]
+        ).stdout.strip()
+        print(
+            f"WARNING: {len(survivors)} sandbox container(s) survived cleanup for session "
+            f"{session_id}: {detail or survivors}. Remove with: docker rm -f {' '.join(survivors)}",
+            file=sys.stderr,
+        )
+    return survivors
 
 
 def _do_run(

@@ -49,6 +49,33 @@ def test_redact_github_pat_substitutes() -> None:
     assert any("github" in rule.lower() or "pat" in rule.lower() or "ghp" in rule.lower() for rule in fired)
 
 
+def test_redact_gitlab_pat_substitutes() -> None:
+    """A GitLab PAT (glpat-*, 20+ chars) is masked to glpat-<REDACTED> — including a longer CRC-suffixed one."""
+    for tail in ("A" * 20, "A" * 20 + "-" + "b" * 7):  # plain + CRC-suffixed shape
+        tok = "glpat-" + tail
+        out, fired = r.redact(f"Token: {tok}")
+        assert tok not in out, f"unredacted: {tok}"
+        assert "glpat-<REDACTED>" in out
+        assert fired
+
+
+def test_redact_gitlab_deploy_token_substitutes() -> None:
+    """A GitLab deploy token (gldt-*) is masked to gldt-<REDACTED>."""
+    tok = "gldt-" + "z" * 24
+    out, fired = r.redact(f"registry login with {tok}")
+    assert tok not in out
+    assert "gldt-<REDACTED>" in out
+    assert fired
+
+
+def test_redact_gitlab_rules_leave_short_and_prose_forms_alone() -> None:
+    """The bare prefix in prose (and a too-short suffix) is NOT a token and must survive."""
+    text = "set a glpat- prefixed token; gldt-short is not one"
+    out = r.redact(text)[0]
+    assert "glpat- prefixed" in out
+    assert "gldt-short" in out
+
+
 def test_redact_anthropic_api_key_substitutes() -> None:
     """An Anthropic sk-ant-api03-* key is masked."""
     key = "sk-ant-api03-" + "x" * 50
