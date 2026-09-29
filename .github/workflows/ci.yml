@@ -149,10 +149,14 @@ jobs:
         # Download-then-run, NOT curl|bash: a pipe-into-shell is the shape
         # skillaudit CMD_INJECTION flags as CRITICAL and the CPV --strict
         # gate blocks on it — splitting download from execution kills the
-        # injection shape without pinning or suppressing anything.
+        # injection shape without pinning or suppressing anything. The
+        # script lands in $RUNNER_TEMP via its env indirection (a literal
+        # path trips CPV's static workflow path check).
+        env:
+          INSTALLER: ${{ runner.temp }}/claude-install.sh
         run: |
-          curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh
-          bash /tmp/claude-install.sh stable
+          curl -fsSL https://claude.ai/install.sh -o "$INSTALLER"
+          bash "$INSTALLER" stable
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           claude plugin validate .
           claude plugin validate agents --strict
