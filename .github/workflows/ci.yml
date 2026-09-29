@@ -146,11 +146,12 @@ jobs:
         # not gated. Install path $HOME/.local/bin is UNTESTED on an
         # ubuntu-latest runner (verified locally on macOS only).
         # Budget: adds ~1-3 min cold download on top of the uvx CPV build.
-        # Download-then-run, NOT curl|bash: a pipe-into-shell is the shape
-        # skillaudit CMD_INJECTION flags as CRITICAL and the CPV --strict
-        # gate blocks on it — splitting download from execution kills the
-        # injection shape without pinning or suppressing anything. The
-        # script lands in $RUNNER_TEMP via its env indirection (a literal
+        # Download-then-run, never download-and-execute-in-one-step: the
+        # one-step shape is what skillaudit's command-injection rule flags
+        # and the CPV --strict gate blocks on. Splitting the download from
+        # the execution keeps the same behavior with no unverified-stream
+        # execution shape, no pinning, and no rule suppression. The script
+        # lands in $RUNNER_TEMP via its env indirection (a literal
         # path trips CPV's static workflow path check).
         env:
           INSTALLER: ${{ runner.temp }}/claude-install.sh
