@@ -187,6 +187,13 @@ design folders (`design/proposals|tasks|refused|archived`). Full model:
   to both the plugin repo and the marketplace hub — the script
   always uses `gh secret set NAME -b "$VALUE"` (the only reliable
   form; stdin pipes silently produce broken secrets).
+- **Managed-site permission note** (Claude Code ≥ 2.1.284). On sites with
+  managed `allowManagedPermissionRulesOnly`, a plugin's own `allowed-tools`
+  frontmatter no longer pre-approves its tools (2.1.282/2.1.284). This
+  plugin declares no tool frontmatter, so it is unaffected — its tools
+  follow the site's normal permission flow everywhere. Managed-site admins
+  of other role-plugins: pre-approval now comes only from official or
+  vouched sources.
 
 ## Behaviour notes
 
