@@ -6,70 +6,72 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
-- **test:** Match the wildcard-before-subcommand CLASS, not the changelog example (ca83632)
-- **test:** Narrow the wildcard detector to the shape it can actually define (9b1decf)
-- **test:** Point the BOM detector at the file 2.1.246 actually names (e2cf78c)
-- **test:** Change the BOM question instead of guessing its file set again (03a4003)
-- **test:** BOM scan skips without git instead of erroring (fd8b63e)
-- **test:** Put the BOM floor in the test that scans, not beside it (6824470)
-- **worktree:** Refuse to remove a LOCKED worktree, per CC 2.1.248 (8cd19d6)
-- **governance:** Type compare() with Mapping so its own tests type-check (5dcb246)
-- **trdd:** Name the two ways RO44YZDP's box 3 could PASS unearned (TRDD-RO44YZDP) (3ae1c7c)
-- **ci:** Validate manifest non-strict (drop the || true no-op); fix card over-claim (TRDD-RO44YZDP) (207c5ee)
-- **skill:** Validate must accept the status-less cards the v2 rule permits; drop dead SLUG arg (follow-up to 9ffa21b) (ad5ee47)
-- **ci:** Devitalize the installer curl-pipe shape; complete the trdd-template TOC (CPV --strict) (c3c57f1)
-- **ci:** Route the installer through $RUNNER_TEMP env indirection (ccb425a)
+- **test:** Match the wildcard-before-subcommand CLASS, not the changelog example (c70a23f)
+- **test:** Narrow the wildcard detector to the shape it can actually define (d3d4ad5)
+- **test:** Point the BOM detector at the file 2.1.246 actually names (fbc08b6)
+- **test:** Change the BOM question instead of guessing its file set again (a100b4f)
+- **test:** BOM scan skips without git instead of erroring (604ee1d)
+- **test:** Put the BOM floor in the test that scans, not beside it (2d157eb)
+- **worktree:** Refuse to remove a LOCKED worktree, per CC 2.1.248 (d971ab1)
+- **governance:** Type compare() with Mapping so its own tests type-check (eb703e1)
+- **trdd:** Name the two ways RO44YZDP's box 3 could PASS unearned (TRDD-RO44YZDP) (81eb320)
+- **ci:** Validate manifest non-strict (drop the || true no-op); fix card over-claim (TRDD-RO44YZDP) (8c869d0)
+- **skill:** Validate must accept the status-less cards the v2 rule permits; drop dead SLUG arg (follow-up to 9ffa21b) (b6efff9)
+- **ci:** Devitalize the installer curl-pipe shape; complete the trdd-template TOC (CPV --strict) (6626c50)
+- **ci:** Route the installer through $RUNNER_TEMP env indirection (be519f5)
 
 ### Documentation
 
-- Qualify stale trdd-approval-tiers.md pointers (janitor#286) (966e34d)
-- Record never-touch-AgentlensPro directive on TRDD-RO44YZDP (72a238e)
-- **test:** Record the 2.1.247 audit, and why it gets no detector (662fd0b)
-- **test:** Make the 2.1.247 paragraph true about its own method (9e7fa29)
-- **memory:** Record the publish-globally field memgrep normalized in (8dd9719)
-- Tick RO44YZDP acceptance box 4, record why box 3 cannot be ticked (TRDD-RO44YZDP) (5f2ca3a)
-- Say what was measured about issue #18, not what it implies (TRDD-RO44YZDP) (99b0470)
-- Park RO44YZDP to 2026-09-08; box 3 is falsified, not just un-elapsed (TRDD-RO44YZDP) (87c8bc5)
-- Withdraw the disk-rate claim from RO44YZDP; box 3 is NOT EVALUABLE (TRDD-RO44YZDP) (a3cc8b9)
-- RO44YZDP → blocked on AgentlensPro#18; du figure restated as a lower bound (TRDD-RO44YZDP) (a7c0505)
-- Revert RO44YZDP to human_review; issue ref belongs in external-refs (TRDD-RO44YZDP) (7a8c8ac)
-- Cite the ratified sources for RO44YZDP's column, not the card itself (TRDD-RO44YZDP) (e3667bd)
-- Replace RO44YZDP's two second-hand facts with first-hand measurements (TRDD-RO44YZDP) (0e60b01)
-- Withdraw the in-scope claim for the AgentlensPro issue query (TRDD-RO44YZDP) (6b78b92)
-- Recover the verbatim AgentlensPro directive; the gh call was a VIOLATION (TRDD-RO44YZDP) (dff14c0)
-- Earn the "sole directive" absence claim by enumeration (TRDD-RO44YZDP) (4f2e43b)
-- Settle the absence claim on FULL text, not 230-char previews (TRDD-RO44YZDP) (e9073a7)
-- **trdd:** Record RO44YZDP box 3 FAILED on breach and missing series (TRDD-RO44YZDP) (3bbd98d)
-- **ci:** State the gate's real coverage; docs(trdd): restore box-3 endpoints (TRDD-RO44YZDP) (9b134b5)
-- **trdd:** Replace endpoint-span with honest discovery-gap wording (TRDD-RO44YZDP); docs(ci): name the non-warning class (0a8f730)
-- **memory:** Repair architecture.md page shape (janitor#250 splice defect) (a42b4bc)
-- **readme:** Managed-site permission note for CC 2.1.282/2.1.284 (changelog sweep) (148658a)
-- **trdd:** Track proposal V4Z2MTT2 (WFSEC-004 installer curl-pipe) with maintainer analysis (c670dcf)
-- **ci:** Reword the installer comment without the pipe shape in prose (0e16947)
-- **trdd:** Restore V4Z2MTT2 to proposals/ (owner ruling: no refused/ folder) + supersession note (8051852)
+- Qualify stale trdd-approval-tiers.md pointers (janitor#286) (3f709a1)
+- Record never-touch-AgentlensPro directive on TRDD-RO44YZDP (3202faf)
+- **test:** Record the 2.1.247 audit, and why it gets no detector (86f838c)
+- **test:** Make the 2.1.247 paragraph true about its own method (f17c6d6)
+- **memory:** Record the publish-globally field memgrep normalized in (e0fe50e)
+- Tick RO44YZDP acceptance box 4, record why box 3 cannot be ticked (TRDD-RO44YZDP) (1740960)
+- Say what was measured about issue #18, not what it implies (TRDD-RO44YZDP) (921cc31)
+- Park RO44YZDP to 2026-09-08; box 3 is falsified, not just un-elapsed (TRDD-RO44YZDP) (abeadcb)
+- Withdraw the disk-rate claim from RO44YZDP; box 3 is NOT EVALUABLE (TRDD-RO44YZDP) (8a99faf)
+- RO44YZDP → blocked on AgentlensPro#18; du figure restated as a lower bound (TRDD-RO44YZDP) (baa2331)
+- Revert RO44YZDP to human_review; issue ref belongs in external-refs (TRDD-RO44YZDP) (b6df6ab)
+- Cite the ratified sources for RO44YZDP's column, not the card itself (TRDD-RO44YZDP) (5fa32a3)
+- Replace RO44YZDP's two second-hand facts with first-hand measurements (TRDD-RO44YZDP) (a0f3b0a)
+- Withdraw the in-scope claim for the AgentlensPro issue query (TRDD-RO44YZDP) (33ff243)
+- Recover the verbatim AgentlensPro directive; the gh call was a VIOLATION (TRDD-RO44YZDP) (005d819)
+- Earn the "sole directive" absence claim by enumeration (TRDD-RO44YZDP) (fd0a100)
+- Settle the absence claim on FULL text, not 230-char previews (TRDD-RO44YZDP) (c73a320)
+- **trdd:** Record RO44YZDP box 3 FAILED on breach and missing series (TRDD-RO44YZDP) (ea44a08)
+- **ci:** State the gate's real coverage; docs(trdd): restore box-3 endpoints (TRDD-RO44YZDP) (db0fa01)
+- **trdd:** Replace endpoint-span with honest discovery-gap wording (TRDD-RO44YZDP); docs(ci): name the non-warning class (2edd279)
+- **memory:** Repair architecture.md page shape (janitor#250 splice defect) (8a2af0d)
+- **readme:** Managed-site permission note for CC 2.1.282/2.1.284 (changelog sweep) (f4e8168)
+- **trdd:** Track proposal V4Z2MTT2 (WFSEC-004 installer curl-pipe) with maintainer analysis (b60c91e)
+- **ci:** Reword the installer comment without the pipe shape in prose (8afc153)
+- **trdd:** Restore V4Z2MTT2 to proposals/ (owner ruling: no refused/ folder) + supersession note (2cbaf5b)
 
 ### Features
 
-- **trdd:** Set RO44YZDP's free-space floor and make box 3 agent-evaluable (TRDD-RO44YZDP) (0d4f67d)
-- **ci:** Add native `claude plugin validate` step to the Validate job (87d58bc)
-- **skill:** Align TRDD teaching files with 3-pillars 3.0.0 and route writes through trddgrep (PRRD G12.1) (9ffa21b)
-- **persona:** Adopt R41 approval-vs-mandate semantics, cited by number ([#41](https://github.com/Emasoft/ai-maestro-maintainer-agent/issues/41)) (ca1a2b6)
+- **trdd:** Set RO44YZDP's free-space floor and make box 3 agent-evaluable (TRDD-RO44YZDP) (68085eb)
+- **ci:** Add native `claude plugin validate` step to the Validate job (da09ffb)
+- **skill:** Align TRDD teaching files with 3-pillars 3.0.0 and route writes through trddgrep (PRRD G12.1) (64a774a)
+- **persona:** Adopt R41 approval-vs-mandate semantics, cited by number ([#41](https://github.com/Emasoft/ai-maestro-maintainer-agent/issues/41)) (623dd4c)
 
 ### Miscellaneous Tasks
 
-- **validate:** Reject UTF-8 BOMs — install fails (2.1.246) / components silently dropped (2.1.239) (f5d1078)
+- **validate:** Reject UTF-8 BOMs — install fails (2.1.246) / components silently dropped (2.1.239) (a4c1df2)
+- Bump version to 1.15.0 (11652f9)
+- Sync uv.lock self-version to 1.15.0 (a805728)
 
 ### Revert
 
-- **test:** Drop the wildcard-before-subcommand detector, keep the finding (cd515a5)
+- **test:** Drop the wildcard-before-subcommand detector, keep the finding (c2a80dd)
 
 ### Testing
 
-- Align the Claude Code surface ledger to 2.1.246 (8d9157c)
-- Give the BOM set a non-empty floor (fbd6003)
+- Align the Claude Code surface ledger to 2.1.246 (784b00d)
+- Give the BOM set a non-empty floor (fe9bac4)
 
 ### Build
 
-- Scope bare `pytest` to tests/, so a no-args run stops dying on _corpus_dev (05b00ab)
+- Scope bare `pytest` to tests/, so a no-args run stops dying on _corpus_dev (29893fd)
 ---
 *Generated by [git-cliff](https://git-cliff.org)*
